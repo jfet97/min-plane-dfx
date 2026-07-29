@@ -265,6 +265,11 @@ export interface RunIntrinsicCapacityColdSearchInput {
   readonly incumbent?: IntrinsicCapacityEndpoint
   readonly control?: IrregularNfpIfpControl
   readonly capturePhaseTimings?: boolean
+  /** Test-only monotonic source for deterministic phase-timing accounting.
+   *  Defaults to `performance.now`. Never affects the checkpoint itself
+   *  (which carries no timing field) — only the separate, diagnostic-only
+   *  `phaseTimings` result. */
+  readonly timingNow?: () => number
   /** Resume only from a validated depth-boundary checkpoint. */
   readonly checkpoint?: IntrinsicAnytimeCheckpoint
   /** Test/scheduler seam. Omit to run through settlement. */
@@ -334,7 +339,8 @@ export function runIntrinsicCapacityColdSearch(
   GeometryKernel | GeometrySettings | NfpIfpService
 > {
   return Effect.gen(function* () {
-    const startedAt = performance.now()
+    const timingNow = input.timingNow ?? performance.now.bind(performance)
+    const startedAt = timingNow()
     const capture = input.capturePhaseTimings === true
     const captureTopologyRetention =
       input.retentionMode === 'cohesion-frontier' ||
@@ -595,7 +601,7 @@ export function runIntrinsicCapacityColdSearch(
           if (depthQuotaExhausted) break
           const transform = sortedTransforms[transformOrdinal]
           if (transform === undefined) continue
-          const generationStartedAt = capture ? performance.now() : 0
+          const generationStartedAt = capture ? timingNow() : 0
           if (input.control !== undefined) yield* input.control.checkpoint('candidate-points')
           const moving = yield* geometryKernel.transformCollisionGeometry({
             geometry: piece.collisionGeometry,
@@ -617,9 +623,9 @@ export function runIntrinsicCapacityColdSearch(
           if (captureTopologyRetention) {
             contactFanoutTrace.legalCandidateCount += legalCandidates.length
           }
-          if (capture) timings.candidateGenerationMs += performance.now() - generationStartedAt
+          if (capture) timings.candidateGenerationMs += timingNow() - generationStartedAt
 
-          const evaluationStartedAt = capture ? performance.now() : 0
+          const evaluationStartedAt = capture ? timingNow() : 0
           for (const candidate of legalCandidates) {
             if (
               consumedAtDepth >= placementEvaluationQuotaPerDepth ||
@@ -628,7 +634,7 @@ export function runIntrinsicCapacityColdSearch(
               settlement = 'evaluation-cap'
               depthQuotaExhausted = true
               if (capture) {
-                timings.candidateEvaluationMs += performance.now() - evaluationStartedAt
+                timings.candidateEvaluationMs += timingNow() - evaluationStartedAt
               }
               break
             }
@@ -649,7 +655,7 @@ export function runIntrinsicCapacityColdSearch(
               continue
             }
             if (captureTopologyRetention) {
-              const contactStartedAt = performance.now()
+              const contactStartedAt = timingNow()
               const contactScore =
                 yield* IrregularPlacementScorer.Make.scoreCandidate({
                   sheet: INTRINSIC_COORDINATE_DOMAIN,
@@ -668,7 +674,7 @@ export function runIntrinsicCapacityColdSearch(
               contactFanoutTrace.measuredCandidateCount += 1
               contactFanoutTrace.measurementMs += Math.max(
                 0,
-                performance.now() - contactStartedAt
+                timingNow() - contactStartedAt
               )
               if (contactScore.sharedCollisionBoundaryLengthMm > 0) {
                 contactFanoutTrace.positiveCandidateCount += 1
@@ -682,10 +688,10 @@ export function runIntrinsicCapacityColdSearch(
               scored.push(evaluated)
             }
           }
-          if (capture) timings.candidateEvaluationMs += performance.now() - evaluationStartedAt
+          if (capture) timings.candidateEvaluationMs += timingNow() - evaluationStartedAt
         }
 
-        const constructionStartedAt = capture ? performance.now() : 0
+        const constructionStartedAt = capture ? timingNow() : 0
         scored.sort(compareScoredCandidateReferences)
         let builtCount = 0
         const builtCandidateKeys = new Set<string>()
@@ -781,11 +787,11 @@ export function runIntrinsicCapacityColdSearch(
             }
           }
         }
-        if (capture) timings.successorConstructionMs += performance.now() - constructionStartedAt
+        if (capture) timings.successorConstructionMs += timingNow() - constructionStartedAt
       }
       if (depthQuotaExhausted) depthQuotaExhaustions += 1
 
-      const retentionStartedAt = capture ? performance.now() : 0
+      const retentionStartedAt = capture ? timingNow() : 0
       const remainingCountAfterDepth = input.preparedPieces.length - (depth + 1)
       const remainingMaterialAfterDepth = suffixMaterial[depth + 1] ?? 0n
       const incumbent = input.incumbent
@@ -809,7 +815,7 @@ export function runIntrinsicCapacityColdSearch(
         surviving.push(successor)
       }
 
-      const cavityStartedAt = capture ? performance.now() : 0
+      const cavityStartedAt = capture ? timingNow() : 0
       const measuredSurvivors: CapacityBeamEntry[] = []
       for (const successor of surviving) {
         if (successor.state.placementOrder.length === 0) {
@@ -823,15 +829,16 @@ export function runIntrinsicCapacityColdSearch(
         }
         measuredSurvivors.push({ ...successor, cavities })
       }
-      if (capture) timings.cavityMeasurementMs += performance.now() - cavityStartedAt
+      if (capture) timings.cavityMeasurementMs += timingNow() - cavityStartedAt
 
       const topologyMeasurements =
-        captureTopologyRetention ? makeCapacityTopologyMeasurements() : undefined
+        captureTopologyRetention ? makeCapacityTopologyMeasurements(timingNow) : undefined
       beam = retainCapacityBeamEntries(
         measuredSurvivors,
         coldBeamWidth,
         input.retentionMode ?? 'objective',
-        topologyMeasurements
+        topologyMeasurements,
+        timingNow
       )
       if (topologyMeasurements !== undefined) {
         topologyRetentionDepths.push(
@@ -871,7 +878,7 @@ export function runIntrinsicCapacityColdSearch(
             (noSkipFrontier.present && !hasNoSkipState ? depth + 1 : undefined)
         }
       }
-      if (capture) timings.retentionMs += performance.now() - retentionStartedAt
+      if (capture) timings.retentionMs += timingNow() - retentionStartedAt
       if (beam.length === 0) break
       if (
         maximumDepthBoundaries !== undefined &&
@@ -913,7 +920,7 @@ export function runIntrinsicCapacityColdSearch(
           sheetWidthGrid,
           sheetHeightGrid
         })
-        const totalMs = Math.max(0, performance.now() - startedAt)
+        const totalMs = Math.max(0, timingNow() - startedAt)
         return {
           status: 'paused',
           endpoints: [],
@@ -934,7 +941,7 @@ export function runIntrinsicCapacityColdSearch(
       }
     }
 
-    const materializationStartedAt = capture ? performance.now() : 0
+    const materializationStartedAt = capture ? timingNow() : 0
     const endpointsByHash = new Map<string, IntrinsicCapacityEndpoint>()
     for (const entry of beam) {
       const placedIdSet = new Set(entry.state.placementOrder)
@@ -968,10 +975,10 @@ export function runIntrinsicCapacityColdSearch(
     }
     const endpoints = [...endpointsByHash.values()].toSorted(compareIntrinsicCapacityEndpoints)
     if (capture) {
-      timings.endpointMaterializationMs += performance.now() - materializationStartedAt
+      timings.endpointMaterializationMs += timingNow() - materializationStartedAt
     }
 
-    const totalMs = Math.max(0, performance.now() - startedAt)
+    const totalMs = Math.max(0, timingNow() - startedAt)
     const counters = capacitySearchCounters({
       prunedByAttainableCount,
       prunedByAttainableMaterial,
@@ -1828,7 +1835,8 @@ function retainCapacityBeamEntries(
   entries: ReadonlyArray<CapacityBeamEntry>,
   beamWidth: number,
   mode: IntrinsicCapacityRetentionMode,
-  topologyMeasurements?: CapacityTopologyMeasurements
+  topologyMeasurements: CapacityTopologyMeasurements | undefined,
+  timingNow: () => number
 ): ReadonlyArray<CapacityBeamEntry> {
   if (mode === 'objective') {
     return entries.toSorted(compareCapacityBeamEntries).slice(0, beamWidth)
@@ -1844,7 +1852,7 @@ function retainCapacityBeamEntries(
     return retainCapacityCohesionFrontier(
       entries,
       beamWidth,
-      topologyMeasurements ?? makeCapacityTopologyMeasurements(),
+      topologyMeasurements ?? makeCapacityTopologyMeasurements(timingNow),
       mode === 'quality-frontier'
         ? {
             objectiveBucketWidth: Math.max(1, beamWidth - 4),
@@ -1973,7 +1981,9 @@ interface CapacityTopologyMeasurements {
   }
 }
 
-function makeCapacityTopologyMeasurements(): CapacityTopologyMeasurements {
+function makeCapacityTopologyMeasurements(
+  timingNow: () => number
+): CapacityTopologyMeasurements {
   const topologyByIdentity = new Map<
     string,
     CanonicalLayoutTopologyExact | undefined
@@ -1985,7 +1995,7 @@ function makeCapacityTopologyMeasurements(): CapacityTopologyMeasurements {
       const identity = intrinsicCapacitySuccessorIdentity(entry)
       const cached = topologyByIdentity.get(identity)
       if (cached !== undefined || topologyByIdentity.has(identity)) return cached
-      const startedAt = performance.now()
+      const startedAt = timingNow()
       const measured =
         entry.state.placedCollisionGeometries.length === 0
           ? undefined
@@ -1993,7 +2003,7 @@ function makeCapacityTopologyMeasurements(): CapacityTopologyMeasurements {
               entry.state.placedCollisionGeometries
             )
       counters.count += 1
-      counters.elapsedMs += Math.max(0, performance.now() - startedAt)
+      counters.elapsedMs += Math.max(0, timingNow() - startedAt)
       topologyByIdentity.set(identity, measured)
       return measured
     }
