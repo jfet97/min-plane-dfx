@@ -1,0 +1,1 @@
+//! TS counterpart: src/workers/algorithm/irregular/intrinsicShortSideAxes.ts, intrinsicShortSideObserver.ts, intrinsicShortSidePairFoldObserver.ts, and intrinsicShortSideContactStrip.ts (Compact Short Side directional construction).
