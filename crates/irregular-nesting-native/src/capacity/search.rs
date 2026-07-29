@@ -3396,6 +3396,44 @@ enum TopologyMetric {
     HullWaste,
 }
 
+/// TS: `intrinsicCapacitySearch.ts:1889-1920` `compareTopology` (the
+/// closure inside `retainCapacityCohesionFrontier`, called from that
+/// function's own `reserve(entries.toSorted(...), ...)` steps over the
+/// *full*, unfiltered survivor list) and `:2139-2168` `compareTopologyMetric`
+/// (the free-function twin `makeCapacityTopologyRetentionDepthTrace`'s
+/// `specifications` loop calls, but only ever over `bestAccounting` --
+/// `measuredSurvivors` pre-filtered to entries that already tie in
+/// accounting with the depth's best entry). These two TS functions are
+/// **not** textually identical -- only `compareTopology` has the accounting
+/// short-circuit below; `compareTopologyMetric` measures both arguments
+/// unconditionally -- but they are provably behavior-equivalent at every
+/// site this crate calls this single merged Rust function from `bestAccounting`,
+/// because every pair drawn from that pre-filtered list already has equal
+/// accounting by construction, so the short-circuit below is a guaranteed
+/// no-op there; merging them into one function is therefore safe, not a
+/// divergence.
+///
+/// # Accounting short-circuit: measurement, not just comparison, is gated
+///
+/// TS's `compareTopology` checks `compareCapacityBeamEntryAccounting(first,
+/// second)` **first** and returns immediately on any non-zero result,
+/// *before* calling `topologyMeasurements.measure()` on either argument.
+/// This is not a pure comparison optimization: `measure()` has the side
+/// effect of incrementing the checkpoint-visible
+/// `topologyMeasurementCount`/`topologyMeasurementMs` counters (and, on a
+/// cache miss, running the real topology measurement). Skipping straight to
+/// `measure()` -- as this function previously did unconditionally -- still
+/// produces the *same relative order* (accounting differences already
+/// decide those pairs either way), but measures strictly more entries than
+/// TS ever does over `retainCapacityCohesionFrontier`'s unfiltered survivor
+/// list, which is directly observable in the capacity checkpoint's
+/// `integrityHash` preimage (`topologyRetentionDepths[].topologyMeasurementCount`/
+/// `topologyMeasurementMs`). Confirmed by direct preimage diffing against a
+/// real TS run (`tests/capacity_search_vectors.rs`'s checkpoint cases,
+/// `cohesion-frontier`/`cohesion-frontier-shadow`/`quality-frontier`
+/// retention modes): with this short-circuit missing, every case with more
+/// than one distinct-accounting measured survivor triggered one or more
+/// extra measurements TS's own comparator never performs.
 fn compare_topology_metric(
     topology_measurements: &CapacityTopologyMeasurements,
     first: &CapacityBeamEntry,
@@ -3403,6 +3441,10 @@ fn compare_topology_metric(
     metric: TopologyMetric,
     timing_now: &TimingNowFn,
 ) -> Ordering {
+    let accounting = compare_capacity_beam_entry_accounting(first, second);
+    if accounting != Ordering::Equal {
+        return accounting;
+    }
     let first_topology = topology_measurements.measure(first, timing_now);
     let second_topology = topology_measurements.measure(second, timing_now);
     match (&first_topology, &second_topology) {

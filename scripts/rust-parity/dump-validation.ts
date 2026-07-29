@@ -654,6 +654,14 @@ interface SpatialIndexSequenceCase {
     readonly resultOrdinals: number[]
   }>
   readonly matchesChecks: ReadonlyArray<{ readonly label: string; readonly result: boolean }>
+  /** `PlacedCollisionSpatialIndex.continuationIdentity()`'s own real TS
+   * output for this exact index -- added when ruling R22's byte-exactness
+   * carve-out was revoked (2026-07-30) so this string, once believed to
+   * only ever need Rust-to-Rust self-consistency, could be pinned against
+   * the real cross-language oracle directly (not just indirectly, nested
+   * inside `beam-state.json`/`strict-decoder.json`/`capacity-search.json`'s
+   * own `continuationMetadataIdentity`/`integrityHash` fields). */
+  readonly continuationIdentity: string
 }
 
 const spatialSequenceCases: SpatialIndexSequenceCase[] = []
@@ -717,7 +725,8 @@ function buildSpatialSequenceCase(input: {
     ),
     pieceValid: index.entries.map((entry) => entry.translated !== undefined),
     queries,
-    matchesChecks
+    matchesChecks,
+    continuationIdentity: index.continuationIdentity()
   })
 }
 
@@ -839,7 +848,8 @@ function buildSpatialSequenceCase(input: {
     matchesChecks: [
       { label: 'same-array', result: emptyIndex.matches([]) },
       { label: 'non-empty-array', result: emptyIndex.matches([placedPiece('empty-check', square(0, 1), 0, 0)]) }
-    ]
+    ],
+    continuationIdentity: emptyIndex.continuationIdentity()
   })
 }
 

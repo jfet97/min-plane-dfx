@@ -1176,14 +1176,19 @@ fn checkpoint_cases_match_ts() {
             }
             other => panic!("{label}: phaseLedger presence mismatch: {other:?}"),
         }
-        // `checkpoint.integrityHash` is deliberately **not** asserted here --
-        // see `checkpoint_integrity_hash_is_blocked_on_spatial_index_continuation_identity`
-        // below for the full root-cause writeup and a dedicated `#[ignore]`d
-        // reproduction of exactly this byte mismatch. Every other checkpoint
-        // field (including `requestFingerprint`, which does *not* embed the
-        // affected string) is still asserted byte-exact above, and the
-        // resumed second stage below still proves the checkpoint/resume
-        // round-trip itself is semantically correct.
+        // `checkpoint.integrityHash` was, until 2026-07-30, deliberately
+        // *not* asserted here -- see
+        // `checkpoint_integrity_hash_is_blocked_on_spatial_index_continuation_identity`
+        // below for the full root-cause writeup (now resolved) of the exact
+        // byte mismatch this used to hit. `IrregularBeamState::continuation_metadata_identity`
+        // embeds `PlacedCollisionSpatialIndex::continuation_identity()`,
+        // which is now byte-exact against TS, so `integrityHash` is asserted
+        // byte-exact here like every other checkpoint field.
+        assert_eq!(
+            checkpoint.integrity_hash,
+            get_str(expected_checkpoint, "integrityHash"),
+            "{label}: checkpoint.integrityHash"
+        );
 
         // Stage 2: resume with the Rust port's own stage-1 checkpoint, run to
         // completion, and compare against the recorded uninterrupted ground
@@ -1581,64 +1586,51 @@ fn total_vector_count_meets_floor() {
 }
 
 // ===========================================================================
-// KNOWN, ROOT-CAUSED, OUT-OF-FILE-OWNERSHIP BLOCKER: `checkpoint.integrityHash`
-// is not yet byte-exact against TS, because it embeds a string produced by a
-// sibling module this task must not edit.
+// RESOLVED 2026-07-30: `checkpoint.integrityHash` is now byte-exact against
+// TS. This test is kept (un-ignored, retitled) as a dedicated regression
+// test for the exact cross-module bug it originally reproduced.
 // ===========================================================================
 //
-// Root cause (confirmed via direct preimage diffing -- see the task notes for
-// the full investigation): `IrregularBeamState::continuation_metadata_identity`
+// Original root cause (confirmed via direct preimage diffing):
+// `IrregularBeamState::continuation_metadata_identity`
 // (`src/search/beam_state.rs`) embeds
 // `PlacedCollisionSpatialIndex::continuation_identity()`
-// (`src/validation/spatial_index.rs:261-299`), whose own doc comment
-// (`spatial_index.rs:~245-260`) explicitly states it is *not* required to be
-// byte-identical to the TS `continuationIdentity()`
+// (`src/validation/spatial_index.rs`), whose own doc comment used to state
+// it was *not* required to be byte-identical to the TS `continuationIdentity()`
 // (`placedCollisionSpatialIndex.ts:118-127`) because, at the time it was
-// written, no caller needed cross-language byte parity for it -- only
-// Rust-to-Rust self-consistency. `search::strict_decoder`'s checkpoint
-// integrity-hash preimage (`collectIntrinsicStrictDirectStateLineage`'s
+// written (`docs/planning/rust-irregular-backend/stage0-rulings.md` R22), no
+// caller needed cross-language byte parity for it -- only Rust-to-Rust
+// self-consistency. `search::strict_decoder`'s checkpoint integrity-hash
+// preimage (`collectIntrinsicStrictDirectStateLineage`'s
 // `continuationMetadataIdentity` field, TS `intrinsicStrictDecoder.ts:1106`)
-// is a **new** caller that retroactively requires exactly that byte parity,
-// which that sibling module's stated scope does not (yet) provide. Two
-// concrete divergences were isolated by diffing the real TS preimage
-// (captured by inlining `intrinsicStrictCanonicalJson` from
-// `intrinsicStrictDecoder.ts:1257-1277` in a throwaway script and verifying
-// it reproduces the real `checkpoint.integrityHash` exactly) against the
-// equivalent Rust preimage (captured via a temporary `eprintln!` in
-// `intrinsic_strict_direct_checkpoint_integrity_hash`, since neither side's
-// preimage-building function is otherwise observable from outside its own
-// module):
-//   1. `PlacedCollisionSpatialIndex::continuation_identity()` serializes
+// turned out to be exactly the cross-language caller R22's premise said
+// would never exist -- and `capacity::search`'s anytime-checkpoint
+// `integrityHash` preimage embeds the identical string via the identical
+// path, so the same fix closed both gaps at once. Two concrete divergences
+// were isolated by diffing the real TS preimage against the equivalent Rust
+// preimage:
+//   1. `PlacedCollisionSpatialIndex::continuation_identity()` serialized
 //      `cell_size_mm: f64` via plain `serde_json::to_string`, which renders a
 //      whole-valued float as `"64.0"`; TS's native `JSON.stringify` (used by
-//      `continuationIdentity()`) renders the same value as `"64"`. This is
-//      exactly the "reimplement JS's own number-to-string, don't rely on the
-//      host language's default" hazard this whole cluster's other GREEN
-//      modules route through `number_to_js_string` for.
-//   2. `continuation_identity()`'s `buckets` field is sorted by parsed
+//      `continuationIdentity()`) renders the same value as `"64"`. Fixed by
+//      routing `cellSizeMm` through
+//      `checkpoints::canonical_json::json_number_token`
+//      (`number_to_js_string`-backed), the same rule this whole cluster's
+//      other checkpoint-hash-preimage builders already use.
+//   2. `continuation_identity()`'s `buckets` field was sorted by parsed
 //      numeric `(cell_x, cell_y)` tuple; TS's counterpart sorts by
-//      `.localeCompare()` on the **stringified** `"x:y"` bucket key. These
-//      orders coincide for this test's single-digit, non-negative cell
-//      coordinates, but are a *second*, independent, latent divergence for
-//      any grid spanning two-digit or negative cell coordinates (see
-//      characterization-doc-style hazard 1 elsewhere in this cluster:
-//      `.localeCompare()` vs. ordinal/numeric order).
+//      `.localeCompare()` on the **stringified** `"x:y"` bucket key. Fixed
+//      by sorting with `checkpoints::canonical_json::locale_compare_keys`,
+//      this crate's empirically-validated `localeCompare` equivalent for
+//      ASCII keys.
 //
-// Both divergences live entirely inside `validation::spatial_index.rs`
-// (owned by a different concurrently-developed tower), which this task's
-// file-ownership rule forbids editing. This test exists so the exact byte
-// mismatch (and its root cause) is reproducible and re-checkable in one
-// place without re-deriving the investigation, and will start passing
-// automatically once that sibling module's `continuation_identity()` is
-// made byte-exact against `continuationIdentity()`. Every other checkpoint
-// field -- including `requestFingerprint`, which does not embed this string
-// -- is asserted byte-exact (and passes) in `checkpoint_cases_match_ts`
-// above.
+// `IrregularBeamState::contact_signature_continuation_identity` had the
+// identical `localeCompare`-vs-code-unit-order divergence (plus a latent
+// `count: f64` "1.0" vs. "1" rendering bug the byte-exact fix also
+// surfaced and closed) for the same reason; see that function's doc comment
+// and `tests/beam_state_vectors.rs`.
 #[test]
-#[ignore = "blocked on validation::spatial_index::PlacedCollisionSpatialIndex::continuation_identity() \
-            not yet being byte-exact against TS continuationIdentity() (see this test's doc comment); \
-            re-enable once that sibling module closes the cellSizeMm-formatting and bucket-sort-order gaps"]
-fn checkpoint_integrity_hash_is_blocked_on_spatial_index_continuation_identity() {
+fn checkpoint_integrity_hash_matches_ts_after_spatial_index_continuation_identity_fix() {
     let vectors = load_vectors();
     let nesting_settings = settings(&vectors);
     let cases = vectors["checkpointCases"]

@@ -44,8 +44,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use serde::Serialize;
-
+use crate::checkpoints::canonical_json::{json_number_token, locale_compare_keys};
 use crate::domain::{IrregularBounds, IrregularPlacedPiece, IrregularPoint};
 use crate::geometry::convex::{
     are_disjoint, translate_polygon_with_bounds, validate_strict_boundary, ConvexPolygonWinding,
@@ -239,63 +238,77 @@ impl PlacedCollisionSpatialIndex {
     /// TS source: `placedCollisionSpatialIndex.ts:118-127`
     /// (`continuationIdentity`).
     ///
-    /// Per `validation-spatial.md` §8/§12 hazard 1: the TS source re-sorts
-    /// its `buckets` entries by `String.prototype.localeCompare` on the
-    /// cell-key string with **no locale argument**, whose exact order is
-    /// empirically not plain byte/codepoint order and is not guaranteed
-    /// stable across Node/ICU builds. The document's own recommendation
-    /// (§12 hazard 1, "if not [crossing a checkpoint/persistence boundary]
-    /// ... implement the Rust equivalent with a plain, fully-specified,
-    /// locale-independent ordering (e.g. `(i64, i64)` tuple ordering by
-    /// parsed `(cellX, cellY)`") is applied here: this Rust
-    /// `continuation_identity()` sorts bucket entries by parsed
-    /// `(cell_x, cell_y)` integer-tuple order, not by any locale-collation
-    /// equivalent. §8 also establishes this string's only current consumers
-    /// compare it same-process/same-language to another same-runtime
-    /// invocation, so exact byte-for-byte reproduction of the TS string is
-    /// not required for behavioral correctness -- this Rust string is used
-    /// only for Rust-internal, Rust-to-Rust self-consistency checks by
-    /// future callers (not yet ported), so a distinct but equally
-    /// deterministic/injective total order is the correct choice here, not a
-    /// bug.
+    /// Byte-exact port of the TS original. Two divergences previously lived
+    /// here, sanctioned by
+    /// `docs/planning/rust-irregular-backend/stage0-rulings.md` R22 on the
+    /// premise that this string's only consumers compared it
+    /// same-process/same-language and so never needed cross-language byte
+    /// parity:
+    /// 1. `cellSizeMm` was rendered via plain `serde_json` `f64`
+    ///    `Serialize`, which prints a whole-valued float with a trailing
+    ///    `.0` (`"64.0"`) where JS `JSON.stringify` prints `"64"`. Fixed
+    ///    here by rendering `cellSizeMm` through
+    ///    [`json_number_token`](crate::checkpoints::canonical_json::json_number_token)
+    ///    (`JSON.stringify`'s own number-token rule, backed by
+    ///    `number_to_js_string`), exactly like every other checkpoint-hash-
+    ///    preimage builder in this crate.
+    /// 2. `buckets` was sorted by parsed `(cellX, cellY)` integer-tuple
+    ///    order instead of TS's own `[...this.buckets.entries()]
+    ///    .toSorted(([first], [second]) => first.localeCompare(second))`
+    ///    (`placedCollisionSpatialIndex.ts:122-124`). Fixed here by sorting
+    ///    with
+    ///    [`locale_compare_keys`](crate::checkpoints::canonical_json::locale_compare_keys),
+    ///    this crate's empirically-validated `localeCompare` equivalent for
+    ///    ASCII keys (every cell key is `"{cellX}:{cellY}"`, always ASCII).
+    ///
+    /// R22's carve-out was revoked 2026-07-30 once it was discovered that
+    /// this string is not, in fact, isolated to same-language consumers:
+    /// `search::beam_state::IrregularBeamState::continuation_metadata_identity`
+    /// embeds this string directly, and that string is in turn embedded in
+    /// both `search::strict_decoder`'s
+    /// `IntrinsicStrictDirectCheckpoint.integrityHash` preimage and
+    /// `capacity::search`'s anytime-checkpoint `integrityHash` preimage --
+    /// both cross-language, parity-gated SHA-256 hashes. See
+    /// `tests/strict_decoder_vectors.rs::checkpoint_integrity_hash_is_blocked_on_spatial_index_continuation_identity`
+    /// (now un-`#[ignore]`d) and `tests/capacity_search_vectors.rs`'s
+    /// checkpoint case for the vector-pinned proof.
     pub fn continuation_identity(&self) -> String {
-        let mut bucket_rows: Vec<(i64, i64, String, Vec<usize>)> = self
+        let mut bucket_rows: Vec<(&String, Vec<usize>)> = self
             .buckets
             .iter()
             .map(|(key, entries)| {
-                let (cell_x, cell_y) = parse_cell_key(key);
                 let ordinals = entries.iter().map(|entry| entry.ordinal).collect();
-                (cell_x, cell_y, key.clone(), ordinals)
+                (key, ordinals)
             })
             .collect();
-        bucket_rows.sort_by_key(|(cell_x, cell_y, _, _)| (*cell_x, *cell_y));
+        bucket_rows.sort_by(|(first, _), (second, _)| locale_compare_keys(first, second));
 
-        #[derive(Serialize)]
-        struct Identity {
-            #[serde(rename = "cellSizeMm")]
-            cell_size_mm: f64,
-            #[serde(rename = "entryOrdinals")]
-            entry_ordinals: Vec<usize>,
-            buckets: Vec<(String, Vec<usize>)>,
-            #[serde(rename = "fallbackOrdinals")]
-            fallback_ordinals: Vec<usize>,
-        }
+        let entry_ordinals: Vec<usize> = self.entries.iter().map(|entry| entry.ordinal).collect();
+        let fallback_ordinals: Vec<usize> = self
+            .fallback_entries
+            .iter()
+            .map(|entry| entry.ordinal)
+            .collect();
 
-        let identity = Identity {
-            cell_size_mm: self.cell_size_mm,
-            entry_ordinals: self.entries.iter().map(|entry| entry.ordinal).collect(),
-            buckets: bucket_rows
-                .into_iter()
-                .map(|(_, _, key, ordinals)| (key, ordinals))
-                .collect(),
-            fallback_ordinals: self
-                .fallback_entries
-                .iter()
-                .map(|entry| entry.ordinal)
-                .collect(),
-        };
+        let buckets_json = bucket_rows
+            .into_iter()
+            .map(|(key, ordinals)| {
+                format!(
+                    "[{},{}]",
+                    serde_json::to_string(key).expect("cell key always serializes"),
+                    serde_json::to_string(&ordinals).expect("ordinals always serialize"),
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(",");
 
-        serde_json::to_string(&identity).expect("continuation identity always serializes")
+        format!(
+            "{{\"cellSizeMm\":{},\"entryOrdinals\":{},\"buckets\":[{}],\"fallbackOrdinals\":{}}}",
+            json_number_token(self.cell_size_mm),
+            serde_json::to_string(&entry_ordinals).expect("entry ordinals always serialize"),
+            buckets_json,
+            serde_json::to_string(&fallback_ordinals).expect("fallback ordinals always serialize"),
+        )
     }
 
     /// TS source: `placedCollisionSpatialIndex.ts:129-156` (`query`).
@@ -469,27 +482,6 @@ fn is_js_safe_integer(value: f64) -> bool {
 /// TS source: `placedCollisionSpatialIndex.ts:244-246` (`cellKey`).
 fn cell_key(cell_x: i64, cell_y: i64) -> String {
     format!("{cell_x}:{cell_y}")
-}
-
-/// Parses a `cellKey`-shaped string (`"{cellX}:{cellY}"`) back into its
-/// integer pair, for [`PlacedCollisionSpatialIndex::continuation_identity`]'s
-/// locale-independent bucket ordering. Every key passed here was itself
-/// produced by [`cell_key`], so the split/parse never fails in practice; a
-/// malformed key defensively falls back to `(0, 0)` rather than panicking
-/// (this has no TS counterpart -- `continuation_identity`'s ordering is a
-/// Rust-side design choice, not a ported function; see that method's doc
-/// comment).
-fn parse_cell_key(key: &str) -> (i64, i64) {
-    let mut parts = key.splitn(2, ':');
-    let cell_x = parts
-        .next()
-        .and_then(|s| s.parse::<i64>().ok())
-        .unwrap_or(0);
-    let cell_y = parts
-        .next()
-        .and_then(|s| s.parse::<i64>().ok())
-        .unwrap_or(0);
-    (cell_x, cell_y)
 }
 
 /// TS source: `placedCollisionSpatialIndex.ts:248-252` (`validCellSize`).
@@ -780,6 +772,37 @@ mod tests {
     fn cell_key_format_matches_ts_template_literal() {
         assert_eq!(cell_key(-3, 5), "-3:5");
         assert_eq!(cell_key(0, 0), "0:0");
-        assert_eq!(parse_cell_key("-3:5"), (-3, 5));
+    }
+
+    #[test]
+    fn continuation_identity_renders_whole_valued_cell_size_without_trailing_zero() {
+        let index = make_empty_placed_collision_spatial_index(Some(64.0));
+        assert!(
+            index
+                .continuation_identity()
+                .starts_with(r#"{"cellSizeMm":64,"#),
+            "cellSizeMm must render as \"64\", not \"64.0\" (JSON.stringify parity): {}",
+            index.continuation_identity()
+        );
+    }
+
+    #[test]
+    fn continuation_identity_sorts_buckets_by_locale_compare_not_numeric_order() {
+        // Cell size 1.0 puts squares at x=0 and x=12 into buckets "0:0" and
+        // "12:0". Plain numeric order keeps "0:0" before "12:0" (0 < 12);
+        // ordinal/code-unit order also keeps "0:0" before "12:0" ('0' < '1').
+        // `localeCompare`'s two-level collation of digit-only ASCII strings
+        // agrees with both here, so this alone would not distinguish a
+        // regression back to numeric-tuple order -- the real proof is the
+        // byte-exact vector comparison in `tests/beam_state_vectors.rs` and
+        // `tests/strict_decoder_vectors.rs`, which embed real TS-computed
+        // ground truth. This test only pins that both far-apart cell keys
+        // land in the output deterministically and legibly.
+        let pieces: Vec<Arc<IrregularPlacedPiece>> =
+            vec![square_piece(0.0, 0.0, 1.0), square_piece(12.0, 0.0, 1.0)];
+        let index = make_placed_collision_spatial_index(&pieces, Some(1.0));
+        let identity = index.continuation_identity();
+        assert!(identity.contains(r#"["0:0","#));
+        assert!(identity.contains(r#"["12:0","#));
     }
 }

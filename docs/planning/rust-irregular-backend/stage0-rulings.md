@@ -91,14 +91,55 @@ them.
   to a verbatim port of V8's ieee754 implementations. No tolerance may ever
   migrate into comparators, keys, or hashes.
 
-- **R22 — spatial-index continuation identity ordering.** The Rust
-  `PlacedCollisionSpatialIndex::continuation_identity` sorts bucket rows by
-  parsed (cell_x, cell_y) integer tuples instead of replicating TS's unseeded
-  `localeCompare` for the same JSON — per characterization
-  `validation-spatial.md` §12 hazard 1: this identity never crosses a
-  checkpoint, hash, or process boundary; it is a same-process self-consistency
-  check whose only requirement is internal determinism. Formal carve-out from
-  R8 granted for this single call site.
+- **R22 — spatial-index continuation identity ordering — REVOKED 2026-07-30.**
+  Originally: the Rust `PlacedCollisionSpatialIndex::continuation_identity`
+  sorted bucket rows by parsed (cell_x, cell_y) integer tuples instead of
+  replicating TS's unseeded `localeCompare` for the same JSON, and rendered
+  `cellSizeMm` via plain `serde_json` `f64` `Serialize` (`"64.0"` instead of
+  JS's `"64"`) — per characterization `validation-spatial.md` §12 hazard 1,
+  on the premise that this identity never crosses a checkpoint, hash, or
+  process boundary and is a same-process self-consistency check whose only
+  requirement is internal determinism. A formal carve-out from R8 was
+  granted for this single call site on that premise.
+
+  That premise was found false on 2026-07-30: `search::beam_state::IrregularBeamState::continuation_metadata_identity`
+  embeds `continuation_identity()`'s string directly, and that embedded
+  string is itself part of both `search::strict_decoder`'s
+  `IntrinsicStrictDirectCheckpoint.integrityHash` preimage and
+  `capacity::search`'s `IntrinsicAnytimeCheckpoint.integrityHash` preimage —
+  both cross-language, parity-gated SHA-256 hashes compared byte-for-byte
+  against the TS oracle. The carve-out is revoked; `continuation_identity()`
+  is now byte-exact against TS `continuationIdentity()` (cell keys sorted via
+  `checkpoints::canonical_json::locale_compare_keys`, `cellSizeMm` rendered
+  via `checkpoints::canonical_json::json_number_token`). The same
+  false-premise pattern was found and fixed in
+  `search::beam_state::IrregularBeamState::contact_signature_continuation_identity`
+  (also embedded in the same checkpoint preimages via
+  `continuation_metadata_identity`), which had both the identical
+  `localeCompare`-vs-code-unit-order divergence and a latent `count: f64`
+  "1.0"-vs-"1" JSON-number-rendering bug; both are now byte-exact and sort
+  via `locale_compare_keys` too.
+
+  Byte-exactness is vector-pinned: `tests/vectors/validation.json`'s
+  `spatialIndex` cases now record each case's real TS
+  `continuationIdentity()` string directly (asserted in
+  `tests/validation_vectors.rs::spatial_index_sequences_match_ts_oracle`);
+  `tests/beam_state_vectors.rs` asserts `contactSignatureContinuationIdentity`/
+  `continuationMetadataIdentity` byte-exact (previously content-equivalence
+  only); `tests/strict_decoder_vectors.rs`'s
+  `checkpoint_integrity_hash_matches_ts_after_spatial_index_continuation_identity_fix`
+  (previously `#[ignore]`d) and `checkpoint_cases_match_ts` both assert
+  `checkpoint.integrityHash` byte-exact; `tests/capacity_search_vectors.rs`'s
+  checkpoint case asserts the same for the capacity checkpoint. Fixing the
+  capacity checkpoint's `integrityHash` additionally required an unrelated,
+  independently-discovered fix in `capacity::search::compare_topology_metric`
+  (a missing `compareCapacityBeamEntryAccounting` short-circuit before
+  calling `topologyMeasurements.measure()`, which caused extra topology
+  measurements — and therefore a diverging `topologyMeasurementCount`/
+  `topologyMeasurementMs` in the checkpoint preimage — for every
+  `cohesion-frontier`/`cohesion-frontier-shadow`/`quality-frontier` retention
+  case with more than one distinct-accounting measured survivor); see that
+  function's own doc comment for the full root-cause writeup.
 
 ## Checkpoints and timing
 

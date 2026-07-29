@@ -28,6 +28,12 @@
 //!   `compareCanonicalKeys` (`irregularBeamState.ts:867-871`); see that
 //!   function's own doc comment, which names `compareCanonicalKeys` as a
 //!   confirmed call site.
+//! - `checkpoints::canonical_json::locale_compare_keys` -- this crate's
+//!   empirically-validated `localeCompare` equivalent for ASCII keys, used
+//!   by `IrregularBeamState::contact_signature_continuation_identity` to
+//!   reproduce `contactSignatureContinuationIdentity`'s
+//!   `first.localeCompare(second)` sort (`irregularBeamState.ts:166-168`)
+//!   byte-exactly; see ruling R22.
 //! - `js_number::{fold_negative_zero, is_safe_integer}`,
 //!   `js_number::js_math::{min, max, floor, sign}` -- the JS-`Number`/`Math`
 //!   semantics primitives this file's arithmetic depends on.
@@ -91,6 +97,7 @@ use std::time::Instant;
 use crate::canonical_grid::contact::measure_shared_convex_polygon_boundary_contact;
 use crate::checkpoints::canonical_json::{
     canonical_entry_list_key, canonical_number, canonical_record, canonical_token,
+    json_number_token, locale_compare_keys,
 };
 #[cfg(test)]
 use crate::domain::IrregularPlacement;
@@ -456,46 +463,59 @@ impl IrregularBeamState {
     /// against Node v24; see [`Self::continuation_metadata_identity`]'s doc
     /// for why the distinction is load-bearing one level up).
     ///
-    /// # Sort order: NOT byte-parity with TS's `localeCompare`
+    /// # Sort order: byte-exact `localeCompare` parity
     ///
-    /// TS sorts `[...map.entries()]` by
-    /// `first.localeCompare(second)` (`irregularBeamState.ts:166-168`), the
-    /// ICU-backed default-locale collator, before serializing. This function
-    /// sorts by [`cmp_js_code_units`] (plain UTF-16 code-unit order)
-    /// instead. These are **not** provably equivalent for this content
-    /// class: empirically verified against Node v24 (`en-US` default
-    /// locale) that `localeCompare` genuinely reorders pairs of these
-    /// digit/colon/hyphen-only structural-contact-signature strings
-    /// differently from code-unit order (e.g. `"12:3:4:5:1:2:6:7"
-    /// .localeCompare("12:30:4")` is `-1` while plain `<` says the opposite)
-    /// -- ICU's default collation treats `:`/`-`/`.` as low-weight
-    /// "variable" punctuation, which ordinary UTF-16 code-unit comparison
-    /// does not replicate, and this crate cannot add an ICU-backed
-    /// dependency (out of this task's file-ownership scope: `Cargo.toml` is
-    /// not an editable file here). This is the same hazard class
-    /// `validation::spatial_index::PlacedCollisionSpatialIndex::continuation_identity`
-    /// already documents and resolves the same way, for the same reason: per
-    /// `search-scoring.md` §5.3, this value's only confirmed use
-    /// (`intrinsicCapacitySearch.ts:1393-1394`, not ported here) is an
-    /// **equality** check between two same-process, same-language
-    /// computations of the same underlying state (a staleness assertion),
-    /// never a cross-process/cross-language byte comparison against a
-    /// TS-produced string -- so a distinct but equally
-    /// deterministic/content-sensitive/injective total order is the correct
-    /// choice here, not a bug. A Rust port that needs true `localeCompare`
-    /// parity for this specific string must add a real Unicode-collation
-    /// dependency, which is out of this module's scope.
+    /// TS sorts `[...map.entries()]` by `first.localeCompare(second)`
+    /// (`irregularBeamState.ts:166-168`), the ICU-backed default-locale
+    /// collator, before serializing. This function previously sorted by
+    /// [`cmp_js_code_units`] (plain UTF-16 code-unit order) instead, on the
+    /// premise that this value's only confirmed consumer
+    /// (`intrinsicCapacitySearch.ts:1393-1394`, not ported here) was a
+    /// same-process, same-language equality check (a staleness assertion),
+    /// never a cross-language byte comparison -- see
+    /// `docs/planning/rust-irregular-backend/stage0-rulings.md` R22. That
+    /// premise was revoked 2026-07-30: this string is embedded (via
+    /// [`Self::continuation_metadata_identity`]) in both
+    /// `search::strict_decoder`'s and `capacity::search`'s
+    /// cross-language, parity-gated checkpoint `integrityHash` preimages.
+    /// This function now sorts by
+    /// [`locale_compare_keys`](crate::checkpoints::canonical_json::locale_compare_keys),
+    /// this crate's empirically-validated `localeCompare` equivalent for
+    /// ASCII keys (every structural-contact-signature string is ASCII
+    /// digits/colons/hyphens), matching Encoders B/C's own key-sort in
+    /// `checkpoints::canonical_json` exactly.
+    ///
+    /// # Count rendering: `json_number_token`, not `serde_json`'s `f64` default
+    ///
+    /// `count` is stored as `f64` (every JS `number` is), always a
+    /// non-negative integer by construction. Rendering the `(String, f64)`
+    /// pair list through a single `serde_json::to_string` call (as this
+    /// function previously did) would print a whole-valued count like `1.0`
+    /// with a trailing `.0`, exactly the hazard
+    /// [`json_number_token`](crate::checkpoints::canonical_json::json_number_token)
+    /// exists to avoid -- JS `JSON.stringify` prints `1`, never `1.0`. This
+    /// function therefore builds the `[[signature,count],...]` JSON string
+    /// by hand, routing `count` through `json_number_token` the same way
+    /// [`PlacedCollisionSpatialIndex::continuation_identity`] routes
+    /// `cellSizeMm`.
     pub fn contact_signature_continuation_identity(&self) -> Option<String> {
         let counts = self
             .near_complete_structural_contact_signature_counts
             .as_ref()?;
         let mut entries: Vec<(&String, &f64)> = counts.iter().collect();
-        entries.sort_by(|(first, _), (second, _)| cmp_js_code_units(first, second));
-        let pairs: Vec<(String, f64)> = entries
+        entries.sort_by(|(first, _), (second, _)| locale_compare_keys(first, second));
+        let pairs_json = entries
             .into_iter()
-            .map(|(signature, count)| (signature.clone(), *count))
-            .collect();
-        Some(serde_json::to_string(&pairs).expect("signature counts always serialize"))
+            .map(|(signature, count)| {
+                format!(
+                    "[{},{}]",
+                    serde_json::to_string(signature).expect("signature always serializes"),
+                    json_number_token(*count),
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(",");
+        Some(format!("[{pairs_json}]"))
     }
 
     /// TS: `irregularBeamState.ts:172-253` `withPlacement` -- the hot-path

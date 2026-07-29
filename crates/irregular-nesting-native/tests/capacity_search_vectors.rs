@@ -20,26 +20,28 @@
 //!   reaches the identical final status/endpoints/trace the TS dump script
 //!   recorded from its own uninterrupted (unbounded) run on the same input.
 //!
-//! # Known, out-of-scope limitation: `integrityHash` is not cross-language
-//! # byte-exact
+//! # `integrityHash`: byte-exact against TS since 2026-07-30
 //!
 //! The checkpoint's `integrityHash` preimage embeds
 //! `IrregularBeamState::continuation_metadata_identity()`, which embeds
-//! `validation::spatial_index::PlacedCollisionSpatialIndex::continuation_identity()`
-//! -- a module outside this task's file-ownership scope. That function's own
-//! doc comment documents two deliberate TS-divergences (bucket order via
-//! parsed integer-tuple order instead of TS's locale-collated string order;
-//! `cellSizeMm` via plain `serde_json` `f64` `Serialize`, rendering `"64.0"`
-//! where JS renders `"64"`) as acceptable *because* every consumer at the
-//! time that comment was written was same-process/same-language. This
-//! checkpoint's cross-language integrity hash is exactly the "future caller"
-//! that doc comment anticipated but did not resolve -- confirmed by direct
-//! byte-level preimage diffing during this task's own verification pass
-//! (first divergent byte lands inside `"cellSizeMm":64` vs `"cellSizeMm":64.0`).
+//! `validation::spatial_index::PlacedCollisionSpatialIndex::continuation_identity()`.
+//! That function's own doc comment used to document two deliberate
+//! TS-divergences (bucket order via parsed integer-tuple order instead of
+//! TS's locale-collated string order; `cellSizeMm` via plain `serde_json`
+//! `f64` `Serialize`, rendering `"64.0"` where JS renders `"64"`) as
+//! acceptable *because* every consumer at the time that comment was written
+//! was same-process/same-language (`docs/planning/rust-irregular-backend/stage0-rulings.md`
+//! R22). This checkpoint's cross-language integrity hash turned out to be
+//! exactly the "future caller" that doc comment anticipated but did not yet
+//! resolve -- confirmed by direct byte-level preimage diffing (first
+//! divergent byte landed inside `"cellSizeMm":64` vs `"cellSizeMm":64.0`).
+//! R22's carve-out was revoked and `continuation_identity()` is now
+//! byte-exact against TS (routes `cellSizeMm` through
+//! `checkpoints::canonical_json::json_number_token` and sorts buckets via
+//! `checkpoints::canonical_json::locale_compare_keys`), so
 //! `checkpoint_cases_reproduce_ts_hash_fields_and_resume_to_the_recorded_ground_truth`
-//! below asserts what *is* achievable (requestFingerprint, hash shape,
-//! Rust-to-Rust resume self-consistency) and documents this precisely at its
-//! own assertion site rather than silently working around it.
+//! below now asserts `integrityHash` byte-exact like every other checkpoint
+//! field.
 
 use std::cell::Cell;
 use std::collections::HashMap;
@@ -646,54 +648,35 @@ fn checkpoint_cases_reproduce_ts_hash_fields_and_resume_to_the_recorded_ground_t
                 .expect("requestFingerprint present"),
             "{case_id}: requestFingerprint"
         );
-        // NOT asserted equal to the recorded TS `integrityHash` byte-for-byte:
-        // the preimage embeds `IrregularBeamState::continuation_metadata_identity()`,
-        // which in turn embeds
-        // `validation::spatial_index::PlacedCollisionSpatialIndex::continuation_identity()`
-        // -- a module outside this task's file-ownership scope whose own doc
-        // comment (`validation/spatial_index.rs`, on `continuation_identity`)
-        // explicitly documents two independent, deliberate TS-divergences as
-        // acceptable *because* "this string's only current consumers compare
-        // it same-process/same-language to another same-runtime invocation
-        // ... not required for behavioral correctness": (a) bucket order is
-        // sorted by parsed `(cellX, cellY)` integer-tuple order rather than
-        // TS's own locale-collated cell-key string order, and (b) `cellSizeMm`
-        // is serialized via plain `serde_json` `f64` `Serialize`, which
-        // renders whole-number floats with a trailing `.0` (`"64.0"`) where
-        // JS `JSON.stringify` renders `"64"` -- confirmed by direct byte-level
-        // preimage diffing during this task's own verification pass. That
-        // doc comment's own "future callers" caveat is exactly this
-        // checkpoint's cross-language integrity hash, which the module was
-        // never proven against. Byte-exact `integrityHash` cross-language
-        // reproduction is therefore not achievable without a fix inside that
-        // out-of-scope file; this is reported as a finding, not silently
-        // worked around. What *is* verified here: (1) `requestFingerprint`
-        // above, which never touches `continuation_identity()`; (2) the
-        // recorded hash's shape (a genuine SHA-256 hex digest); (3) this
-        // crate's own resume validation below, which recomputes and checks
-        // *this exact same* `integrity_hash` against *its own* checkpoint
-        // internally (`validate_intrinsic_capacity_checkpoint`) -- proving
-        // Rust-to-Rust round-trip self-consistency, the same guarantee the
-        // out-of-scope module's own doc comment already relies on elsewhere.
+        // Byte-exact against the recorded TS `integrityHash` since
+        // 2026-07-30: the preimage embeds
+        // `IrregularBeamState::continuation_metadata_identity()`, which in
+        // turn embeds
+        // `validation::spatial_index::PlacedCollisionSpatialIndex::continuation_identity()`.
+        // That function's own doc comment used to document two independent,
+        // deliberate TS-divergences (bucket order sorted by parsed
+        // `(cellX, cellY)` integer-tuple order rather than TS's own
+        // locale-collated cell-key string order; `cellSizeMm` serialized via
+        // plain `serde_json` `f64` `Serialize`, rendering whole-number
+        // floats with a trailing `.0` (`"64.0"`) where JS `JSON.stringify`
+        // renders `"64"`) as acceptable under ruling R22, on the premise
+        // that this string's only consumers compared it
+        // same-process/same-language. This checkpoint's cross-language
+        // integrity hash was exactly the "future caller" that premise did
+        // not anticipate; R22 was revoked once that was discovered, and
+        // `continuation_identity()` was made byte-exact against TS
+        // (`cellSizeMm` via `checkpoints::canonical_json::json_number_token`,
+        // bucket order via `checkpoints::canonical_json::locale_compare_keys`).
+        // See `docs/planning/rust-irregular-backend/stage0-rulings.md` R22
+        // and `tests/strict_decoder_vectors.rs`'s
+        // `checkpoint_integrity_hash_matches_ts_after_spatial_index_continuation_identity_fix`
+        // for the sibling fix/proof on the strict-decoder checkpoint.
         assert_eq!(
-            checkpoint.integrity_hash.len(),
-            64,
-            "{case_id}: integrity_hash length"
-        );
-        assert!(
-            checkpoint
-                .integrity_hash
-                .chars()
-                .all(|c| c.is_ascii_hexdigit()),
-            "{case_id}: integrity_hash must be a hex digest"
-        );
-        assert_eq!(
+            checkpoint.integrity_hash,
             case["integrityHash"]
                 .as_str()
-                .expect("integrityHash present")
-                .len(),
-            64,
-            "{case_id}: recorded TS integrityHash length"
+                .expect("integrityHash present"),
+            "{case_id}: integrity_hash"
         );
         assert_f64_bits_eq(
             checkpoint.next_depth,

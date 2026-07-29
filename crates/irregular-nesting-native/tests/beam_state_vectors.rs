@@ -7,27 +7,29 @@
 //! ring-key invariance sweep, incremental-state-chain snapshot, `-0`
 //! coordinate case, and insertion-order dedup-identity proof.
 //!
-//! # `localeCompare`-dependent fields: content-equivalence, not byte-equality
+//! # `localeCompare`-dependent fields: now byte-exact
 //!
 //! Two fields in the recorded snapshots
 //! (`contactSignatureContinuationIdentity`, and the
 //! `nearCompleteStructuralContactSignatureCounts` sub-string embedded inside
 //! `continuationMetadataIdentity`) are sorted by TS's locale-sensitive
-//! `String.prototype.localeCompare` before serialization. Per
-//! `search::beam_state::IrregularBeamState::contact_signature_continuation_identity`'s
-//! own doc comment (which documents an empirically-verified, genuine
-//! divergence from plain UTF-16 code-unit order for this content class, and
-//! this crate's inability to add an ICU-backed dependency), this Rust port
-//! deliberately uses a different-but-equally-deterministic order. This test
-//! therefore verifies **content equivalence** (decode both sides' JSON
-//! payload, sort by a shared Rust-only order, compare) for those two
-//! sub-fields rather than raw string equality -- exactly the same principle
-//! `validation::spatial_index::PlacedCollisionSpatialIndex::continuation_identity`
-//! already established for its own `localeCompare` field. Every other
-//! recorded field (every canonical key, every bound, every contact metric,
-//! `canonicalEntryContinuationIdentity`, and the `canonicalEntryKeys`
-//! sub-string embedded inside `continuationMetadataIdentity`) is asserted
-//! byte-exact.
+//! `String.prototype.localeCompare` before serialization. Until 2026-07-30
+//! (ruling R22), `search::beam_state::IrregularBeamState::contact_signature_continuation_identity`
+//! sorted these by plain UTF-16 code-unit order instead (a different-but-
+//! equally-deterministic order, sanctioned on the premise that this value's
+//! only consumer was a same-process, same-language equality check), and this
+//! test correspondingly verified content-equivalence (decode both sides,
+//! sort by a shared Rust-only order, compare) rather than raw string
+//! equality for those two sub-fields. That premise was revoked once these
+//! strings were found to feed cross-language, parity-gated checkpoint
+//! `integrityHash` preimages (`search::strict_decoder`,
+//! `capacity::search`); `contact_signature_continuation_identity` now sorts
+//! via `checkpoints::canonical_json::locale_compare_keys`, and this test
+//! asserts every recorded field -- including these two -- byte-exact
+//! against the TS oracle. `validation::spatial_index::PlacedCollisionSpatialIndex::continuation_identity`
+//! (embedded in `continuationMetadataIdentity`'s `placedCollisionIndex`
+//! field) received the identical fix for the identical reason; see that
+//! function's own doc comment.
 
 use std::fs;
 use std::sync::Arc;
@@ -260,97 +262,21 @@ fn decode_placed_piece(value: &Value) -> Arc<IrregularPlacedPiece> {
     })
 }
 
-/// Decodes a `contactSignatureContinuationIdentity`-shaped JSON string
-/// (`[[signature, count], ...]`) into a canonically-sorted `(String, f64)`
-/// vector, for order-independent content comparison (see this file's top
-/// doc, "`localeCompare`-dependent fields").
-fn decode_signature_pairs_sorted(json_str: &str) -> Vec<(String, u64)> {
-    let value: Value = serde_json::from_str(json_str)
-        .unwrap_or_else(|err| panic!("invalid signature-pairs JSON: {err}"));
-    let mut pairs: Vec<(String, u64)> = value
-        .as_array()
-        .expect("signature pairs is a JSON array")
-        .iter()
-        .map(|entry| {
-            let tuple = entry.as_array().expect("signature pair is a 2-tuple");
-            let signature = tuple[0]
-                .as_str()
-                .expect("signature is a string")
-                .to_string();
-            // Counts are always non-negative safe integers by construction
-            // (`is_safe_integer` guarded throughout `beam_state.rs`); bit
-            // pattern is irrelevant here, only the exact integer value.
-            let count = tuple[1].as_f64().expect("count is a number") as u64;
-            (signature, count)
-        })
-        .collect();
-    pairs.sort();
-    pairs
-}
-
-fn assert_contact_signature_identity_content_matches(
+/// Byte-exact comparison of `contactSignatureContinuationIdentity` against
+/// the recorded TS ground truth (see this file's top doc, "`localeCompare`
+/// fields now byte-exact"): `Self::contact_signature_continuation_identity`
+/// sorts via `locale_compare_keys`, this crate's empirically-validated
+/// `localeCompare` equivalent, so no order-independent fallback is needed
+/// any more.
+fn assert_contact_signature_identity_matches(
     actual: Option<String>,
     expected_value: &Value,
     label: &str,
 ) {
     let expected = decode_optional_string(expected_value);
-    match (actual, expected) {
-        (None, None) => {}
-        (Some(actual_str), Some(expected_str)) => {
-            assert_eq!(
-                decode_signature_pairs_sorted(&actual_str),
-                decode_signature_pairs_sorted(&expected_str),
-                "{label}: contact signature continuation identity CONTENT (order-independent) mismatch"
-            );
-        }
-        (actual, expected) => panic!(
-            "{label}: contact signature continuation identity presence mismatch \
-             (actual={actual:?}, expected present={})",
-            expected.is_some()
-        ),
-    }
-}
-
-/// Structurally validates `continuation_metadata_identity()` against the
-/// recorded TS string: decodes both as JSON objects, asserts the
-/// `canonicalEntryKeys` field is byte-identical (no locale dependency), the
-/// `nearCompleteStructuralContactSignatureCounts` key's *presence* matches
-/// (content already independently verified via
-/// [`assert_contact_signature_identity_content_matches`] on the un-nested
-/// value), and the `placedCollisionIndex` field is present as a non-empty
-/// string (its exact bytes are deliberately not compared -- see
-/// `validation::spatial_index::PlacedCollisionSpatialIndex::continuation_identity`'s
-/// own doc for why that field's `localeCompare`-derived bytes are not
-/// ported byte-exact either).
-fn assert_continuation_metadata_identity_matches(
-    actual: &str,
-    expected_str: &str,
-    expected_contact_signature_present: bool,
-    label: &str,
-) {
-    let actual_value: Value = serde_json::from_str(actual).unwrap_or_else(|err| {
-        panic!("{label}: actual continuationMetadataIdentity not valid JSON: {err}")
-    });
-    let expected_value: Value = serde_json::from_str(expected_str).unwrap_or_else(|err| {
-        panic!("{label}: expected continuationMetadataIdentity not valid JSON: {err}")
-    });
-
     assert_eq!(
-        actual_value["canonicalEntryKeys"], expected_value["canonicalEntryKeys"],
-        "{label}: continuationMetadataIdentity.canonicalEntryKeys mismatch"
-    );
-    assert_eq!(
-        actual_value
-            .get("nearCompleteStructuralContactSignatureCounts")
-            .is_some(),
-        expected_contact_signature_present,
-        "{label}: continuationMetadataIdentity nearCompleteStructuralContactSignatureCounts presence mismatch"
-    );
-    assert!(
-        actual_value["placedCollisionIndex"]
-            .as_str()
-            .is_some_and(|s| !s.is_empty()),
-        "{label}: continuationMetadataIdentity.placedCollisionIndex must be a non-empty string"
+        actual, expected,
+        "{label}: contactSignatureContinuationIdentity mismatch"
     );
 }
 
@@ -528,18 +454,17 @@ fn assert_snapshot_matches(state: &Arc<IrregularBeamState>, expected: &Value, la
             .expect("canonicalEntryContinuationIdentity present"),
         "{label}: canonicalEntryContinuationIdentity mismatch"
     );
-    assert_contact_signature_identity_content_matches(
+    assert_contact_signature_identity_matches(
         state.contact_signature_continuation_identity(),
         &expected["contactSignatureContinuationIdentity"],
         label,
     );
-    assert_continuation_metadata_identity_matches(
-        &state.continuation_metadata_identity(),
+    assert_eq!(
+        state.continuation_metadata_identity(),
         expected["continuationMetadataIdentity"]
             .as_str()
             .expect("continuationMetadataIdentity present"),
-        decode_optional_string(&expected["contactSignatureContinuationIdentity"]).is_some(),
-        label,
+        "{label}: continuationMetadataIdentity mismatch"
     );
 
     assert_quarter_turn_result(

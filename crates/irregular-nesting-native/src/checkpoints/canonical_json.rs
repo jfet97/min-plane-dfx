@@ -121,7 +121,20 @@ fn json_string_literal(value: &str) -> String {
 /// `checkpoint-encoding.md` §7); every finite value (including `-0`, which
 /// renders as `"0"`, not `"-0"`) uses ECMAScript `Number::toString` via
 /// [`number_to_js_string`].
-fn json_number_token(value: f64) -> String {
+///
+/// `pub(crate)` (not just `fn`) specifically so any other module that hand-
+/// builds a `JSON.stringify`-equivalent string for a plain `f64` field --
+/// rather than routing through one of this module's four full encoders --
+/// can reuse this exact number-rendering rule instead of re-deriving it.
+/// Confirmed reused by `validation::spatial_index::PlacedCollisionSpatialIndex::continuation_identity`
+/// (`cellSizeMm`) and `search::beam_state::IrregularBeamState::contact_signature_continuation_identity`
+/// (the signature-count field), both of which build a raw `JSON.stringify`
+/// preimage by hand for the same reason this module's encoders exist: a
+/// checkpoint/dedup-identity hash preimage that must reproduce TS's
+/// `Number::toString` rendering exactly, not Rust's default `f64`
+/// `Serialize` (which renders whole-valued floats like `64.0` with a
+/// trailing `.0` that JS never emits).
+pub(crate) fn json_number_token(value: f64) -> String {
     if value.is_nan() || value.is_infinite() {
         "null".to_string()
     } else {

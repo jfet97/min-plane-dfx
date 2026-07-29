@@ -361,6 +361,12 @@ struct SpatialIndexSequenceCase {
     queries: Vec<EncodedQuery>,
     #[serde(rename = "matchesChecks")]
     matches_checks: Vec<EncodedMatchesCheck>,
+    /// `PlacedCollisionSpatialIndex.continuationIdentity()`'s real TS
+    /// output for this exact index. Added when ruling R22's byte-exactness
+    /// carve-out for `continuation_identity()` was revoked (2026-07-30);
+    /// see that method's own doc comment in `validation/spatial_index.rs`.
+    #[serde(rename = "continuationIdentity")]
+    continuation_identity: String,
 }
 
 #[test]
@@ -401,6 +407,13 @@ fn spatial_index_sequences_match_ts_oracle() {
             index.size(),
             case.piece_count,
             "case {}: index size mismatch",
+            case.case_label
+        );
+
+        assert_eq!(
+            index.continuation_identity(),
+            case.continuation_identity,
+            "case {}: continuationIdentity mismatch",
             case.case_label
         );
 
