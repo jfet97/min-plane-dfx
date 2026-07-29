@@ -6,7 +6,8 @@
 //! self-contained point-math slice of that file is ported here, and not its
 //! surrounding cache/key/resolver/revalidation surface
 //! (`computeTransformedCollisionGeometry`, `resolveTransformedCollisionGeometry`),
-//! which belongs to the `nfp_ifp` cluster.
+//! which is owned by `crate::caches::transform_collision_geometry` — import it
+//! from there; never re-implement it.
 //!
 //! # Trig-into-canonical-geometry flag (task-mandated, prominent)
 //!

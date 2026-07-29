@@ -91,6 +91,15 @@ them.
   to a verbatim port of V8's ieee754 implementations. No tolerance may ever
   migrate into comparators, keys, or hashes.
 
+- **R22 — spatial-index continuation identity ordering.** The Rust
+  `PlacedCollisionSpatialIndex::continuation_identity` sorts bucket rows by
+  parsed (cell_x, cell_y) integer tuples instead of replicating TS's unseeded
+  `localeCompare` for the same JSON — per characterization
+  `validation-spatial.md` §12 hazard 1: this identity never crosses a
+  checkpoint, hash, or process boundary; it is a same-process self-consistency
+  check whose only requirement is internal determinism. Formal carve-out from
+  R8 granted for this single call site.
+
 ## Checkpoints and timing
 
 - **R12 — Checkpoints are internal-only.** No production serialization of any
