@@ -17,7 +17,7 @@ const binaryPath = path.join(__dirname, binaryName);
 
 let native;
 try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires -- CommonJS native addon load.
+  // CommonJS native addon load.
   native = require(binaryPath);
 } catch (cause) {
   const causeMessage = cause && cause.message ? cause.message : String(cause);

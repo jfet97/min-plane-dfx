@@ -773,7 +773,7 @@ function main(): void {
 
   mkdirSync(dirname(outputPath), { recursive: true })
   writeFileSync(outputPath, `${JSON.stringify(document, null, 2)}\n`, 'utf8')
-  // eslint-disable-next-line no-console
+   
   console.log(`Wrote ${totalVectorCount} canonical-grid vectors to ${outputPath}`)
 }
 

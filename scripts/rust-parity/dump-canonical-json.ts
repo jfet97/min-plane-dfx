@@ -617,6 +617,82 @@ function fixedMapVectors(): Array<[string, unknown]> {
 }
 
 // ---------------------------------------------------------------------------
+// Direct `locale_compare_keys` oracle vectors (added to close a coverage gap:
+// the hand-derived `LOCALE_PRIMARY_WEIGHT` table in `canonical_json.rs`'s doc
+// comment claims "200,000 random ASCII strings ... validated ... see ...
+// `tests/vectors/canonical-json.json` for the committed, pinned proof," but
+// prior to this addition no vector in this file directly compared
+// `String.prototype.localeCompare` against the Rust comparator over the full
+// printable-ASCII range — every existing `*Vectors` entry only exercises
+// `localeCompare` indirectly, through object-key sort order on a handful of
+// curated alphabets. This section is the actual committed, pinned proof the
+// doc comment describes: an exhaustive single-character weight matrix over
+// every printable-ASCII code point (`0x20..=0x7e`, matching
+// `LOCALE_TABLE_MIN..=LOCALE_TABLE_MAX` exactly) plus a large batch of random
+// multi-character strings drawn from that same alphabet.
+// ---------------------------------------------------------------------------
+
+const PRINTABLE_ASCII_ALPHABET: string[] = (() => {
+  const chars: string[] = []
+  for (let codePoint = 0x20; codePoint <= 0x7e; codePoint += 1) {
+    chars.push(String.fromCodePoint(codePoint))
+  }
+  return chars
+})()
+
+interface LocaleCompareVector {
+  readonly id: string
+  readonly first: string
+  readonly second: string
+  readonly expectedSign: -1 | 0 | 1
+}
+
+function buildLocaleCompareVectors(): LocaleCompareVector[] {
+  const vectors: LocaleCompareVector[] = []
+
+  // Exhaustive pairwise single-character matrix: pins every cell of the
+  // Rust `LOCALE_PRIMARY_WEIGHT` table (95 * 95 = 9025 pairs) directly
+  // against real `localeCompare`, including the `i === j` (Equal) diagonal.
+  for (const first of PRINTABLE_ASCII_ALPHABET) {
+    for (const second of PRINTABLE_ASCII_ALPHABET) {
+      vectors.push({
+        id: `locale-single-char-${first.codePointAt(0)}-${second.codePointAt(0)}`,
+        first,
+        second,
+        expectedSign: Math.sign(first.localeCompare(second)) as -1 | 0 | 1
+      })
+    }
+  }
+
+  // Random multi-character strings (lengths 1-8) drawn from the full
+  // printable-ASCII alphabet, exercising the length/tie-break fallthrough
+  // paths the single-character matrix alone cannot reach.
+  const next = mulberry32(0x10ca1e)
+  const randomStringCount = 3000
+  for (let index = 0; index < randomStringCount; index += 1) {
+    const first = randomPrintableAsciiString(next, 1, 8)
+    const second = randomPrintableAsciiString(next, 1, 8)
+    vectors.push({
+      id: `locale-random-${index}`,
+      first,
+      second,
+      expectedSign: Math.sign(first.localeCompare(second)) as -1 | 0 | 1
+    })
+  }
+
+  return vectors
+}
+
+function randomPrintableAsciiString(next: () => number, minLength: number, maxLength: number): string {
+  const length = minLength + Math.floor(next() * (maxLength - minLength + 1))
+  let value = ''
+  for (let index = 0; index < length; index += 1) {
+    value += PRINTABLE_ASCII_ALPHABET[Math.floor(next() * PRINTABLE_ASCII_ALPHABET.length)]
+  }
+  return value
+}
+
+// ---------------------------------------------------------------------------
 // Bigint-into-encoder-C throw vectors.
 // ---------------------------------------------------------------------------
 
@@ -811,6 +887,7 @@ function main(): void {
   const canonicalNumberVectors = buildCanonicalNumberVectors()
   const recordVectors = buildRecordVectors()
   const entryListKeyVectors = buildEntryListKeyVectors()
+  const localeCompareVectors = buildLocaleCompareVectors()
 
   const totalVectorCount =
     capacityVectors.length +
@@ -820,7 +897,8 @@ function main(): void {
     tokenVectors.length +
     canonicalNumberVectors.length +
     recordVectors.length +
-    entryListKeyVectors.length
+    entryListKeyVectors.length +
+    localeCompareVectors.length
 
   const document = {
     header: {
@@ -844,7 +922,12 @@ function main(): void {
         'top-level `undefined` input), or "throws" (the real encoder threw synchronously, ' +
         'currently only reachable for Encoder C given a `bigint` anywhere in the input). ' +
         'Encoder D (canonicalToken/canonicalNumber/canonicalRecord/canonicalEntryListKey) ' +
-        'vectors are plain string/array-of-strings input/output pairs (no tagging needed).'
+        'vectors are plain string/array-of-strings input/output pairs (no tagging needed). ' +
+        'localeCompareVectors directly pin `first.localeCompare(second)` (mapped through ' +
+        'Math.sign) against the Rust `locale_compare_keys` two-level table/tie-break ' +
+        'algorithm shared by Encoders B/C: an exhaustive single-character matrix over the ' +
+        'full printable-ASCII range (0x20..=0x7e, matching `LOCALE_TABLE_MIN..' +
+        '=LOCALE_TABLE_MAX`) plus randomized multi-character strings from the same alphabet.'
     },
     capacityVectors,
     strictVectors,
@@ -853,12 +936,13 @@ function main(): void {
     tokenVectors,
     canonicalNumberVectors,
     recordVectors,
-    entryListKeyVectors
+    entryListKeyVectors,
+    localeCompareVectors
   }
 
   mkdirSync(dirname(outputPath), { recursive: true })
   writeFileSync(outputPath, `${JSON.stringify(document, null, 2)}\n`, 'utf8')
-  // eslint-disable-next-line no-console
+   
   console.log(`Wrote ${totalVectorCount} canonical-json vectors to ${outputPath}`)
 }
 

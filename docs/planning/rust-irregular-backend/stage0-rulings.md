@@ -78,6 +78,19 @@ them.
   loop order for every Number accumulation feeding ranked/serialized values;
   parallel term computation allowed, reduction serial.
 
+- **R21 — V8 trig parity is an open risk, gated end-to-end.** Measured: neither
+  Rust std nor libm reproduces V8's Math.atan2/asin/sin/cos/hypot bit-for-bit
+  in general (evidence in transforms/generator.rs and flattening.rs module
+  docs). Current policy: per-call-site choice backed by that site's own
+  differential vectors (generator uses libm for atan2/asin — 100% vector-exact
+  on the production-representative matrix; rotate/sin/cos on std — 100%
+  vector-exact; flattening carries a documented 1e-9 tolerance on its
+  deliberately-adversarial synthetic matrix, ~10⁶× below the 0.001 mm grid
+  step). The authoritative gate is the end-to-end differential harness: if any
+  pipeline hash mismatch traces to trig, the affected call sites must switch
+  to a verbatim port of V8's ieee754 implementations. No tolerance may ever
+  migrate into comparators, keys, or hashes.
+
 ## Checkpoints and timing
 
 - **R12 — Checkpoints are internal-only.** No production serialization of any

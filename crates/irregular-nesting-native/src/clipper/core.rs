@@ -292,8 +292,11 @@ pub enum PointInPolygonResult {
 /// TS: Core.ts:74-80 `type ZCallback64 = (bot1, top1, bot2, top2, intersectPt) => void`.
 /// `intersectPt` is mutated in place by the JS callback (its `.z` field is
 /// set); modeled here as an `&mut Point64` out-parameter. Owned by the
-/// boolean-engine cleanup phase (see `offset::engine_union_stub`), not
-/// invoked by anything in this module.
+/// boolean-clip engine (`engine::Clipper64::z_callback`) and, via
+/// `offset::ClipperOffset::execute`'s installed `ZCB` wrapper
+/// (`offset::ClipperOffset::zcb`), by the offset module's self-intersection
+/// cleanup call into the engine (Offset.ts:192-203) — not invoked by anything
+/// in this module.
 pub type ZCallback64 = Box<dyn Fn(Point64, Point64, Point64, Point64, &mut Point64)>;
 
 /// TS: Core.ts:82-88 `type ZCallbackD = ...`. See [`ZCallback64`].

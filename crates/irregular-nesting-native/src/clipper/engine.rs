@@ -104,10 +104,11 @@
 use std::collections::{BinaryHeap, HashSet};
 
 use super::core::{
-    self, cross_product_sign, dot_product_sign, get_bounds, get_closest_pt_on_segment,
-    get_line_intersect_pt, is_collinear, is_safe_integer, path2_contains_path1, rect64_utils,
-    round_to_even, segs_intersect, ClipType, FillRule, PathType, Point64, PointInPolygonResult,
-    Rect64, ZCallback64,
+    self, cross_product_sign, dot_product_sign, f64_to_bigint, get_bounds,
+    get_closest_pt_on_segment, get_line_intersect_pt, is_collinear, is_safe_integer, math_round,
+    max_coord_for_safe_area_product, path2_contains_path1, rect64_utils, round_to_even,
+    segs_intersect, ClipType, FillRule, PathType, Point64, PointInPolygonResult, Rect64,
+    ZCallback64,
 };
 use num_bigint::BigInt;
 
@@ -363,7 +364,11 @@ struct HorzJoin {
 /// sign comparison of the same difference to preserve identical float behavior
 /// (including for huge-magnitude coordinates where the literal subtraction could lose
 /// precision or saturate to infinity — the *sign* is still exactly what `.sort()` used).
-fn compare_horz_segments(hs1: &HorzSegment, hs2: &HorzSegment, out_pts: &[OutPtNode]) -> std::cmp::Ordering {
+fn compare_horz_segments(
+    hs1: &HorzSegment,
+    hs2: &HorzSegment,
+    out_pts: &[OutPtNode],
+) -> std::cmp::Ordering {
     use std::cmp::Ordering;
     if hs1.right_op.is_none() {
         return if hs2.right_op.is_none() {
@@ -520,7 +525,7 @@ impl PolyTree64 {
             level += 1;
             pp = self.nodes[p].parent;
         }
-        level != 0 && level % 2 == 0
+        level != 0 && level.is_multiple_of(2)
     }
 
     /// TS: `PolyPath64.addChild` (Engine.ts:448-453).
@@ -643,7 +648,7 @@ impl Clipper64 {
         };
         let a1 = self.active_pool[ae1];
         let a2 = self.active_pool[ae2];
-        if Self::get_poly_type(&a1) == PathType::Subject {
+        if self.poly_type_of(&a1) == PathType::Subject {
             if Self::xy_equal(*intersect_pt, a1.bot) {
                 intersect_pt.z = a1.bot.z_or_zero();
             } else if Self::xy_equal(*intersect_pt, a1.top) {
@@ -672,7 +677,11 @@ impl Clipper64 {
         }
     }
 
-    /// TS: `ClipperBase.isOdd` (Engine.ts:611-613).
+    /// TS: `ClipperBase.isOdd` (Engine.ts:611-613). Only called from
+    /// `setWindCountForOpenPathEdge` (Engine.ts:1996-1997), which is entirely
+    /// open-path-only and unreachable in this port — see module doc and
+    /// [`Self::set_wind_count_for_open_path_edge`]. Ported for fidelity.
+    #[allow(dead_code)]
     fn is_odd(val: i32) -> bool {
         (val & 1) != 0
     }
@@ -684,7 +693,11 @@ impl Clipper64 {
 
     /// TS: `ClipperBase.isOpen` (Engine.ts:619-621). Real (not stubbed) — see module doc.
     fn is_open(&self, ae: &ActiveNode) -> bool {
-        self.open_paths_enabled && self.minima_list[ae.local_min.expect("Active.localMin always set once inserted into the AEL")].is_open
+        self.open_paths_enabled
+            && self.minima_list[ae
+                .local_min
+                .expect("Active.localMin always set once inserted into the AEL")]
+            .is_open
     }
 
     /// TS: `ClipperBase.isOpenEndVertex` (Engine.ts:629-631).
@@ -775,7 +788,16 @@ impl Clipper64 {
         self.minima_list[ae.local_min.expect("localMin set")].polytype
     }
 
-    /// TS: `ClipperBase.isSamePolyType` (Engine.ts:692-694).
+    /// TS: `ClipperBase.isSamePolyType` (Engine.ts:692-694). TS's one reachable call
+    /// site in the ported subset (`intersectEdges`, Engine.ts:2530) is translated as
+    /// a direct `ae1_polytype != ae2_polytype` comparison on already-fetched owned
+    /// `PathType` values instead (see [`Self::intersect_edges`]) — those values are
+    /// fetched once up front (via [`Self::poly_type_of_owned`]) and reused across
+    /// several branches, so re-deriving them through this `&ActiveNode`-borrowing
+    /// helper would require re-borrowing `self.active_pool` mid-function. Kept for
+    /// fidelity (its only reachable TS call site is `doHorizontal`'s open-path branch
+    /// otherwise, Engine.ts:1126, which is unreachable here — see module doc).
+    #[allow(dead_code)]
     fn is_same_poly_type(&self, ae1: &ActiveNode, ae2: &ActiveNode) -> bool {
         self.poly_type_of(ae1) == self.poly_type_of(ae2)
     }
@@ -940,7 +962,10 @@ impl Clipper64 {
     /// TS: `ClipperBase.hasLocMinAtY` (Engine.ts:843-846).
     fn has_loc_min_at_y(&self, y: f64) -> bool {
         self.current_loc_min < self.minima_list.len()
-            && self.vertices[self.minima_list[self.current_loc_min].vertex].pt.y == y
+            && self.vertices[self.minima_list[self.current_loc_min].vertex]
+                .pt
+                .y
+                == y
     }
 
     /// TS: `ClipperBase.popLocalMinima` (Engine.ts:848-850).
@@ -962,7 +987,13 @@ impl Clipper64 {
     /// (`Clipper.ts:85,87,96,98`).
     pub fn add_paths(&mut self, paths: &Paths64, polytype: PathType) {
         self.is_sorted_minima_list = false;
-        Self::add_paths_to_vertex_list(paths, polytype, false, &mut self.minima_list, &mut self.vertices);
+        Self::add_paths_to_vertex_list(
+            paths,
+            polytype,
+            false,
+            &mut self.minima_list,
+            &mut self.vertices,
+        );
     }
 
     /// TS: `ClipperEngine.addPathsToVertexList` (Engine.ts:258-342). `isOpen` is kept as
@@ -1564,9 +1595,15 @@ impl Clipper64 {
             for j in (i + 1)..k {
                 let hs2 = self.horz_seg_list[j];
                 let hs2_left_x = self.out_pts[hs2.left_op].pt.x;
-                let hs1_right_x = self.out_pts[hs1.right_op.expect("compacted entries have rightOp")].pt.x;
+                let hs1_right_x = self.out_pts
+                    [hs1.right_op.expect("compacted entries have rightOp")]
+                .pt
+                .x;
                 let hs1_left_x = self.out_pts[hs1.left_op].pt.x;
-                let hs2_right_x = self.out_pts[hs2.right_op.expect("compacted entries have rightOp")].pt.x;
+                let hs2_right_x = self.out_pts
+                    [hs2.right_op.expect("compacted entries have rightOp")]
+                .pt
+                .x;
                 if hs2_left_x >= hs1_right_x
                     || hs2.left_to_right == hs1.left_to_right
                     || hs2_right_x <= hs1_left_x
@@ -1579,7 +1616,8 @@ impl Clipper64 {
                 if hs1.left_to_right {
                     loop {
                         let next = self.out_pts[hs1_left].next;
-                        if self.out_pts[next].pt.y == curr_y && self.out_pts[next].pt.x <= self.out_pts[hs2_left].pt.x
+                        if self.out_pts[next].pt.y == curr_y
+                            && self.out_pts[next].pt.x <= self.out_pts[hs2_left].pt.x
                         {
                             hs1_left = next;
                         } else {
@@ -1588,7 +1626,8 @@ impl Clipper64 {
                     }
                     loop {
                         let prev = self.out_pts[hs2_left].prev;
-                        if self.out_pts[prev].pt.y == curr_y && self.out_pts[prev].pt.x <= self.out_pts[hs1_left].pt.x
+                        if self.out_pts[prev].pt.y == curr_y
+                            && self.out_pts[prev].pt.x <= self.out_pts[hs1_left].pt.x
                         {
                             hs2_left = prev;
                         } else {
@@ -1601,7 +1640,8 @@ impl Clipper64 {
                 } else {
                     loop {
                         let prev = self.out_pts[hs1_left].prev;
-                        if self.out_pts[prev].pt.y == curr_y && self.out_pts[prev].pt.x <= self.out_pts[hs2_left].pt.x
+                        if self.out_pts[prev].pt.y == curr_y
+                            && self.out_pts[prev].pt.x <= self.out_pts[hs2_left].pt.x
                         {
                             hs1_left = prev;
                         } else {
@@ -1610,7 +1650,8 @@ impl Clipper64 {
                     }
                     loop {
                         let next = self.out_pts[hs2_left].next;
-                        if self.out_pts[next].pt.y == curr_y && self.out_pts[next].pt.x <= self.out_pts[hs1_left].pt.x
+                        if self.out_pts[next].pt.y == curr_y
+                            && self.out_pts[next].pt.x <= self.out_pts[hs1_left].pt.x
                         {
                             hs2_left = next;
                         } else {
@@ -1632,7 +1673,9 @@ impl Clipper64 {
     /// plain values (see module doc).
     fn update_horz_segment(&mut self, mut hs: HorzSegment) -> (bool, HorzSegment) {
         let op = hs.left_op;
-        let outrec = self.get_real_out_rec(self.out_pts[op].outrec).expect("hot outrec always resolves");
+        let outrec = self
+            .get_real_out_rec(Some(self.out_pts[op].outrec))
+            .expect("hot outrec always resolves");
         let outrec_has_edges = self.outrec_list[outrec].front_edge.is_some();
         let curr_y = self.out_pts[op].pt.y;
         let mut op_p = op;
@@ -1648,10 +1691,14 @@ impl Clipper64 {
                 op_n = self.out_pts[op_n].next;
             }
         } else {
-            while self.out_pts[op_p].prev != op_n && self.out_pts[self.out_pts[op_p].prev].pt.y == curr_y {
+            while self.out_pts[op_p].prev != op_n
+                && self.out_pts[self.out_pts[op_p].prev].pt.y == curr_y
+            {
                 op_p = self.out_pts[op_p].prev;
             }
-            while self.out_pts[op_n].next != op_p && self.out_pts[self.out_pts[op_n].next].pt.y == curr_y {
+            while self.out_pts[op_n].next != op_p
+                && self.out_pts[self.out_pts[op_n].next].pt.y == curr_y
+            {
                 op_n = self.out_pts[op_n].next;
             }
         }
@@ -1982,8 +2029,7 @@ impl Clipper64 {
                 let op2_prev = self.out_pts[op2].prev;
                 if self.out_pts[op2].pt.x == pt.x
                     || (self.out_pts[op2].pt.y == self.out_pts[op2_prev].pt.y
-                        && (pt.x < self.out_pts[op2_prev].pt.x)
-                            != (pt.x < self.out_pts[op2].pt.x))
+                        && (pt.x < self.out_pts[op2_prev].pt.x) != (pt.x < self.out_pts[op2].pt.x))
                 {
                     return PointInPolygonResult::IsOn;
                 }
@@ -2118,8 +2164,10 @@ impl Clipper64 {
                 self.active_pool[curr_base].jump = r_end;
 
                 while left != l_end && right != r_end {
-                    let l = left.expect("left != lEnd holds only while left stays Some (TS `left!`)");
-                    let r = right.expect("right != rEnd holds only while right stays Some (TS `right!`)");
+                    let l =
+                        left.expect("left != lEnd holds only while left stays Some (TS `left!`)");
+                    let r = right
+                        .expect("right != rEnd holds only while right stays Some (TS `right!`)");
                     if self.active_pool[r].cur_x < self.active_pool[l].cur_x {
                         let mut tmp = self.active_pool[r]
                             .prev_in_sel
@@ -2316,6 +2364,14 @@ impl Clipper64 {
         }
 
         if Self::is_horizontal(&self.active_pool[ae]) {
+            // TS: `if (!openPathsEnabled) { trimHorz(...) /* closed-path fast path */ }
+            // else if (!isOpen(ae)) { trimHorz(...) }` (Engine.ts:1810-1816) — the two
+            // branches call `trimHorz` identically on purpose (TS's own comment: "Closed-
+            // path-only fast path", avoiding the `isOpen(ae)` call in the always-false
+            // `open_paths_enabled` case); reproduced verbatim per the migration prompt's
+            // "reproduce even unusual/inefficient TS structure" rule rather than merging
+            // the branches.
+            #[allow(clippy::if_same_then_else)]
             if !self.open_paths_enabled {
                 let pc = self.preserve_collinear;
                 self.trim_horz(ae, pc);
@@ -2452,13 +2508,17 @@ impl Clipper64 {
         let node = self.active_pool[ae];
         let mut result = node.vertex_top.expect("vertexTop set");
         if node.wind_dx > 0 {
-            while self.vertices[self.vertices[result].next.expect("next set")].pt.y
+            while self.vertices[self.vertices[result].next.expect("next set")]
+                .pt
+                .y
                 == self.vertices[result].pt.y
             {
                 result = self.vertices[result].next.expect("next set");
             }
         } else {
-            while self.vertices[self.vertices[result].prev.expect("prev set")].pt.y
+            while self.vertices[self.vertices[result].prev.expect("prev set")]
+                .pt
+                .y
                 == self.vertices[result].pt.y
             {
                 result = self.vertices[result].prev.expect("prev set");
@@ -2581,8 +2641,12 @@ impl Clipper64 {
                 while ae2 != Some(ae) {
                     let a2 = ae2.expect("ae2 reaches ae before ever becoming null (TS `ae2!`)");
                     if self.poly_type_of(&self.active_pool[a2]) != pt {
-                        self.active_pool[ae].wind_count2 =
-                            if self.active_pool[ae].wind_count2 == 0 { 1 } else { 0 };
+                        self.active_pool[ae].wind_count2 = if self.active_pool[ae].wind_count2 == 0
+                        {
+                            1
+                        } else {
+                            0
+                        };
                     }
                     ae2 = self.active_pool[a2].next_in_ael;
                 }
@@ -2625,8 +2689,11 @@ impl Clipper64 {
                             a2_wc + ae_wind_dx
                         };
                     } else {
-                        self.active_pool[ae].wind_count =
-                            if self.is_open(&self.active_pool[ae]) { 1 } else { ae_wind_dx };
+                        self.active_pool[ae].wind_count = if self.is_open(&self.active_pool[ae]) {
+                            1
+                        } else {
+                            ae_wind_dx
+                        };
                     }
                 } else if a2_wdx * ae_wind_dx < 0 {
                     self.active_pool[ae].wind_count = a2_wc;
@@ -2645,8 +2712,11 @@ impl Clipper64 {
                 if self.poly_type_of(&self.active_pool[a2]) != pt
                     && !self.is_open(&self.active_pool[a2])
                 {
-                    self.active_pool[ae].wind_count2 =
-                        if self.active_pool[ae].wind_count2 == 0 { 1 } else { 0 };
+                    self.active_pool[ae].wind_count2 = if self.active_pool[ae].wind_count2 == 0 {
+                        1
+                    } else {
+                        0
+                    };
                 }
                 ae2 = self.active_pool[a2].next_in_ael;
             }
@@ -3009,15 +3079,21 @@ impl Clipper64 {
                 let ae2_wind_dx = self.active_pool[ae2].wind_dx;
                 self.active_pool[ae1].wind_count2 += ae2_wind_dx;
             } else {
-                self.active_pool[ae1].wind_count2 =
-                    if self.active_pool[ae1].wind_count2 == 0 { 1 } else { 0 };
+                self.active_pool[ae1].wind_count2 = if self.active_pool[ae1].wind_count2 == 0 {
+                    1
+                } else {
+                    0
+                };
             }
             if self.fillrule != FillRule::EvenOdd {
                 let ae1_wind_dx = self.active_pool[ae1].wind_dx;
                 self.active_pool[ae2].wind_count2 -= ae1_wind_dx;
             } else {
-                self.active_pool[ae2].wind_count2 =
-                    if self.active_pool[ae2].wind_count2 == 0 { 1 } else { 0 };
+                self.active_pool[ae2].wind_count2 = if self.active_pool[ae2].wind_count2 == 0 {
+                    1
+                } else {
+                    0
+                };
             }
         }
 
@@ -3056,7 +3132,8 @@ impl Clipper64 {
                 if let Some(result_op) = self.add_local_max_poly(ae1, ae2, pt) {
                     self.set_z_on_out_pt(ae1, ae2, result_op);
                 }
-            } else if self.is_front(ae1) || self.active_pool[ae1].outrec == self.active_pool[ae2].outrec
+            } else if self.is_front(ae1)
+                || self.active_pool[ae1].outrec == self.active_pool[ae2].outrec
             {
                 // this 'else if' condition isn't strictly needed but it's sensible to
                 // split polygons that only touch at a common vertex (not at common
@@ -3064,7 +3141,7 @@ impl Clipper64 {
                 if let Some(result_op) = self.add_local_max_poly(ae1, ae2, pt) {
                     self.set_z_on_out_pt(ae1, ae2, result_op);
                 }
-                let op2 = self.add_local_min_poly(ae1, ae2, pt);
+                let op2 = self.add_local_min_poly(ae1, ae2, pt, false);
                 self.set_z_on_out_pt(ae1, ae2, op2);
             } else {
                 // can't treat as maxima & minima
@@ -3103,7 +3180,7 @@ impl Clipper64 {
             };
 
             if ae1_polytype != ae2_polytype {
-                let result_op = self.add_local_min_poly(ae1, ae2, pt);
+                let result_op = self.add_local_min_poly(ae1, ae2, pt, false);
                 self.set_z_on_out_pt(ae1, ae2, result_op);
             } else if old_e1_wind_count == 1 && old_e2_wind_count == 1 {
                 let mut result_op: Option<usize> = None;
@@ -3112,17 +3189,17 @@ impl Clipper64 {
                         if e1_wc2 > 0 && e2_wc2 > 0 {
                             return;
                         }
-                        result_op = Some(self.add_local_min_poly(ae1, ae2, pt));
+                        result_op = Some(self.add_local_min_poly(ae1, ae2, pt, false));
                     }
                     ClipType::Difference => {
                         if (ae1_polytype == PathType::Clip && e1_wc2 > 0 && e2_wc2 > 0)
                             || (ae1_polytype == PathType::Subject && e1_wc2 <= 0 && e2_wc2 <= 0)
                         {
-                            result_op = Some(self.add_local_min_poly(ae1, ae2, pt));
+                            result_op = Some(self.add_local_min_poly(ae1, ae2, pt, false));
                         }
                     }
                     ClipType::Xor => {
-                        result_op = Some(self.add_local_min_poly(ae1, ae2, pt));
+                        result_op = Some(self.add_local_min_poly(ae1, ae2, pt, false));
                     }
                     _ => {
                         // ClipType.Intersection (TS `default`); `NoClip` is unreachable
@@ -3130,7 +3207,7 @@ impl Clipper64 {
                         if e1_wc2 <= 0 || e2_wc2 <= 0 {
                             return;
                         }
-                        result_op = Some(self.add_local_min_poly(ae1, ae2, pt));
+                        result_op = Some(self.add_local_min_poly(ae1, ae2, pt, false));
                     }
                 }
                 if let Some(result_op) = result_op {
@@ -3197,8 +3274,7 @@ impl Clipper64 {
         let y = n.bot.y;
         let newcomer_is_left = n.is_left_bound;
 
-        let resident_local_min_vertex =
-            self.minima_list[r.local_min.expect("localMin set")].vertex;
+        let resident_local_min_vertex = self.minima_list[r.local_min.expect("localMin set")].vertex;
         if r.bot.y != y || self.vertices[resident_local_min_vertex].pt.y != y {
             return n.is_left_bound;
         }
@@ -3400,8 +3476,12 @@ impl Clipper64 {
         // pointers. (NB Only very rarely do the joining ends share the same coords.)
         let ae1_outrec = self.active_pool[ae1].outrec.expect("hot edge has outrec");
         let ae2_outrec = self.active_pool[ae2].outrec.expect("hot edge has outrec");
-        let p1_start = self.outrec_list[ae1_outrec].pts.expect("hot outrec has pts");
-        let p2_start = self.outrec_list[ae2_outrec].pts.expect("hot outrec has pts");
+        let p1_start = self.outrec_list[ae1_outrec]
+            .pts
+            .expect("hot outrec has pts");
+        let p2_start = self.outrec_list[ae2_outrec]
+            .pts
+            .expect("hot outrec has pts");
         let p1_end = self.out_pts[p1_start].next;
         let p2_end = self.out_pts[p2_start].next;
         if self.is_front(ae1) {
@@ -3496,11 +3576,18 @@ impl Clipper64 {
     }
 
     /// TS: `ClipperBase.buildPath` (Engine.ts:2848-2878).
-    fn build_path(&self, op: Option<usize>, reverse: bool, is_open: bool, path: &mut Path64) -> bool {
+    fn build_path(
+        &self,
+        op: Option<usize>,
+        reverse: bool,
+        is_open: bool,
+        path: &mut Path64,
+    ) -> bool {
         let Some(op) = op else {
             return false;
         };
-        if self.out_pts[op].next == op || (!is_open && self.out_pts[op].next == self.out_pts[op].prev)
+        if self.out_pts[op].next == op
+            || (!is_open && self.out_pts[op].next == self.out_pts[op].prev)
         {
             return false;
         }
@@ -3710,17 +3797,20 @@ impl Clipper64 {
             let remove = if let Some(o2) = op2 {
                 let prev = self.out_pts[o2].prev;
                 let next = self.out_pts[o2].next;
-                is_collinear(self.out_pts[prev].pt, self.out_pts[o2].pt, self.out_pts[next].pt)
-                    && ((self.out_pts[o2].pt.x == self.out_pts[prev].pt.x
-                        && self.out_pts[o2].pt.y == self.out_pts[prev].pt.y)
-                        || (self.out_pts[o2].pt.x == self.out_pts[next].pt.x
-                            && self.out_pts[o2].pt.y == self.out_pts[next].pt.y)
-                        || !self.preserve_collinear
-                        || dot_product_sign(
-                            self.out_pts[prev].pt,
-                            self.out_pts[o2].pt,
-                            self.out_pts[next].pt,
-                        ) < 0)
+                is_collinear(
+                    self.out_pts[prev].pt,
+                    self.out_pts[o2].pt,
+                    self.out_pts[next].pt,
+                ) && ((self.out_pts[o2].pt.x == self.out_pts[prev].pt.x
+                    && self.out_pts[o2].pt.y == self.out_pts[prev].pt.y)
+                    || (self.out_pts[o2].pt.x == self.out_pts[next].pt.x
+                        && self.out_pts[o2].pt.y == self.out_pts[next].pt.y)
+                    || !self.preserve_collinear
+                    || dot_product_sign(
+                        self.out_pts[prev].pt,
+                        self.out_pts[o2].pt,
+                        self.out_pts[next].pt,
+                    ) < 0)
             } else {
                 false
             };
@@ -3775,7 +3865,9 @@ impl Clipper64 {
     /// never actually absent within a valid ring — see [`OutPtNode`]'s doc comment) and
     /// is not translated.
     fn fix_self_intersects(&mut self, outrec: usize) {
-        let mut op2 = self.outrec_list[outrec].pts.expect("fixSelfIntersects requires pts");
+        let mut op2 = self.outrec_list[outrec]
+            .pts
+            .expect("fixSelfIntersects requires pts");
         {
             let next0 = self.out_pts[op2].next;
             if self.out_pts[op2].prev == self.out_pts[next0].next {
@@ -3843,21 +3935,20 @@ impl Clipper64 {
         )
         .expect("doSplitOp is only reached for known-intersecting segments (TS `!`)");
 
-        if self.z_callback.is_some() {
+        if let Some(z_callback) = self.z_callback.as_ref() {
             let bot1 = self.out_pts[prev_op].pt;
             let top1 = self.out_pts[split_op].pt;
             let bot2 = self.out_pts[split_next].pt;
             let top2 = self.out_pts[next_next_op].pt;
-            let z_callback = self.z_callback.as_ref().expect("checked is_some");
             z_callback(bot1, top1, bot2, top2, &mut ip);
         }
 
         let double_area1 = Self::area_out_pt(prev_op, &self.out_pts);
         let zero = BigInt::from(0);
         let abs_double_area1 = if double_area1 < zero {
-            -double_area1
+            -double_area1.clone()
         } else {
-            double_area1
+            double_area1.clone()
         };
 
         if abs_double_area1 < BigInt::from(4) {
@@ -3891,12 +3982,368 @@ impl Clipper64 {
 
         if !(abs_double_area2 > BigInt::from(2)) // area > 1
             || (!(abs_double_area2 > abs_double_area1)
-                && ((double_area2 > BigInt::from(0)) != (abs_double_area1_sign_hack(&abs_double_area1))))
+                && ((double_area2 > zero) != (double_area1 > zero)))
         {
-            // placeholder replaced below
+            return;
         }
 
-        self.finish_do_split_op(outrec, split_op, split_next, ip, double_area2, abs_double_area1_into(abs_double_area1_clone_hack()));
+        let new_out_rec = self.new_out_rec();
+        self.outrec_list[new_out_rec].owner = self.outrec_list[outrec].owner;
+        self.out_pts[split_op].outrec = new_out_rec;
+        self.out_pts[split_next].outrec = new_out_rec;
+
+        // TS: `const newOp = new OutPt(ip, newOutRec); newOp.prev = splitOp.next!;
+        // newOp.next = splitOp;` (Engine.ts:3099-3101) — constructed self-circular by
+        // `new OutPt`, then immediately overwritten; pushed directly with the final
+        // `next`/`prev` values rather than round-tripping through `new_out_pt`.
+        let new_op = self.out_pts.len();
+        self.out_pts.push(OutPtNode {
+            pt: ip,
+            next: split_op,
+            prev: split_next,
+            outrec: new_out_rec,
+            horz: false,
+        });
+        self.outrec_list[new_out_rec].pts = Some(new_op);
+        self.out_pts[split_op].prev = new_op;
+        self.out_pts[split_next].next = new_op;
+
+        if !self.using_polytree {
+            return;
+        }
+
+        if self.path1_inside_path2(prev_op, new_op) {
+            let outrec_idx = self.outrec_list[outrec].idx;
+            if self.outrec_list[new_out_rec].splits.is_none() {
+                self.outrec_list[new_out_rec].splits = Some(Vec::new());
+            }
+            self.outrec_list[new_out_rec]
+                .splits
+                .as_mut()
+                .expect("just ensured Some")
+                .push(outrec_idx);
+        } else {
+            let new_out_rec_idx = self.outrec_list[new_out_rec].idx;
+            if self.outrec_list[outrec].splits.is_none() {
+                self.outrec_list[outrec].splits = Some(Vec::new());
+            }
+            self.outrec_list[outrec]
+                .splits
+                .as_mut()
+                .expect("just ensured Some")
+                .push(new_out_rec_idx);
+        }
     }
 
-    // APPEND_MARKER
+    /// TS: `ClipperBase.areaOutPt` (Engine.ts:3117-3155), `private static`. Takes the
+    /// `out_pts` arena directly (rather than `&self`) since its only caller,
+    /// [`Self::do_split_op`], needs to call it while `self.out_pts` is otherwise free to
+    /// borrow immutably alongside other `&self.outrec_list` field access.
+    fn area_out_pt(op: usize, out_pts: &[OutPtNode]) -> BigInt {
+        let max_coord = max_coord_for_safe_area_product();
+        let mut area = 0.0_f64;
+        let mut all_small = true;
+        let mut op2 = op;
+        loop {
+            let prev = out_pts[op2].prev;
+            let pt = out_pts[op2].pt;
+            let prev_pt = out_pts[prev].pt;
+            if prev_pt.x.abs() >= max_coord
+                || prev_pt.y.abs() >= max_coord
+                || pt.x.abs() >= max_coord
+                || pt.y.abs() >= max_coord
+            {
+                all_small = false;
+                break;
+            }
+            area += (prev_pt.y + pt.y) * (prev_pt.x - pt.x);
+            op2 = out_pts[op2].next;
+            if op2 == op {
+                break;
+            }
+        }
+
+        if all_small {
+            return f64_to_bigint(math_round(area));
+        }
+
+        let mut area_big = BigInt::from(0);
+        op2 = op;
+        loop {
+            let prev = out_pts[op2].prev;
+            let prev_pt = out_pts[prev].pt;
+            let cur_pt = out_pts[op2].pt;
+            if is_safe_integer(prev_pt.y)
+                && is_safe_integer(cur_pt.y)
+                && is_safe_integer(prev_pt.x)
+                && is_safe_integer(cur_pt.x)
+            {
+                let sum_big = f64_to_bigint(prev_pt.y) + f64_to_bigint(cur_pt.y);
+                let diff_big = f64_to_bigint(prev_pt.x) - f64_to_bigint(cur_pt.x);
+                area_big += sum_big * diff_big;
+            } else {
+                let sum = prev_pt.y + cur_pt.y;
+                let diff = prev_pt.x - cur_pt.x;
+                area_big += f64_to_bigint(math_round(sum * diff));
+            }
+            op2 = out_pts[op2].next;
+            if op2 == op {
+                break;
+            }
+        }
+        area_big
+    }
+
+    /// TS: `ClipperBase.areaTriangle` (Engine.ts:3157-3181). TS declares this as a
+    /// (non-static) instance method but its body never reads `this` — ported as a
+    /// plain associated function, matching this file's existing convention for other
+    /// TS instance methods with no actual `this` dependency (e.g. [`Self::is_front`]'s
+    /// sibling static helpers above).
+    fn area_triangle(pt1: Point64, pt2: Point64, pt3: Point64) -> BigInt {
+        let max_coord = max_coord_for_safe_area_product();
+        if pt1.x.abs() < max_coord
+            && pt1.y.abs() < max_coord
+            && pt2.x.abs() < max_coord
+            && pt2.y.abs() < max_coord
+            && pt3.x.abs() < max_coord
+            && pt3.y.abs() < max_coord
+        {
+            let area = (pt3.y + pt1.y) * (pt3.x - pt1.x)
+                + (pt1.y + pt2.y) * (pt1.x - pt2.x)
+                + (pt2.y + pt3.y) * (pt2.x - pt3.x);
+            return f64_to_bigint(math_round(area));
+        }
+
+        if is_safe_integer(pt1.x)
+            && is_safe_integer(pt1.y)
+            && is_safe_integer(pt2.x)
+            && is_safe_integer(pt2.y)
+            && is_safe_integer(pt3.x)
+            && is_safe_integer(pt3.y)
+        {
+            let term1 = (f64_to_bigint(pt3.y) + f64_to_bigint(pt1.y))
+                * (f64_to_bigint(pt3.x) - f64_to_bigint(pt1.x));
+            let term2 = (f64_to_bigint(pt1.y) + f64_to_bigint(pt2.y))
+                * (f64_to_bigint(pt1.x) - f64_to_bigint(pt2.x));
+            let term3 = (f64_to_bigint(pt2.y) + f64_to_bigint(pt3.y))
+                * (f64_to_bigint(pt2.x) - f64_to_bigint(pt3.x));
+            return term1 + term2 + term3;
+        }
+
+        let area = (pt3.y + pt1.y) * (pt3.x - pt1.x)
+            + (pt1.y + pt2.y) * (pt1.x - pt2.x)
+            + (pt2.y + pt3.y) * (pt2.x - pt3.x);
+        f64_to_bigint(math_round(area))
+    }
+
+    /// TS: `ClipperBase.isValidOwner` (Engine.ts:3183-3188).
+    fn is_valid_owner(&self, out_rec: Option<usize>, mut test_owner: Option<usize>) -> bool {
+        while let Some(t) = test_owner {
+            if Some(t) == out_rec {
+                break;
+            }
+            test_owner = self.outrec_list[t].owner;
+        }
+        test_owner.is_none()
+    }
+
+    /// TS: `ClipperBase.checkSplitOwner` (Engine.ts:3195-3219). TS's `splits: number[]`
+    /// parameter is a direct reference to one specific `OutRec.splits` array/`Vec`;
+    /// this port instead threads the *owning* `OutRec`'s id (`splits_owner`) and
+    /// re-reads `self.outrec_list[splits_owner].splits` fresh on every loop
+    /// iteration/recursive call, which observes the exact same live growth the TS
+    /// comment calls out ("splits' is modified inside this loop (#1029)") since
+    /// `splits_owner`'s `.splits` field is never reassigned to a *different* `Vec`
+    /// while this recursion is live (only ever grown via `.push`, or left `None`
+    /// until first grown) — see [`Self::process_horz_joins`]/[`Self::move_splits`],
+    /// the only two sites that ever assign `.splits`, neither reachable from
+    /// `buildTree`'s call graph (both run once, earlier, at the end of the scanbeam
+    /// sweep).
+    fn check_split_owner(&mut self, outrec: usize, splits_owner: usize) -> bool {
+        let mut i = 0usize;
+        loop {
+            let len = match &self.outrec_list[splits_owner].splits {
+                Some(s) => s.len(),
+                None => return false,
+            };
+            if i >= len {
+                return false;
+            }
+            let mut split = self.outrec_list[splits_owner]
+                .splits
+                .as_ref()
+                .expect("checked Some above")[i];
+
+            if self.outrec_list[split].pts.is_none()
+                && self.outrec_list[split].splits.is_some()
+                && self.check_split_owner(outrec, split)
+            {
+                return true; // #942
+            }
+
+            let Some(real_split) = self.get_real_out_rec(Some(split)) else {
+                i += 1;
+                continue;
+            };
+            split = real_split;
+            if split == outrec || self.outrec_list[split].recursive_split == Some(outrec) {
+                i += 1;
+                continue;
+            }
+            self.outrec_list[split].recursive_split = Some(outrec); // #599
+
+            if self.outrec_list[split].splits.is_some() && self.check_split_owner(outrec, split) {
+                return true;
+            }
+
+            if !self.check_bounds(split)
+                || !rect64_utils::contains_rect(
+                    self.outrec_list[split].bounds,
+                    self.outrec_list[outrec].bounds,
+                )
+                || !self.path1_inside_path2(
+                    self.outrec_list[outrec]
+                        .pts
+                        .expect("checkSplitOwner requires outrec.pts (TS `!`)"),
+                    self.outrec_list[split]
+                        .pts
+                        .expect("checkBounds(split) true implies split.pts (TS `!`)"),
+                )
+            {
+                i += 1;
+                continue;
+            }
+
+            if !self.is_valid_owner(Some(outrec), Some(split)) {
+                // split is owned by outrec (#957)
+                self.outrec_list[split].owner = self.outrec_list[outrec].owner;
+            }
+
+            self.outrec_list[outrec].owner = Some(split); // found in split
+            return true;
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Clipper64 public execute surface (Engine.ts:3222-3293 `class Clipper64`).
+    // -----------------------------------------------------------------------
+
+    /// TS: `Clipper64.execute` (Engine.ts:3253-3272), `Paths64` overload. Corresponds
+    /// to the `Array.isArray(solutionOrTree)` branch of the merged TS overload
+    /// (Engine.ts:3255-3272). This port splits TS's one dynamically-typed `execute`
+    /// into two plainly-named methods ([`Self::execute_paths`]/[`Self::execute_poly_tree`])
+    /// since Rust has no runtime `Array.isArray` dispatch — callers already know which
+    /// output shape they want (`booleanOp` vs. `booleanOpWithPolyTree`,
+    /// `Clipper.ts:81-101`), so this is a mechanical un-overload, not a behavior change.
+    /// TS's `try { ... } catch { this.succeeded = false; }` has no translation here:
+    /// every exception TS could throw from `executeInternal`/`buildPaths` in the
+    /// reachable (closed-paths-only) subset is unreachable dead code in this port (see
+    /// module doc), so nothing throws on any input this API can construct; wrapping in
+    /// `catch_unwind` here would silently paper over a genuine port bug instead of
+    /// surfacing it.
+    pub fn execute_paths(
+        &mut self,
+        clip_type: ClipType,
+        fill_rule: FillRule,
+        solution_closed: &mut Paths64,
+        solution_open: Option<&mut Paths64>,
+    ) -> bool {
+        solution_closed.clear();
+        let mut local_open = Paths64::new();
+        self.execute_internal(clip_type, fill_rule);
+        self.build_paths(solution_closed, &mut local_open);
+        if let Some(open) = solution_open {
+            *open = local_open;
+        }
+        self.clear_solution_only();
+        self.succeeded
+    }
+
+    /// TS: `Clipper64.execute` (Engine.ts:3253-3272), `PolyTree64` overload — see
+    /// [`Self::execute_paths`]'s doc comment for why TS's one overloaded method
+    /// becomes two here.
+    pub fn execute_poly_tree(
+        &mut self,
+        clip_type: ClipType,
+        fill_rule: FillRule,
+        polytree: &mut PolyTree64,
+        open_paths: Option<&mut Paths64>,
+    ) -> bool {
+        polytree.clear();
+        let mut local_open = Paths64::new();
+        self.using_polytree = true;
+        self.execute_internal(clip_type, fill_rule);
+        self.build_tree(polytree, &mut local_open);
+        if let Some(open) = open_paths {
+            *open = local_open;
+        }
+        self.clear_solution_only();
+        self.succeeded
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Clipper.ts public wrapper surface assigned to this port (Clipper.ts:81-101,
+// 705-720): `booleanOp`, `booleanOpWithPolyTree`, `polyTreeToPaths64`.
+// ---------------------------------------------------------------------------
+
+/// TS: `booleanOp` (Clipper.ts:81-91).
+pub fn boolean_op(
+    clip_type: ClipType,
+    subject: Option<&Paths64>,
+    clip: Option<&Paths64>,
+    fill_rule: FillRule,
+) -> Paths64 {
+    let mut solution = Paths64::new();
+    let Some(subject) = subject else {
+        return solution;
+    };
+    let mut c = Clipper64::new();
+    c.add_paths(subject, PathType::Subject);
+    if let Some(clip) = clip {
+        c.add_paths(clip, PathType::Clip);
+    }
+    c.execute_paths(clip_type, fill_rule, &mut solution, None);
+    solution
+}
+
+/// TS: `booleanOpWithPolyTree` (Clipper.ts:93-101).
+pub fn boolean_op_with_poly_tree(
+    clip_type: ClipType,
+    subject: Option<&Paths64>,
+    clip: Option<&Paths64>,
+    polytree: &mut PolyTree64,
+    fill_rule: FillRule,
+) {
+    let Some(subject) = subject else {
+        return;
+    };
+    let mut c = Clipper64::new();
+    c.add_paths(subject, PathType::Subject);
+    if let Some(clip) = clip {
+        c.add_paths(clip, PathType::Clip);
+    }
+    c.execute_poly_tree(clip_type, fill_rule, polytree, None);
+}
+
+/// TS: `addPolyNodeToPaths` (Clipper.ts:705-712), the private helper `polyTreeToPaths64`
+/// (Clipper.ts:714-720) recurses through.
+fn add_poly_node_to_paths(tree: &PolyTree64, node: usize, paths: &mut Paths64) {
+    if let Some(poly) = tree.poly(node) {
+        if !poly.is_empty() {
+            paths.push(poly.clone());
+        }
+    }
+    for i in 0..tree.count(node) {
+        add_poly_node_to_paths(tree, tree.child(node, i), paths);
+    }
+}
+
+/// TS: `polyTreeToPaths64` (Clipper.ts:714-720).
+pub fn poly_tree_to_paths64(poly_tree: &PolyTree64) -> Paths64 {
+    let mut result = Paths64::new();
+    for i in 0..poly_tree.count(PolyTree64::ROOT) {
+        add_poly_node_to_paths(poly_tree, poly_tree.child(PolyTree64::ROOT, i), &mut result);
+    }
+    result
+}

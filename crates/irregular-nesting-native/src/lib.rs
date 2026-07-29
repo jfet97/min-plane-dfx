@@ -14,6 +14,7 @@ pub mod canonical_grid;
 pub mod capacity;
 pub mod checkpoints;
 pub mod clipper;
+pub mod domain;
 pub mod geometry;
 pub mod js_number;
 pub mod nfp_ifp;

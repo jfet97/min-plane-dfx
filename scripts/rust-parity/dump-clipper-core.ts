@@ -137,10 +137,6 @@ function pt(x: number, y: number, z = 0): Point64 {
   return { x, y, z }
 }
 
-function ptD(x: number, y: number, z = 0): PointD {
-  return { x, y, z }
-}
-
 /** CCW square with side `side`, lower-left corner at `(originX, originY)`. */
 function ccwSquare(side: number, originX = 0, originY = 0): Path64 {
   return [

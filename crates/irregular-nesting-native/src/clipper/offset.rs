@@ -10,18 +10,15 @@
 //! reachable subset.
 //!
 //! The final self-intersection cleanup (`executeInternal`'s `Clipper64`
-//! union, Offset.ts:192-203) belongs to the boolean-clip engine
-//! (`Engine.ts`), which is out of this module's scope (R10 assigns Core.ts +
-//! Offset.ts only). [`engine_union_stub`] is a clearly-marked stub for the
-//! engine agent to replace; everything up to that point — including the
-//! entire per-group offset geometry pipeline (`doGroupOffset` and everything
-//! it calls) — is fully implemented and directly testable via
-//! [`ClipperOffset::execute_pre_cleanup`].
+//! union, Offset.ts:192-203) is wired to the real boolean-clip engine
+//! (`super::engine`, a port of `Engine.ts`) from [`ClipperOffset::execute`]/
+//! [`ClipperOffset::execute_tree`] — see those methods' doc comments.
 
 use super::core::{
     self, cross_product_d, dot_product_d, is_almost_zero, math_round, point64_utils, Path64, PathD,
     Paths64, Point64, PointD,
 };
+use super::engine;
 
 /// TS: Offset.ts:17-22 `enum JoinType`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -45,15 +42,12 @@ pub enum EndType {
 }
 
 /// Typed replacement for anything Offset.ts reaches by throwing (transitively,
-/// through `Point64Utils.fromPointD`'s `ensureSafeInteger` guard) plus the
-/// deliberately-stubbed boolean-engine cleanup step.
+/// through `Point64Utils.fromPointD`'s `ensureSafeInteger` guard).
 #[derive(Debug, Clone, PartialEq)]
 pub enum ClipperError {
     /// A `core::CoreError` propagated from a Core.ts guard function reached
     /// transitively (e.g. `Point64Utils.fromPointD` inside `doSquare`).
     Core(core::CoreError),
-    /// See [`engine_union_stub`].
-    NotYetImplemented { operation: String },
 }
 
 impl From<core::CoreError> for ClipperError {
@@ -107,48 +101,6 @@ pub struct LowestPathInfo {
     pub is_neg_area: bool,
 }
 
-/// Every field `Clipper64.execute(ClipType.Union, fillRule, solution)` reads
-/// off `this`/its arguments in `executeInternal` (Offset.ts:192-203) — the
-/// faithful input capture for [`engine_union_stub`].
-#[derive(Debug, Clone)]
-pub struct EngineUnionRequest {
-    /// TS: `c.addSubject(this.solution)` (Offset.ts:197) — the pre-cleanup
-    /// solution built by the per-group offset pipeline. See
-    /// [`ClipperOffset::execute_pre_cleanup`].
-    pub subject: Paths64,
-    /// TS: `pathsReversed ? FillRule.Negative : FillRule.Positive` (Offset.ts:190).
-    pub fill_rule: core::FillRule,
-    /// TS: `c.preserveCollinear = this.preserveCollinear` (Offset.ts:194).
-    pub preserve_collinear: bool,
-    /// TS: `c.reverseSolution = this.reverseSolution !== pathsReversed` (Offset.ts:195).
-    pub reverse_solution: bool,
-    /// TS: `c.zCallback = this.ZCB` (Offset.ts:196) — whether a Z callback is wired.
-    pub has_z_callback: bool,
-}
-
-/// **STUB for the engine agent.** TS: Offset.ts:192-203 (`executeInternal`'s
-/// self-intersection cleanup): constructs a `Clipper64`, adds `this.solution`
-/// as the sole subject, and executes `ClipType.Union` with the
-/// paths-reversed-derived `FillRule` (`Positive`/`Negative`), writing into
-/// either a `Paths64` or a `PolyTree64`. `Clipper64`/`Engine.ts` (the full
-/// boolean-clip engine: local minima construction, active-edge list,
-/// intersect processing, `PolyTree64` construction) is out of this module's
-/// scope — R10 assigns this crate's `src/clipper/` module only Core.ts +
-/// Offset.ts. Replace this stub with a real call into the engine module once
-/// it exists, using exactly the fields on [`EngineUnionRequest`] (a faithful
-/// capture of every input the real `Clipper64.execute` call reads).
-///
-/// Returns a typed [`ClipperError::NotYetImplemented`] rather than panicking,
-/// per this task's boundary contract — every caller of
-/// [`ClipperOffset::execute`] must handle this `Err` today.
-pub fn engine_union_stub(_request: EngineUnionRequest) -> Result<Paths64, ClipperError> {
-    Err(ClipperError::NotYetImplemented {
-        operation: "clipper::offset::engine_union_stub (Clipper64 boolean-engine union cleanup, \
-                     clipper2-ts Offset.ts:192-203 / Engine.ts, out of R10's Core.ts+Offset.ts scope)"
-            .to_string(),
-    })
-}
-
 /// Delta-callback signature. TS: Offset.ts:102
 /// `((path: Path64, pathNorms: PathD, currPt: number, prevPt: number) => number) | null`.
 pub type DeltaCallback = Box<dyn Fn(&Path64, &PathD, usize, usize) -> f64>;
@@ -158,14 +110,45 @@ pub type DeltaCallback = Box<dyn Fn(&Path64, &PathD, usize, usize) -> f64>;
 /// in place by the JS callback.
 pub type ZCallback = Box<dyn Fn(Point64, Point64, Point64, Point64, &mut Point64)>;
 
+/// TS: `ClipperOffset.ZCB` (Offset.ts:122-134), the private arrow-function field
+/// `executeInternal` installs on the internal `Clipper64` as `c.zCallback` (Offset.ts:196)
+/// — always installed, regardless of whether the caller ever set `this.zCallback`. Pure
+/// core extracted to a free function (taking the raw user callback explicitly instead of
+/// reading `self.zCallback`) so [`ClipperOffset::execute`] can move an owned
+/// `Option<ZCallback>` into a `'static` closure handed to the engine without borrowing
+/// `self` — see that method's doc comment.
+fn zcb_apply(
+    bot1: Point64,
+    top1: Point64,
+    bot2: Point64,
+    top2: Point64,
+    intersect_pt: &mut Point64,
+    z_callback: Option<&ZCallback>,
+) {
+    if bot1.z_or_zero() != 0.0 && (bot1.z == bot2.z || bot1.z == top2.z) {
+        intersect_pt.z = bot1.z;
+    } else if bot2.z_or_zero() != 0.0 && bot2.z == top1.z {
+        intersect_pt.z = bot2.z;
+    } else if top1.z_or_zero() != 0.0 && top1.z == top2.z {
+        intersect_pt.z = top1.z;
+    } else if let Some(cb) = z_callback {
+        cb(bot1, top1, bot2, top2, intersect_pt);
+    }
+}
+
 /// TS: Offset.ts:63-737 `class ClipperOffset`.
 pub struct ClipperOffset {
     group_list: Vec<Group>,
     path_out: Path64,
     normals: PathD,
     solution: Paths64,
-    /// TS: `solutionTree: PolyTree64 | null` — see [`engine_union_stub`]'s doc
-    /// comment for why the real `PolyTree64` type isn't ported here.
+    /// TS: `solutionTree: PolyTree64 | null` (Offset.ts:82). Tracks which
+    /// `execute*` overload the caller used ([`ClipperOffset::execute`] vs.
+    /// [`ClipperOffset::execute_tree`]); the real `engine::PolyTree64` output
+    /// itself is built (and immediately flattened back to `Paths64` via
+    /// `engine::poly_tree_to_paths64`) inside [`ClipperOffset::execute_tree`]
+    /// — see that method's doc comment for why this crate's `execute_tree`
+    /// still returns `Paths64` rather than exposing the raw tree.
     solution_tree_requested: bool,
 
     group_delta: f64,
@@ -236,8 +219,11 @@ impl ClipperOffset {
     }
 
     /// TS: Offset.ts:122-134 `ZCB` (internal Z callback wrapping default Z
-    /// handling before calling the user callback). Pure; not invoked by
-    /// anything pre-engine-cleanup (see module doc).
+    /// handling before calling the user callback). Delegates to
+    /// [`zcb_apply`], which takes the raw user callback explicitly rather
+    /// than borrowing `self` — see [`ClipperOffset::execute`], which installs
+    /// [`zcb_apply`] on the engine's `'static`-bound `ZCallback64` and so
+    /// cannot borrow `self` for the duration of the callback.
     pub fn zcb(
         &self,
         bot1: Point64,
@@ -246,15 +232,14 @@ impl ClipperOffset {
         top2: Point64,
         intersect_pt: &mut Point64,
     ) {
-        if bot1.z_or_zero() != 0.0 && (bot1.z == bot2.z || bot1.z == top2.z) {
-            intersect_pt.z = bot1.z;
-        } else if bot2.z_or_zero() != 0.0 && bot2.z == top1.z {
-            intersect_pt.z = bot2.z;
-        } else if top1.z_or_zero() != 0.0 && top1.z == top2.z {
-            intersect_pt.z = top1.z;
-        } else if let Some(cb) = &self.z_callback {
-            cb(bot1, top1, bot2, top2, intersect_pt);
-        }
+        zcb_apply(
+            bot1,
+            top1,
+            bot2,
+            top2,
+            intersect_pt,
+            self.z_callback.as_ref(),
+        );
     }
 
     /// TS: Offset.ts:136-140 `addPath`.
@@ -338,9 +323,20 @@ impl ClipperOffset {
         Ok(self.solution.clone())
     }
 
-    /// TS: Offset.ts:206-223 `execute` (the `Paths64` overload). Runs the
-    /// pre-cleanup pipeline, then (for a significant delta) hands off to the
-    /// boolean-engine union cleanup via [`engine_union_stub`].
+    /// TS: Offset.ts:206-223 `execute` (the `Paths64` overload). Runs the pre-cleanup
+    /// pipeline, then (for a significant delta) hands off to the boolean-clip engine
+    /// for the final self-intersection cleanup union (`executeInternal`,
+    /// Offset.ts:192-203): builds an `engine::Clipper64`, wires
+    /// `preserveCollinear`/`reverseSolution` and the `ZCB` Z-callback wrapper
+    /// ([`zcb_apply`], see [`Self::zcb`]'s doc comment for why it's a free function
+    /// here) exactly as TS's `executeInternal` does (`c.zCallback = this.ZCB` is
+    /// unconditional — Offset.ts:196 — even when no user callback was ever set), adds
+    /// the pre-cleanup solution as the sole subject, and runs `ClipType.Union` with
+    /// the paths-reversed-derived `FillRule` (`Positive`/`Negative`). Like TS
+    /// (`ClipperOffset.execute`'s `void` return, and every production caller —
+    /// `Clipper.inflatePaths`, Clipper.ts:131-137 — which discards
+    /// `Clipper64.execute`'s `boolean` return), this ignores whether the internal
+    /// union "succeeded".
     pub fn execute(&mut self, delta: f64) -> Result<Paths64, ClipperError> {
         self.solution_tree_requested = false;
         let pre = self.execute_pre_cleanup(delta)?;
@@ -353,21 +349,73 @@ impl ClipperOffset {
         } else {
             core::FillRule::Positive
         };
-        engine_union_stub(EngineUnionRequest {
-            subject: pre,
-            fill_rule,
-            preserve_collinear: self.preserve_collinear,
-            reverse_solution: self.reverse_solution != paths_reversed,
-            has_z_callback: self.z_callback.is_some(),
-        })
+
+        let mut c = engine::Clipper64::new();
+        c.preserve_collinear = self.preserve_collinear;
+        c.reverse_solution = self.reverse_solution != paths_reversed;
+        let user_z_callback = self.z_callback.take();
+        let engine_z_callback: core::ZCallback64 =
+            Box::new(move |bot1, top1, bot2, top2, intersect_pt| {
+                zcb_apply(
+                    bot1,
+                    top1,
+                    bot2,
+                    top2,
+                    intersect_pt,
+                    user_z_callback.as_ref(),
+                );
+            });
+        c.z_callback = Some(engine_z_callback);
+        c.add_paths(&pre, core::PathType::Subject);
+
+        let mut solution = Paths64::new();
+        c.execute_paths(core::ClipType::Union, fill_rule, &mut solution, None);
+        Ok(solution)
     }
 
-    /// TS: Offset.ts:206-223 `execute` (the `PolyTree64` overload). `PolyTree64`
-    /// itself belongs to `Engine.ts`, out of this module's scope; this always
-    /// defers to [`engine_union_stub`] once past the trivial-delta early-out.
+    /// TS: Offset.ts:206-223 `execute` (the `PolyTree64` overload). Runs the same
+    /// boolean-clip-engine cleanup as [`Self::execute`] but requests `PolyTree64`
+    /// output from the engine (`engine::Clipper64::execute_poly_tree`, mirroring
+    /// `usingPolytree = true`). No caller in this crate needs the raw tree structure
+    /// — the production app's only offset entry point (`inflatePaths`,
+    /// Clipper.ts:131-137) always uses the `Paths64` overload — so the tree is
+    /// flattened back to `Paths64` via `engine::poly_tree_to_paths64` (mirroring
+    /// `Clipper.ts:714-720 polyTreeToPaths64`) before returning, rather than exposing
+    /// `engine::PolyTree64` through this method's signature.
     pub fn execute_tree(&mut self, delta: f64) -> Result<Paths64, ClipperError> {
         self.solution_tree_requested = true;
-        self.execute(delta)
+        let pre = self.execute_pre_cleanup(delta)?;
+        if self.group_list.is_empty() || delta.abs() < 0.5 {
+            return Ok(pre);
+        }
+        let paths_reversed = self.check_paths_reversed();
+        let fill_rule = if paths_reversed {
+            core::FillRule::Negative
+        } else {
+            core::FillRule::Positive
+        };
+
+        let mut c = engine::Clipper64::new();
+        c.preserve_collinear = self.preserve_collinear;
+        c.reverse_solution = self.reverse_solution != paths_reversed;
+        let user_z_callback = self.z_callback.take();
+        let engine_z_callback: core::ZCallback64 =
+            Box::new(move |bot1, top1, bot2, top2, intersect_pt| {
+                zcb_apply(
+                    bot1,
+                    top1,
+                    bot2,
+                    top2,
+                    intersect_pt,
+                    user_z_callback.as_ref(),
+                );
+            });
+        c.z_callback = Some(engine_z_callback);
+        c.add_paths(&pre, core::PathType::Subject);
+
+        let mut tree = engine::PolyTree64::new();
+        c.execute_poly_tree(core::ClipType::Union, fill_rule, &mut tree, None);
+        Ok(engine::poly_tree_to_paths64(&tree))
     }
 
     /// TS: Offset.ts:225-228 `executeWithCallback`.
@@ -1182,12 +1230,28 @@ mod tests {
     }
 
     #[test]
-    fn execute_returns_not_yet_implemented_for_significant_delta() {
+    fn execute_significant_delta_runs_through_engine_union_cleanup() {
+        // Regression pin for the wiring between `ClipperOffset::execute` and the real
+        // boolean-clip engine (Offset.ts:192-203): a convex, non-self-intersecting
+        // miter offset should survive the `ClipType.Union` cleanup unchanged as a set
+        // of vertices — same ring as `execute_pre_cleanup_miter_polygon_produces_one_offset_ring_per_input`
+        // asserts pre-cleanup, just re-started/re-ordered by the engine's own scanline
+        // reconstruction (see crates/irregular-nesting-native/tests/clipper_offset_vectors.rs
+        // for the byte-exact TS-oracle differential coverage of this path).
         let mut co = ClipperOffset::new(2.0, 0.0, false, false);
         let square = ccw_square(100.0);
         co.add_path(&square, JoinType::Miter, EndType::Polygon);
-        let err = co.execute(10.0).unwrap_err();
-        matches!(err, ClipperError::NotYetImplemented { .. });
+        let solution = co.execute(10.0).unwrap();
+        assert_eq!(solution.len(), 1);
+        assert_eq!(
+            solution[0],
+            vec![
+                p(110.0, 110.0),
+                p(-10.0, 110.0),
+                p(-10.0, -10.0),
+                p(110.0, -10.0),
+            ]
+        );
     }
 
     #[test]

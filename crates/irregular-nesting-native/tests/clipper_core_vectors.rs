@@ -10,9 +10,11 @@
 //! integer/boolean/enum results.
 //!
 //! `tests/vectors/clipper-offset-pending.json` (full `ClipperOffset.execute`
-//! outputs that require the boolean-clip engine's union cleanup) is
-//! deliberately NOT loaded here — see that file's `meta.description` and
-//! `src/clipper/offset.rs`'s `engine_union_stub` doc comment.
+//! outputs that require the boolean-clip engine's union cleanup) is loaded by
+//! a separate test file, `tests/clipper_offset_vectors.rs`, now that
+//! `crates/irregular-nesting-native/src/clipper/engine.rs` exists and
+//! `offset::ClipperOffset::execute` calls into it — not loaded here to keep
+//! this file's scope to the engine-independent Core.ts/Offset.ts surface.
 
 use std::fs;
 

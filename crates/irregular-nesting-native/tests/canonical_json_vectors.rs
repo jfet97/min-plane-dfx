@@ -16,7 +16,7 @@ use std::panic::{self, AssertUnwindSafe};
 use irregular_nesting_native::checkpoints::canonical_json::{
     canonical_entry_list_key, canonical_number, canonical_record, canonical_token,
     intrinsic_capacity_canonical_json, intrinsic_periodic_canonical_json,
-    intrinsic_strict_canonical_json, JsValue,
+    intrinsic_strict_canonical_json, locale_compare_keys, JsValue,
 };
 use num_bigint::BigInt;
 use serde_json::Value;
@@ -356,6 +356,50 @@ fn canonical_entry_list_key_matches_oracle() {
             canonical_entry_list_key(&entry_keys),
             expected,
             "entryListKeyVectors[{id}] mismatch for entryKeys={entry_keys:?}"
+        );
+    }
+}
+
+/// Direct oracle test for `locale_compare_keys` — the hand-derived,
+/// empirically-validated `localeCompare`-equivalent comparator shared by
+/// Encoders B/C. Closes a coverage gap: prior to this test, no vector in
+/// this suite compared `locale_compare_keys` against real
+/// `String.prototype.localeCompare` output directly; every other vector only
+/// exercised it indirectly through object-key sort order on a handful of
+/// curated key alphabets. `localeCompareVectors` (from
+/// `dump-canonical-json.ts`) is an exhaustive single-character matrix over
+/// the full printable-ASCII range plus randomized multi-character strings
+/// from that same alphabet — this is the actual "committed, pinned proof"
+/// [`locale_compare_keys`]'s own doc comment cites.
+#[test]
+fn locale_compare_keys_matches_oracle_over_full_printable_ascii_range() {
+    let document = load_vectors();
+    let vectors = document["localeCompareVectors"]
+        .as_array()
+        .expect("localeCompareVectors array");
+    assert!(
+        vectors.len() >= 9000,
+        "expected the exhaustive printable-ASCII single-character matrix (95*95=9025) plus \
+         random-string vectors, got {}",
+        vectors.len()
+    );
+    for vector in vectors {
+        let id = vector["id"].as_str().expect("id is a string");
+        let first = vector["first"].as_str().expect("first is a string");
+        let second = vector["second"].as_str().expect("second is a string");
+        let expected_sign = vector["expectedSign"]
+            .as_i64()
+            .unwrap_or_else(|| panic!("localeCompareVectors[{id}]: expectedSign missing"));
+        let expected = match expected_sign {
+            -1 => std::cmp::Ordering::Less,
+            0 => std::cmp::Ordering::Equal,
+            1 => std::cmp::Ordering::Greater,
+            other => panic!("localeCompareVectors[{id}]: unrecognized expectedSign {other}"),
+        };
+        assert_eq!(
+            locale_compare_keys(first, second),
+            expected,
+            "localeCompareVectors[{id}] mismatch for first={first:?} second={second:?}"
         );
     }
 }

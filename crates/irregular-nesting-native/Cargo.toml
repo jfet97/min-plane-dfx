@@ -23,6 +23,14 @@ sha2 = "0.10"
 num-bigint = "0.4"
 ryu-js = "1"
 robust = "1.2.0"
+# Pure-Rust, platform-independent libm port (musl/fdlibm lineage). Used only
+# by `transforms::generator` for `atan2`/`asin`, whose Rust std results
+# (glibc's system libm on Linux) were measured to disagree with V8's own
+# fdlibm-derived `Math.atan2`/`Math.asin` implementation far more often than
+# this crate does -- see `transforms::generator`'s module doc for the
+# specific measured mismatch-rate evidence this choice is based on (not an
+# assumption that "portable libm generally matches V8 better").
+libm = "0.2"
 
 [build-dependencies]
 napi-build = "2"
