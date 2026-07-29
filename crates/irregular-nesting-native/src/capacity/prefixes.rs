@@ -25,25 +25,18 @@
 //! - `js_number::js_math::floor` -- `Math.floor` for the quarter/half/
 //!   three-quarter depth arithmetic.
 //!
-//! # Seam: `IntrinsicSharedArchiveDirectRole` (provisional)
+//! # `IntrinsicSharedArchiveDirectRole` -- reconciled onto `archive::shared`
 //!
-//! TS imports `IntrinsicSharedArchiveDirectRole`/
-//! `INTRINSIC_SHARED_ARCHIVE_DIRECT_ROLES` from
-//! `intrinsicSharedArchivePortfolio.ts`, a sibling module not yet ported and
-//! outside this task's file-ownership scope. Per this task's established
-//! "seam type" pattern (e.g. `search::layout_scorer`'s
-//! `LayoutScorerBeamStateView`), [`IntrinsicSharedArchiveDirectRole`] is
-//! defined locally here as the exact fixed 3-member closed set
-//! `capacity-search.md` §2 confirms by direct source read
-//! (`intrinsicSharedArchivePortfolio.ts:41-45`):
-//! `['canonical-grid', 'legacy-absolute-envelope', 'open-pocket-first']`, in
-//! that exact array-literal order (load-bearing for the role-major
-//! truncation order documented on
-//! [`capture_intrinsic_capacity_prefix_descriptors`] below). Whoever ports
-//! `intrinsicSharedArchivePortfolio.ts` must reconcile this into a single
-//! definition rather than let two independent copies drift, matching the
-//! precedent `capacity::telemetry`'s own module doc already set for
-//! `INTRINSIC_ANYTIME_CHECKPOINT_VERSION`.
+//! This file previously carried a provisional local copy of
+//! `IntrinsicSharedArchiveDirectRole`/`INTRINSIC_SHARED_ARCHIVE_DIRECT_ROLES`
+//! (see `archive::shared`'s own top doc, "`IntrinsicSharedArchiveDirectRole`
+//! -- this module is now authoritative", for the reconciliation this
+//! anticipated). `intrinsicSharedArchivePortfolio.ts` is now ported as
+//! `archive::shared`, so this module re-exports that module's definition
+//! instead of maintaining a second copy -- both were byte-for-byte identical
+//! (same three variants, same `as_str()` strings, same array-literal order)
+//! for the entire time both existed, so this reconciliation changes no
+//! behavior for any existing caller of either name.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -61,37 +54,13 @@ use super::endpoint::{
 };
 use super::material::intrinsic_capacity_prepared_piece_id;
 
-/// TS: `intrinsicSharedArchivePortfolio.ts:41-45`
-/// `INTRINSIC_SHARED_ARCHIVE_DIRECT_ROLES` collapsed into a closed enum. See
-/// this module's top doc, "Seam: `IntrinsicSharedArchiveDirectRole`
-/// (provisional)".
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum IntrinsicSharedArchiveDirectRole {
-    CanonicalGrid,
-    LegacyAbsoluteEnvelope,
-    OpenPocketFirst,
-}
-
-impl IntrinsicSharedArchiveDirectRole {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            IntrinsicSharedArchiveDirectRole::CanonicalGrid => "canonical-grid",
-            IntrinsicSharedArchiveDirectRole::LegacyAbsoluteEnvelope => "legacy-absolute-envelope",
-            IntrinsicSharedArchiveDirectRole::OpenPocketFirst => "open-pocket-first",
-        }
-    }
-}
-
-/// TS: `intrinsicSharedArchivePortfolio.ts:41-45`
-/// `INTRINSIC_SHARED_ARCHIVE_DIRECT_ROLES`. Fixed array-literal order --
-/// determines descriptor push order and thus which descriptors survive the
-/// 9-descriptor truncation in [`capture_intrinsic_capacity_prefix_descriptors`]
-/// when more than 9 valid (role, depth) pairs exist.
-pub const INTRINSIC_SHARED_ARCHIVE_DIRECT_ROLES: [IntrinsicSharedArchiveDirectRole; 3] = [
-    IntrinsicSharedArchiveDirectRole::CanonicalGrid,
-    IntrinsicSharedArchiveDirectRole::LegacyAbsoluteEnvelope,
-    IntrinsicSharedArchiveDirectRole::OpenPocketFirst,
-];
+/// TS: `intrinsicSharedArchivePortfolio.ts:49-50` `IntrinsicSharedArchiveDirectRole`.
+/// See this module's top doc, "`IntrinsicSharedArchiveDirectRole` --
+/// reconciled onto `archive::shared`": `archive::shared` is the authoritative
+/// definition; this is a plain re-export, not a second copy.
+pub use crate::archive::shared::{
+    IntrinsicSharedArchiveDirectRole, INTRINSIC_SHARED_ARCHIVE_DIRECT_ROLES,
+};
 
 /// TS: `intrinsicCapacityPrefixes.ts:16`
 /// `INTRINSIC_CAPACITY_MAXIMUM_PREFIX_DESCRIPTORS = 9`. At most three
