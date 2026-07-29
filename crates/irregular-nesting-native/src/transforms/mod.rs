@@ -46,4 +46,13 @@ mod boundary_check;
 pub mod generator;
 pub mod rotate;
 
-mod flattening;
+// `pub(crate)` per `flattening`'s own module doc ("Module visibility note"):
+// this is the "later wiring task" that anticipated note describes — the
+// `geometry::collision_builder` module (a different task, ported per
+// `docs/planning/rust-irregular-backend/characterization/collision-prep.md`)
+// is `flattenSourceGeometry`'s sole caller-equivalent and needs
+// `arc::sample_points`/`arc::sample_bulge_points`/`ellipse::sample_points`
+// directly, per this crate's "GREEN modules to reuse, never duplicate"
+// convention. `pub(crate)` (not full `pub`) keeps this an internal-only
+// reuse surface, matching every other cross-module dependency in this crate.
+pub(crate) mod flattening;
