@@ -1,19 +1,32 @@
 //! `computeIrregularNesting`/`coordinateIntrinsicSharedArchive`: piece
 //! preparation, the intrinsic shared-archive invocation (direct + real
-//! periodic-family runner), the scheduler cold-start, focused
+//! periodic-family runner), the scheduler cold-start (including the
+//! production-always-on interleaved canonical-grid checkpoint quantum),
+//! the real `capacity::mode` capacity-fallback invocation, focused
 //! reconstruction, and the Compact Short Side profile block.
 //!
 //! TS source: `computeIrregularNesting.ts:364-1240`. See `result::mod`'s top
-//! doc for this module's exact scope (archive-eligible path only; the
-//! not-yet-ported `capacity::mode` orchestration is behind
-//! [`IntrinsicCapacityModeRunner`]).
+//! doc for this module's exact scope (archive-eligible path only).
+//!
+//! # Resolved seam: `capacity::mode`'s top-level orchestration
+//!
+//! `capacity::mode` now carries the full, real `run_intrinsic_capacity_mode`/
+//! `run_intrinsic_capacity_scheduler_cold_quantum` orchestration (previously
+//! a `capacity_mode_runner: &mut dyn IntrinsicCapacityModeRunner` seam
+//! defaulting to `UnimplementedCapacityModeRunner`, per `result::mod`'s
+//! former "Known gap" section). Per that section's own prescribed
+//! reconciliation path, this module now calls `capacity::mode`'s real
+//! functions directly (no injected trait object) -- both call sites where
+//! the seam previously lived are reachable at points in this coordinator's
+//! control flow where `geometry_cache` is not concurrently borrowed by
+//! anything else, so no indirection is needed.
 //!
 //! # A note on this file's own mutable-resource plumbing
 //!
 //! Every genuinely mutable resource this coordinator threads
-//! (`event_sink`, `geometry_cache`, `free_material_cache`,
-//! `capacity_mode_runner`, the cooperative-cancellation `control`) is passed
-//! as an independent top-level parameter, never as a field nested inside
+//! (`event_sink`, `geometry_cache`, `free_material_cache`, the
+//! cooperative-cancellation `control`) is passed as an independent
+//! top-level parameter, never as a field nested inside
 //! another struct that is itself passed by `&mut` reference. This follows
 //! the exact precedent `archive::shared`'s own `SharedArchiveControl` doc
 //! comment documents (and `capacity::search`'s `CapacitySearchControl`,
@@ -28,6 +41,7 @@
 //! shared (`&`) fields.
 
 use std::sync::Arc;
+use std::time::Instant;
 
 use crate::archive::shared::{
     make_intrinsic_shared_archive_endpoint, retain_ranked_shared_archive,
@@ -39,10 +53,18 @@ use crate::archive::shared::{
 };
 use crate::archive::{periodic_family, reconstruction};
 use crate::caches::GeometryCacheStore;
+use crate::capacity::mode::{
+    run_intrinsic_capacity_mode, run_intrinsic_capacity_scheduler_cold_quantum,
+    IntrinsicCapacityRouting, IntrinsicCapacityTrace, LaneCoordinatorQuantumOutcome,
+    LaneCoordinatorQuantumPhase, LaneCoordinatorQuantumProducerRole, RunIntrinsicCapacityModeInput,
+    RunIntrinsicCapacitySchedulerColdQuantumInput,
+};
+use crate::capacity::prefixes::IntrinsicCapacityPrefixSource;
 use crate::capacity::preflight::{
     preflight_intrinsic_complete_capacity, IntrinsicCapacityError, IntrinsicCapacityPreflightError,
     IntrinsicCapacityPreflightOutcome,
 };
+use crate::capacity::search::{CapacitySearchError, IntrinsicCapacitySearchStatus};
 use crate::domain::{
     CollisionGeometryDiagnostic, ImportedPiece, IrregularNestingSettings, IrregularPreparedPiece,
     IrregularPriorityOrderKey, PieceId, SheetSpec,
@@ -102,86 +124,6 @@ impl Default for ComputeIrregularNestingOptions<'_> {
             is_cancelled: None,
             focused_complete_reconstruction_enabled: true,
         }
-    }
-}
-
-// ===========================================================================
-// Seam: `IntrinsicCapacityModeRunner` (see `result::mod`'s top doc, "Known
-// gap: `capacity::mode`'s top-level orchestration is not yet ported").
-// ===========================================================================
-
-/// Minimal projection of TS `IntrinsicCapacityRouting`
-/// (`intrinsicCapacityMode.ts`) -- the two values
-/// `coordinateIntrinsicSharedArchive` ever passes as `routing`.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum IntrinsicCapacityRouting {
-    PreflightProvenImpossible,
-    BoundedCompleteArchiveMiss,
-}
-
-/// Minimal seam projection of TS `IntrinsicCapacityTrace`
-/// (`intrinsicCapacityMode.ts:175-197`), restricted to the fields this
-/// coordinator's own diagnostics/scheduler-trace assembly reads
-/// (`intrinsicCapacityDiagnostics`, `:1324-1376`, and the
-/// `capacity.trace.laneCoordinator?.quanta`/`warmPrefixEndpointsAdmitted`
-/// reads at `:979-1007`). See `result::mod`'s top doc for why this is a
-/// minimal projection rather than the full trace shape: the real trace's
-/// many other fields (`prefixes`, `cohesionShadow`, `qualityWarmPrefix`,
-/// ...) belong to the not-yet-ported orchestration that would produce them.
-#[derive(Clone, Debug, PartialEq)]
-pub struct IntrinsicCapacityTrace {
-    pub cold_search_settlement: String,
-    pub cold_search_consumed_placement_evaluations: f64,
-    pub cold_search_placement_evaluation_cap: f64,
-    pub cold_search_pruned_by_attainable_count: f64,
-    pub cold_search_pruned_by_attainable_material: f64,
-    pub selected_placed_count: f64,
-    pub selected_unplaced_count: f64,
-    pub selected_origin: String,
-    pub selected_canonical_geometry_hash: String,
-    pub prefixes_fitting_count: f64,
-    pub prefixes_captured_count: f64,
-    pub warm_prefix_endpoints_admitted: bool,
-}
-
-/// TS: `IntrinsicCapacityModeResult` (`intrinsicCapacityMode.ts:329-333`),
-/// restricted to what this coordinator consumes.
-pub struct IntrinsicCapacityModeSeamResult {
-    pub endpoint: crate::capacity::endpoint::IntrinsicCapacityEndpoint,
-    pub trace: IntrinsicCapacityTrace,
-}
-
-/// Seam standing in for the not-yet-ported `runIntrinsicCapacityMode`. See
-/// this module's top doc and `result::mod`'s "Known gap" section.
-pub trait IntrinsicCapacityModeRunner {
-    fn run_capacity_mode(
-        &mut self,
-        sheet: &SheetSpec,
-        prepared_pieces: &[Arc<IrregularPreparedPiece>],
-        routing: IntrinsicCapacityRouting,
-        preflight: &IntrinsicCapacityPreflightOutcome,
-    ) -> Result<IntrinsicCapacityModeSeamResult, IntrinsicCapacityError>;
-}
-
-/// Default [`IntrinsicCapacityModeRunner`]: reports a typed, honest "not yet
-/// ported" error rather than fabricating a capacity-mode result. See
-/// `result::mod`'s top doc for the reconciliation path once
-/// `capacity::mode` grows the real orchestration.
-#[derive(Default)]
-pub struct UnimplementedCapacityModeRunner;
-
-impl IntrinsicCapacityModeRunner for UnimplementedCapacityModeRunner {
-    fn run_capacity_mode(
-        &mut self,
-        _sheet: &SheetSpec,
-        _prepared_pieces: &[Arc<IrregularPreparedPiece>],
-        _routing: IntrinsicCapacityRouting,
-        _preflight: &IntrinsicCapacityPreflightOutcome,
-    ) -> Result<IntrinsicCapacityModeSeamResult, IntrinsicCapacityError> {
-        Err(IntrinsicCapacityError {
-            operation: "runIntrinsicCapacityMode".to_string(),
-            message: "capacity::mode's top-level orchestration (runIntrinsicCapacityMode) is not yet ported to Rust; this coordinator branch cannot produce a real result until that lands.".to_string(),
-        })
     }
 }
 
@@ -439,7 +381,6 @@ pub fn compute_irregular_nesting(
     };
     let is_cancelled = options.is_cancelled.take();
     let focused_complete_reconstruction_enabled = options.focused_complete_reconstruction_enabled;
-    let mut unimplemented_capacity_runner = UnimplementedCapacityModeRunner;
 
     coordinate_intrinsic_shared_archive(
         &input,
@@ -448,7 +389,6 @@ pub fn compute_irregular_nesting(
         focused_complete_reconstruction_enabled,
         geometry_cache,
         free_material_cache,
-        &mut unimplemented_capacity_runner,
     )
 }
 
@@ -505,7 +445,6 @@ fn coordinate_intrinsic_shared_archive(
     focused_complete_reconstruction_enabled: bool,
     geometry_cache: &mut GeometryCacheStore,
     free_material_cache: &mut FreeMaterialCache,
-    capacity_mode_runner: &mut dyn IntrinsicCapacityModeRunner,
 ) -> Result<IrregularComputeResult, IrregularComputeErrorType> {
     // TS: `archiveEnabled = isIntrinsicSharedArchiveEligible(input.settings)`
     // (`:483`). Per `result::mod`'s top doc (R1/R2), a non-eligible request
@@ -551,6 +490,7 @@ fn coordinate_intrinsic_shared_archive(
     // reborrow (see this module's top doc).
     let mut control = is_cancelled.map(cancellation_control);
 
+    let preflight_started_at = Instant::now();
     let preflight = preflight_intrinsic_complete_capacity(
         &input.request.sheet,
         &owned_prepared_pieces(input.prepared_pieces),
@@ -559,8 +499,21 @@ fn coordinate_intrinsic_shared_archive(
         control_dyn(&mut control),
     )
     .map_err(map_preflight_error)?;
+    let preflight_runtime_ms =
+        crate::js_number::js_math::max(0.0, preflight_started_at.elapsed().as_secs_f64() * 1000.0);
 
     let selected: MaterializedDecode;
+    // TS: `settledCompleteArchiveForShortSideObserver` (`:496-505`) -- starts
+    // as the empty array assigned unconditionally right after the
+    // `archiveEnabled` check, and is only ever reassigned to the real
+    // sheetless archive inside the "inconclusive preflight" branch below
+    // (`:938`). The proven-impossible branch deliberately leaves it empty:
+    // per `capacity-core.md` §1, the Short Side observer still runs (this
+    // coordinator falls through to the shared Short Side profile block
+    // below, exactly like TS's own `if`/`else` -- neither arm returns
+    // early), but with zero archive endpoints to observe.
+    let mut settled_complete_archive_for_short_side_observer: Vec<IntrinsicSharedArchiveEndpoint> =
+        Vec::new();
 
     if let IntrinsicCapacityPreflightOutcome::ProvenImpossible { .. } = &preflight {
         if focused_complete_reconstruction_enabled {
@@ -577,157 +530,243 @@ fn coordinate_intrinsic_shared_archive(
                 failure_reason: None,
             });
         }
-        let capacity = capacity_mode_runner
-            .run_capacity_mode(
-                &input.request.sheet,
-                input.prepared_pieces,
-                IntrinsicCapacityRouting::PreflightProvenImpossible,
-                &preflight,
-            )
-            .map_err(map_capacity_error)?;
+        let capacity = run_intrinsic_capacity_mode(
+            RunIntrinsicCapacityModeInput {
+                sheet: &input.request.sheet,
+                prepared_pieces: input.prepared_pieces,
+                routing: IntrinsicCapacityRouting::PreflightProvenImpossible,
+                preflight: &preflight,
+                prefix_sources: &[],
+                capture_cohesion_shadow: false,
+                scheduled_cold_start: None,
+                admit_warm_prefix_endpoints: false,
+                coordinate_protected_lanes: false,
+                preflight_runtime_ms: Some(preflight_runtime_ms),
+                complete_archive_runtime_ms: None,
+                retention_mode: Some(
+                    crate::capacity::search::IntrinsicCapacityRetentionMode::CohesionFrontier,
+                ),
+            },
+            control_dyn(&mut control),
+            input.settings,
+            geometry_cache,
+            None,
+        )
+        .map_err(map_capacity_search_error)?;
         selected = materialize_capacity_result(input, &capacity, free_material_cache)?;
         archive_diagnostics.extend(intrinsic_capacity_diagnostics(&preflight, &capacity));
+        capacity_trace = Some(capacity.trace.clone());
         emit_shared_archive_progress(
             &mut *event_sink,
             IrregularPortfolioPhase::Completed,
             Some(selected.portfolio.score.clone()),
             0.0,
         );
-
-        return Ok(assemble_result(
-            input,
-            selected,
-            archive_diagnostics,
-            capacity_trace,
-            intrinsic_anytime_scheduler_trace,
-            focused_complete_reconstruction_trace,
-            None,
-            None,
-            event_sink,
-        ));
-    }
-
-    // TS: `schedulerEnabled = true` (`:604`) -- the scheduler cold-start
-    // always runs on this branch in production.
-    let owned_pieces_for_material_areas = owned_prepared_pieces(input.prepared_pieces);
-    let material_areas = crate::capacity::material::intrinsic_capacity_material_areas(
-        &owned_pieces_for_material_areas,
-    );
-    let scheduled_cold_start = match material_areas {
-        crate::capacity::material::IntrinsicCapacityMaterialAreas::Complete {
-            areas_by_piece_id,
-        } => {
-            let mut cavity_cache =
-                crate::capacity::endpoint::IntrinsicCapacityCavityCache::default();
-            let depths = crate::capacity::mode::INTRINSIC_ANYTIME_SCHEDULER_COLD_QUANTUM_DEPTHS
-                .min((input.prepared_pieces.len() as f64).max(1.0));
-            crate::capacity::search::run_intrinsic_capacity_cold_search(
-                crate::capacity::search::RunIntrinsicCapacityColdSearchInput {
+        // TS: falls through to the shared post-`if`/`else` code (the Short
+        // Side profile block, then `assemble_result`) -- no early return
+        // here. See this function's `settled_complete_archive_for_short_side_observer`
+        // doc comment above.
+    } else {
+        // TS: `schedulerEnabled = true` (`:604`) -- the scheduler cold-start
+        // always runs on this branch in production. Errors propagate as a hard
+        // coordinator failure (TS: `yield* ...runIntrinsicCapacitySchedulerColdQuantum(...)`),
+        // never silently swallowed into `None`.
+        let mut scheduled_cold_start = Some(
+            run_intrinsic_capacity_scheduler_cold_quantum(
+                RunIntrinsicCapacitySchedulerColdQuantumInput {
                     sheet: &input.request.sheet,
                     prepared_pieces: input.prepared_pieces,
-                    material_areas_by_piece_id: &areas_by_piece_id,
-                    cavity_cache: &mut cavity_cache,
-                    incumbent: None,
-                    control: control_dyn(&mut control),
-                    capture_phase_timings: false,
                     checkpoint: None,
-                    maximum_depth_boundaries: Some(depths),
-                    warm_prefix_seed: None,
-                    scheduler_deficit: Some(1.0),
-                    retention_mode: None,
-                    settings: input.settings,
-                    geometry_cache,
-                    timing_now: None,
+                    maximum_depth_boundaries: None,
+                    retention_mode: Some(
+                        crate::capacity::search::IntrinsicCapacityRetentionMode::CohesionFrontier,
+                    ),
                 },
+                control_dyn(&mut control),
+                input.settings,
+                geometry_cache,
+                None,
             )
-            .ok()
-        }
-        crate::capacity::material::IntrinsicCapacityMaterialAreas::Invalid { .. } => None,
-    };
+            .map_err(map_capacity_search_error)?,
+        );
+        let mut scheduled_cold_checkpoint_reused = false;
 
-    if let Some(cold_start) = &scheduled_cold_start {
-        intrinsic_anytime_scheduler_trace = Some(IntrinsicAnytimeSchedulerTrace {
-            version: INTRINSIC_ANYTIME_SCHEDULER_TRACE_VERSION,
-            cold_quantum_depths:
-                crate::capacity::mode::INTRINSIC_ANYTIME_SCHEDULER_COLD_QUANTUM_DEPTHS,
-            cold_start_status: cold_search_status(cold_start),
-            cold_start_completed_depths: cold_start.trace.completed_depths,
-            cold_start_consumed_placement_evaluations: cold_start
-                .trace
-                .consumed_placement_evaluations,
-            cold_checkpoint_reused: false,
-            warm_prefix_endpoints_admitted: false,
-            cancellation_reason: None,
-            quanta: vec![IntrinsicAnytimeSchedulerQuantum {
-                ordinal: 0,
+        if let Some(cold_start) = &scheduled_cold_start {
+            intrinsic_anytime_scheduler_trace = Some(IntrinsicAnytimeSchedulerTrace {
+                version: INTRINSIC_ANYTIME_SCHEDULER_TRACE_VERSION,
+                cold_quantum_depths:
+                    crate::capacity::mode::INTRINSIC_ANYTIME_SCHEDULER_COLD_QUANTUM_DEPTHS,
+                cold_start_status: cold_search_status(cold_start),
+                cold_start_completed_depths: cold_start.trace.completed_depths,
+                cold_start_consumed_placement_evaluations: cold_start
+                    .trace
+                    .consumed_placement_evaluations,
+                cold_checkpoint_reused: false,
+                warm_prefix_endpoints_admitted: false,
+                cancellation_reason: None,
+                quanta: vec![IntrinsicAnytimeSchedulerQuantum {
+                    ordinal: 0,
+                    cohort: IntrinsicAnytimeSchedulerCohort::Partial,
+                    producer_role: IntrinsicAnytimeSchedulerProducerRole::CapacityCold,
+                    outcome: match cold_search_status(cold_start) {
+                        IntrinsicAnytimeSchedulerColdStartStatus::Paused => {
+                            IntrinsicAnytimeSchedulerOutcome::Checkpointed
+                        }
+                        IntrinsicAnytimeSchedulerColdStartStatus::Settled => {
+                            IntrinsicAnytimeSchedulerOutcome::Settled
+                        }
+                    },
+                }],
+            });
+        }
+
+        // `run_intrinsic_shared_archive_portfolio` takes both `periodic_runner`
+        // (which must independently own a `&mut GeometryCacheStore` for its own
+        // `.run()` call, per `archive::shared`'s fixed trait signature) and a
+        // top-level `geometry_cache: &mut GeometryCacheStore` parameter for its
+        // own direct-phase work -- two simultaneous exclusive borrows of the
+        // *same* store are therefore structurally required by that signature.
+        // Since the coordinator's outer `geometry_cache` is already borrowed
+        // for the direct-phase parameter below, the periodic runner is given
+        // its own private, freshly-allocated `GeometryCacheStore` instead of
+        // sharing the coordinator's. Both stores compute byte-identical
+        // results for any given input (the cache is a pure memoization layer,
+        // not a correctness input); this only forgoes cross-phase cache-hit
+        // reuse between the direct and periodic phases, a performance
+        // difference, never an observable-output difference. The interleaved
+        // scheduler-resume closure below is given its own third private cache
+        // for the identical reason.
+        let mut periodic_geometry_cache = GeometryCacheStore::new();
+        let mut periodic_runner = RealIntrinsicPeriodicFamilyPortfolioRunner {
+            settings: input.settings,
+            geometry_cache: &mut periodic_geometry_cache,
+        };
+        // TS: `onPhaseCompleted: () => emitSharedArchiveProgress(input, 'shared_archive',
+        // undefined, ...)` (`computeIrregularNesting.ts:710-716`) -- fires once
+        // after the direct phase and once after the periodic phase, both still
+        // reporting phase `'shared_archive'` (the phase name does not change;
+        // only the elapsed-time payload would, and that field is diagnostic-only
+        // per `worker-coordination.md` §7). Captured here (not stored earlier)
+        // so `event_sink`'s reborrow only needs to live for this one call.
+        let mut on_phase_completed =
+            |_phase: SharedArchivePhase| -> Result<(), SharedArchiveError> {
+                emit_shared_archive_progress(
+                    &mut *event_sink,
+                    IrregularPortfolioPhase::SharedArchive,
+                    None,
+                    0.0,
+                );
+                Ok(())
+            };
+        // TS: `onDirectConstructed: (role, state) => { prefixSources.push({ role, state }) }`
+        // (`:707-709`) -- captures every committed, uncapped, complete direct
+        // constructor state for later `capacity::mode` prefix reuse.
+        let mut prefix_sources: Vec<IntrinsicCapacityPrefixSource> = Vec::new();
+        let mut on_direct_constructed =
+            |role: crate::archive::shared::IntrinsicSharedArchiveDirectRole,
+             state: &Arc<crate::search::beam_state::IrregularBeamState>| {
+                prefix_sources.push(IntrinsicCapacityPrefixSource {
+                    role: role.as_str().to_string(),
+                    state: Arc::clone(state),
+                });
+            };
+        // TS: `canonicalGridCompletedPieceQuantum: 1` + `onCanonicalGridCheckpointed`
+        // (`:647-705`) -- production's always-on interleaved scheduler: every
+        // time the canonical-grid direct constructor pauses after one more
+        // completed piece boundary, the coordinator (a) records one
+        // `legacy-complete`/`checkpointed` quantum, then (b) if the protected
+        // cold lane is still paused with a checkpoint, resumes it by exactly one
+        // depth boundary (never a cold restart) and records the resulting
+        // `capacity-cold`/`partial` quantum. This is the scheduler's own
+        // chronology, independent of and prior to `capacity::mode`'s lane
+        // coordinator. Control is not threaded into this nested resume (see
+        // `capacity::mode`'s top doc, "No `timingNow` seam" section, for the
+        // analogous narrow relaxation this mirrors): production never sets
+        // `isCancelled`, so this is behaviorally inert for every real caller.
+        let mut scheduler_geometry_cache = GeometryCacheStore::new();
+        let mut on_canonical_grid_checkpointed = |_checkpoint: &crate::search::strict_decoder::IntrinsicStrictDirectCheckpoint| -> Result<(), SharedArchiveError> {
+        if let Some(trace) = intrinsic_anytime_scheduler_trace.as_mut() {
+            trace.quanta.push(IntrinsicAnytimeSchedulerQuantum {
+                ordinal: trace.quanta.len(),
+                cohort: IntrinsicAnytimeSchedulerCohort::Complete,
+                producer_role: IntrinsicAnytimeSchedulerProducerRole::LegacyComplete,
+                outcome: IntrinsicAnytimeSchedulerOutcome::Checkpointed,
+            });
+        }
+        let resumable = matches!(
+            &scheduled_cold_start,
+            Some(search) if search.status == IntrinsicCapacitySearchStatus::Paused
+                && search.checkpoint.is_some()
+        );
+        if !resumable {
+            return Ok(());
+        }
+        let checkpoint = scheduled_cold_start
+            .as_ref()
+            .and_then(|search| search.checkpoint.clone())
+            .expect("checked Some+checkpoint above");
+        let resumed = run_intrinsic_capacity_scheduler_cold_quantum(
+            RunIntrinsicCapacitySchedulerColdQuantumInput {
+                sheet: &input.request.sheet,
+                prepared_pieces: input.prepared_pieces,
+                checkpoint: Some(checkpoint),
+                maximum_depth_boundaries: Some(1.0),
+                retention_mode: Some(
+                    crate::capacity::search::IntrinsicCapacityRetentionMode::CohesionFrontier,
+                ),
+            },
+            None,
+            input.settings,
+            &mut scheduler_geometry_cache,
+            None,
+        )
+        .map_err(capacity_search_error_to_shared_archive_error)?;
+        scheduled_cold_checkpoint_reused = true;
+        if let Some(trace) = intrinsic_anytime_scheduler_trace.as_mut() {
+            trace.quanta.push(IntrinsicAnytimeSchedulerQuantum {
+                ordinal: trace.quanta.len(),
                 cohort: IntrinsicAnytimeSchedulerCohort::Partial,
                 producer_role: IntrinsicAnytimeSchedulerProducerRole::CapacityCold,
-                outcome: match cold_search_status(cold_start) {
-                    IntrinsicAnytimeSchedulerColdStartStatus::Paused => {
+                outcome: match resumed.status {
+                    IntrinsicCapacitySearchStatus::Paused => {
                         IntrinsicAnytimeSchedulerOutcome::Checkpointed
                     }
-                    IntrinsicAnytimeSchedulerColdStartStatus::Settled => {
+                    IntrinsicCapacitySearchStatus::Settled => {
                         IntrinsicAnytimeSchedulerOutcome::Settled
                     }
                 },
-            }],
-        });
-    }
-
-    // `run_intrinsic_shared_archive_portfolio` takes both `periodic_runner`
-    // (which must independently own a `&mut GeometryCacheStore` for its own
-    // `.run()` call, per `archive::shared`'s fixed trait signature) and a
-    // top-level `geometry_cache: &mut GeometryCacheStore` parameter for its
-    // own direct-phase work -- two simultaneous exclusive borrows of the
-    // *same* store are therefore structurally required by that signature.
-    // Since the coordinator's outer `geometry_cache` is already borrowed
-    // for the direct-phase parameter below, the periodic runner is given
-    // its own private, freshly-allocated `GeometryCacheStore` instead of
-    // sharing the coordinator's. Both stores compute byte-identical
-    // results for any given input (the cache is a pure memoization layer,
-    // not a correctness input); this only forgoes cross-phase cache-hit
-    // reuse between the direct and periodic phases, a performance
-    // difference, never an observable-output difference.
-    let mut periodic_geometry_cache = GeometryCacheStore::new();
-    let mut periodic_runner = RealIntrinsicPeriodicFamilyPortfolioRunner {
-        settings: input.settings,
-        geometry_cache: &mut periodic_geometry_cache,
-    };
-    // TS: `onPhaseCompleted: () => emitSharedArchiveProgress(input, 'shared_archive',
-    // undefined, ...)` (`computeIrregularNesting.ts:710-716`) -- fires once
-    // after the direct phase and once after the periodic phase, both still
-    // reporting phase `'shared_archive'` (the phase name does not change;
-    // only the elapsed-time payload would, and that field is diagnostic-only
-    // per `worker-coordination.md` §7). Captured here (not stored earlier)
-    // so `event_sink`'s reborrow only needs to live for this one call.
-    let mut on_phase_completed = |_phase: SharedArchivePhase| -> Result<(), SharedArchiveError> {
-        emit_shared_archive_progress(
-            &mut *event_sink,
-            IrregularPortfolioPhase::SharedArchive,
-            None,
-            0.0,
-        );
+            });
+        }
+        scheduled_cold_start = Some(resumed);
         Ok(())
     };
-    let mut portfolio_options = IntrinsicSharedArchivePortfolioOptions {
-        maximum_direct_runtime_ms: Some(35_000.0),
-        include_source_audit_witnesses: Some(true),
-        on_phase_completed: Some(&mut on_phase_completed),
-        ..Default::default()
-    };
-    let archive = run_intrinsic_shared_archive_portfolio(
-        &input.request.sheet,
-        input.prepared_pieces,
-        &mut portfolio_options,
-        control_dyn(&mut control),
-        &mut periodic_runner,
-        input.settings,
-        geometry_cache,
-    )
-    .map_err(map_shared_archive_error)?;
+        let mut portfolio_options = IntrinsicSharedArchivePortfolioOptions {
+            maximum_direct_runtime_ms: Some(35_000.0),
+            include_source_audit_witnesses: Some(true),
+            canonical_grid_completed_piece_quantum: Some(1.0),
+            on_canonical_grid_checkpointed: Some(&mut on_canonical_grid_checkpointed),
+            on_phase_completed: Some(&mut on_phase_completed),
+            on_direct_constructed: Some(&mut on_direct_constructed),
+            ..Default::default()
+        };
+        let archive_started_at = Instant::now();
+        let archive = run_intrinsic_shared_archive_portfolio(
+            &input.request.sheet,
+            input.prepared_pieces,
+            &mut portfolio_options,
+            control_dyn(&mut control),
+            &mut periodic_runner,
+            input.settings,
+            geometry_cache,
+        )
+        .map_err(map_shared_archive_error)?;
+        let complete_archive_runtime_ms = crate::js_number::js_math::max(
+            0.0,
+            archive_started_at.elapsed().as_secs_f64() * 1000.0,
+        );
 
-    if !crate::archive::shared::intrinsic_shared_archive_production_valid(&archive) {
-        return Err(IrregularComputeErrorType::Portfolio(IrregularPortfolioError {
+        if !crate::archive::shared::intrinsic_shared_archive_production_valid(&archive) {
+            return Err(IrregularComputeErrorType::Portfolio(IrregularPortfolioError {
             operation: "intrinsicSharedArchive".to_string(),
             category: IrregularPortfolioErrorCategory::Search,
             message: format!(
@@ -743,41 +782,41 @@ fn coordinate_intrinsic_shared_archive(
                 archive.periodic_selection_valid,
             ),
         }));
-    }
+        }
 
-    if let Some(trace) = intrinsic_anytime_scheduler_trace.as_mut() {
-        trace.quanta.push(IntrinsicAnytimeSchedulerQuantum {
-            ordinal: trace.quanta.len(),
-            cohort: IntrinsicAnytimeSchedulerCohort::Complete,
-            producer_role: IntrinsicAnytimeSchedulerProducerRole::LegacyComplete,
-            outcome: IntrinsicAnytimeSchedulerOutcome::Settled,
-        });
-    }
+        if let Some(trace) = intrinsic_anytime_scheduler_trace.as_mut() {
+            trace.quanta.push(IntrinsicAnytimeSchedulerQuantum {
+                ordinal: trace.quanta.len(),
+                cohort: IntrinsicAnytimeSchedulerCohort::Complete,
+                producer_role: IntrinsicAnytimeSchedulerProducerRole::LegacyComplete,
+                outcome: IntrinsicAnytimeSchedulerOutcome::Settled,
+            });
+        }
 
-    let protected_sheetless_archive = retain_ranked_shared_archive(&archive.sheetless_archive);
-    let protected_sheetless_winner =
-        select_intrinsic_shared_archive_winner(&protected_sheetless_archive);
-    let protected_fitting_winner = select_intrinsic_shared_archive_winner(
-        &select_fitting_shared_archive(&protected_sheetless_archive),
-    );
+        let protected_sheetless_archive = retain_ranked_shared_archive(&archive.sheetless_archive);
+        let protected_sheetless_winner =
+            select_intrinsic_shared_archive_winner(&protected_sheetless_archive);
+        let protected_fitting_winner = select_intrinsic_shared_archive_winner(
+            &select_fitting_shared_archive(&protected_sheetless_archive),
+        );
 
-    let mut focused_reconstruction_endpoints: Vec<IntrinsicSharedArchiveEndpoint> = Vec::new();
-    if focused_complete_reconstruction_enabled {
-        match (&protected_sheetless_winner, &protected_fitting_winner) {
-            (Some(sheetless_winner), Some(_fitting_winner)) => {
-                let reconstruction_seed = reconstruction::IntrinsicReconstructionSeed {
-                    role: reconstruction::IntrinsicReconstructionSeedRole::SettledProtected,
-                    canonical_geometry_hash: sheetless_winner
-                        .sheetless_canonical_geometry_hash
-                        .clone(),
-                    placed_collision_geometries: sheetless_winner
-                        .placed_collision_geometries
-                        .clone(),
-                    step_trace: Vec::new(),
-                    metrics: sheetless_winner.metrics.clone(),
-                };
-                let baseline_seeds = [reconstruction_seed];
-                let reconstruction_outcome = reconstruction::run_intrinsic_reconstruction_portfolio(
+        let mut focused_reconstruction_endpoints: Vec<IntrinsicSharedArchiveEndpoint> = Vec::new();
+        if focused_complete_reconstruction_enabled {
+            match (&protected_sheetless_winner, &protected_fitting_winner) {
+                (Some(sheetless_winner), Some(_fitting_winner)) => {
+                    let reconstruction_seed = reconstruction::IntrinsicReconstructionSeed {
+                        role: reconstruction::IntrinsicReconstructionSeedRole::SettledProtected,
+                        canonical_geometry_hash: sheetless_winner
+                            .sheetless_canonical_geometry_hash
+                            .clone(),
+                        placed_collision_geometries: sheetless_winner
+                            .placed_collision_geometries
+                            .clone(),
+                        step_trace: Vec::new(),
+                        metrics: sheetless_winner.metrics.clone(),
+                    };
+                    let baseline_seeds = [reconstruction_seed];
+                    let reconstruction_outcome = reconstruction::run_intrinsic_reconstruction_portfolio(
                     reconstruction::RunIntrinsicReconstructionPortfolioInput {
                         all_prepared_pieces: input.prepared_pieces,
                         baseline_seeds: &baseline_seeds,
@@ -795,14 +834,14 @@ fn coordinate_intrinsic_shared_archive(
                     geometry_cache,
                 );
 
-                match reconstruction_outcome {
-                    Err(reconstruction::IntrinsicReconstructionPortfolioFailure::Strict(
-                        IntrinsicStrictDecoderFailure::Abort(abort),
-                    )) if abort.reason == NfpIfpAbortReason::Cancelled => {
-                        return Err(IrregularComputeErrorType::NfpIfpControlAbort(abort));
-                    }
-                    Err(failure) => {
-                        focused_complete_reconstruction_trace =
+                    match reconstruction_outcome {
+                        Err(reconstruction::IntrinsicReconstructionPortfolioFailure::Strict(
+                            IntrinsicStrictDecoderFailure::Abort(abort),
+                        )) if abort.reason == NfpIfpAbortReason::Cancelled => {
+                            return Err(IrregularComputeErrorType::NfpIfpControlAbort(abort));
+                        }
+                        Err(failure) => {
+                            focused_complete_reconstruction_trace =
                             Some(IntrinsicFocusedCompleteReconstructionTrace {
                                 version: INTRINSIC_FOCUSED_COMPLETE_RECONSTRUCTION_TRACE_VERSION,
                                 status: IntrinsicFocusedCompleteReconstructionStatus::FailedProtectedFallback,
@@ -817,55 +856,55 @@ fn coordinate_intrinsic_shared_archive(
                                 output_influence: IntrinsicFocusedCompleteReconstructionOutputInfluence::None,
                                 failure_reason: Some(reconstruction_failure_message(&failure)),
                             });
-                    }
-                    Ok(reconstruction) => {
-                        let focused_run = reconstruction.runs.iter().find(|run| {
+                        }
+                        Ok(reconstruction) => {
+                            let focused_run = reconstruction.runs.iter().find(|run| {
                             run.role
                                 == reconstruction::IntrinsicReconstructionRole::EndpointQ90RightToLeft
                         });
-                        if let Some(run) = focused_run {
-                            if run.status
-                                == reconstruction::IntrinsicReconstructionRunStatus::Completed
-                                && run.metrics.is_some()
-                            {
-                                let placement_order: Vec<PieceId> = run
-                                    .placed_collision_geometries
-                                    .iter()
-                                    .map(|placed| {
-                                        placed.placement.piece_id.clone().unwrap_or_else(|| {
-                                            placed.placement.source_piece_id.clone()
+                            if let Some(run) = focused_run {
+                                if run.status
+                                    == reconstruction::IntrinsicReconstructionRunStatus::Completed
+                                    && run.metrics.is_some()
+                                {
+                                    let placement_order: Vec<PieceId> = run
+                                        .placed_collision_geometries
+                                        .iter()
+                                        .map(|placed| {
+                                            placed.placement.piece_id.clone().unwrap_or_else(|| {
+                                                placed.placement.source_piece_id.clone()
+                                            })
                                         })
-                                    })
-                                    .collect();
-                                let state =
-                                    crate::search::beam_state::IrregularBeamState::from_input(
-                                        crate::search::beam_state::IrregularBeamStateInput {
-                                            remaining_prepared_pieces: Vec::new(),
-                                            placed_collision_geometries: run
-                                                .placed_collision_geometries
-                                                .clone(),
-                                            unplaced_piece_ids: Some(Vec::new()),
-                                            unplaced_source_piece_ids: None,
-                                            placement_order,
-                                            parent: None,
-                                            placed_collision_index: None,
+                                        .collect();
+                                    let state =
+                                        crate::search::beam_state::IrregularBeamState::from_input(
+                                            crate::search::beam_state::IrregularBeamStateInput {
+                                                remaining_prepared_pieces: Vec::new(),
+                                                placed_collision_geometries: run
+                                                    .placed_collision_geometries
+                                                    .clone(),
+                                                unplaced_piece_ids: Some(Vec::new()),
+                                                unplaced_source_piece_ids: None,
+                                                placement_order,
+                                                parent: None,
+                                                placed_collision_index: None,
+                                            },
+                                        );
+                                    if let Some(endpoint) = make_intrinsic_shared_archive_endpoint(
+                                        MakeIntrinsicSharedArchiveEndpointInput {
+                                            sheet: &input.request.sheet,
+                                            role: "reconstruction-endpoint-q90-right-to-left"
+                                                .to_string(),
+                                            source_id: run.source_endpoint_hash.clone(),
+                                            state,
+                                            runtime_ms: Some(run.runtime_ms),
                                         },
-                                    );
-                                if let Some(endpoint) = make_intrinsic_shared_archive_endpoint(
-                                    MakeIntrinsicSharedArchiveEndpointInput {
-                                        sheet: &input.request.sheet,
-                                        role: "reconstruction-endpoint-q90-right-to-left"
-                                            .to_string(),
-                                        source_id: run.source_endpoint_hash.clone(),
-                                        state,
-                                        runtime_ms: Some(run.runtime_ms),
-                                    },
-                                ) {
-                                    focused_reconstruction_endpoints.push(endpoint);
+                                    ) {
+                                        focused_reconstruction_endpoints.push(endpoint);
+                                    }
                                 }
                             }
-                        }
-                        focused_complete_reconstruction_trace =
+                            focused_complete_reconstruction_trace =
                             Some(IntrinsicFocusedCompleteReconstructionTrace {
                                 version: INTRINSIC_FOCUSED_COMPLETE_RECONSTRUCTION_TRACE_VERSION,
                                 status: focused_run
@@ -891,11 +930,11 @@ fn coordinate_intrinsic_shared_archive(
                                     IntrinsicFocusedCompleteReconstructionOutputInfluence::None,
                                 failure_reason: None,
                             });
+                        }
                     }
                 }
-            }
-            _ => {
-                focused_complete_reconstruction_trace = Some(IntrinsicFocusedCompleteReconstructionTrace {
+                _ => {
+                    focused_complete_reconstruction_trace = Some(IntrinsicFocusedCompleteReconstructionTrace {
                     version: INTRINSIC_FOCUSED_COMPLETE_RECONSTRUCTION_TRACE_VERSION,
                     status: IntrinsicFocusedCompleteReconstructionStatus::SkippedNoFittingProtectedEndpoint,
                     source_canonical_geometry_hash: protected_sheetless_winner
@@ -909,119 +948,205 @@ fn coordinate_intrinsic_shared_archive(
                     output_influence: IntrinsicFocusedCompleteReconstructionOutputInfluence::None,
                     failure_reason: None,
                 });
-            }
-        }
-    }
-
-    let sheetless_archive = retain_ranked_shared_archive(
-        &protected_sheetless_archive
-            .iter()
-            .cloned()
-            .chain(focused_reconstruction_endpoints.iter().cloned())
-            .collect::<Vec<_>>(),
-    );
-    let settled_complete_archive_for_short_side_observer = sheetless_archive.clone();
-    let winner =
-        select_intrinsic_shared_archive_winner(&select_fitting_shared_archive(&sheetless_archive));
-
-    if let Some(trace) = focused_complete_reconstruction_trace.as_mut() {
-        trace.selected_canonical_geometry_hash = winner
-            .as_ref()
-            .map(|winner| winner.sheetless_canonical_geometry_hash.clone());
-        trace.output_influence = match &winner {
-            None => IntrinsicFocusedCompleteReconstructionOutputInfluence::None,
-            Some(winner) => {
-                if focused_reconstruction_endpoints.iter().any(|endpoint| {
-                    endpoint.sheetless_canonical_geometry_hash
-                        == winner.sheetless_canonical_geometry_hash
-                }) {
-                    IntrinsicFocusedCompleteReconstructionOutputInfluence::Selected
-                } else {
-                    IntrinsicFocusedCompleteReconstructionOutputInfluence::ProtectedFallback
                 }
             }
-        };
-    }
-
-    match winner {
-        None => {
-            let capacity = capacity_mode_runner
-                .run_capacity_mode(
-                    &input.request.sheet,
-                    input.prepared_pieces,
-                    IntrinsicCapacityRouting::BoundedCompleteArchiveMiss,
-                    &preflight,
-                )
-                .map_err(map_capacity_error)?;
-            if let Some(trace) = intrinsic_anytime_scheduler_trace.as_mut() {
-                trace.warm_prefix_endpoints_admitted =
-                    capacity.trace.warm_prefix_endpoints_admitted;
-                trace.cancellation_reason =
-                    Some(IntrinsicAnytimeSchedulerCancellationReason::CompleteCohortMiss);
-            }
-            selected = materialize_capacity_result(input, &capacity, free_material_cache)?;
-            archive_diagnostics.extend(intrinsic_capacity_diagnostics(&preflight, &capacity));
-            emit_shared_archive_progress(
-                &mut *event_sink,
-                IrregularPortfolioPhase::Completed,
-                Some(selected.portfolio.score.clone()),
-                0.0,
-            );
         }
-        Some(winner) => {
-            if let Some(trace) = intrinsic_anytime_scheduler_trace.as_mut() {
-                trace.cancellation_reason =
-                    Some(IntrinsicAnytimeSchedulerCancellationReason::CompleteEndpointFitted);
-                if scheduled_cold_start.is_some() {
-                    trace.quanta.push(IntrinsicAnytimeSchedulerQuantum {
-                        ordinal: trace.quanta.len(),
-                        cohort: IntrinsicAnytimeSchedulerCohort::Partial,
-                        producer_role: IntrinsicAnytimeSchedulerProducerRole::CapacityCold,
-                        outcome: IntrinsicAnytimeSchedulerOutcome::Cancelled,
-                    });
+
+        let sheetless_archive = retain_ranked_shared_archive(
+            &protected_sheetless_archive
+                .iter()
+                .cloned()
+                .chain(focused_reconstruction_endpoints.iter().cloned())
+                .collect::<Vec<_>>(),
+        );
+        settled_complete_archive_for_short_side_observer = sheetless_archive.clone();
+        let winner = select_intrinsic_shared_archive_winner(&select_fitting_shared_archive(
+            &sheetless_archive,
+        ));
+
+        if let Some(trace) = focused_complete_reconstruction_trace.as_mut() {
+            trace.selected_canonical_geometry_hash = winner
+                .as_ref()
+                .map(|winner| winner.sheetless_canonical_geometry_hash.clone());
+            trace.output_influence = match &winner {
+                None => IntrinsicFocusedCompleteReconstructionOutputInfluence::None,
+                Some(winner) => {
+                    if focused_reconstruction_endpoints.iter().any(|endpoint| {
+                        endpoint.sheetless_canonical_geometry_hash
+                            == winner.sheetless_canonical_geometry_hash
+                    }) {
+                        IntrinsicFocusedCompleteReconstructionOutputInfluence::Selected
+                    } else {
+                        IntrinsicFocusedCompleteReconstructionOutputInfluence::ProtectedFallback
+                    }
                 }
-            }
-            selected = materialize_shared_archive_result(
-                &MaterializeSharedArchiveResultInput {
-                    sorted_piece_ids: input.sorted_piece_ids,
-                    beam_width: input.settings.optimizer.beam_width,
-                    history_mode: input.request.options.history_mode,
+            };
+        }
+
+        match winner {
+            None => {
+                // TS: `...(scheduledColdStart === undefined ? {} : {scheduledColdStart,
+                // captureWarmPrefixTelemetry: true, admitWarmPrefixEndpoints: true,
+                // coordinateProtectedLanes: true})` (`:969-976`) -- all three
+                // gated on `scheduledColdStart`'s presence together.
+                let scheduled_cold_start_present = scheduled_cold_start.is_some();
+                let capacity = run_intrinsic_capacity_mode(
+                RunIntrinsicCapacityModeInput {
+                    sheet: &input.request.sheet,
                     prepared_pieces: input.prepared_pieces,
-                    sheet: input.request.sheet.clone(),
+                    routing: IntrinsicCapacityRouting::BoundedCompleteArchiveMiss,
+                    preflight: &preflight,
+                    prefix_sources: &prefix_sources,
+                    capture_cohesion_shadow: false,
+                    scheduled_cold_start,
+                    admit_warm_prefix_endpoints: scheduled_cold_start_present,
+                    coordinate_protected_lanes: scheduled_cold_start_present,
+                    preflight_runtime_ms: Some(preflight_runtime_ms),
+                    complete_archive_runtime_ms: Some(complete_archive_runtime_ms),
+                    retention_mode: Some(
+                        crate::capacity::search::IntrinsicCapacityRetentionMode::CohesionFrontier,
+                    ),
                 },
-                &winner,
+                control_dyn(&mut control),
                 input.settings,
-                free_material_cache,
-            )?;
-            archive_diagnostics.push(crate::result::materialize::shared_archive_diagnostic(
-                "completed",
-                format!(
-                    "shared archive selected {} from {} exact endpoints",
-                    winner.role,
-                    sheetless_archive.len()
-                ),
-            ));
-            archive_diagnostics.push(CollisionGeometryDiagnostic {
+                geometry_cache,
+                None,
+            )
+            .map_err(map_capacity_search_error)?;
+                if let Some(trace) = intrinsic_anytime_scheduler_trace.as_mut() {
+                    // TS: `:979-1006` -- append the lane coordinator's own
+                    // resume/settlement quanta (filtered) onto the scheduler
+                    // trace, immediately after whatever quanta the interleaved
+                    // canonical-grid checkpoint chronology already produced.
+                    let capacity_resume_ordinal = trace.quanta.len();
+                    let empty_quanta: &[crate::capacity::mode::IntrinsicCapacityLaneCoordinatorQuantum] =
+                    &[];
+                    let lane_quanta = capacity
+                        .trace
+                        .lane_coordinator
+                        .as_ref()
+                        .map(|lane_coordinator| lane_coordinator.quanta.as_slice())
+                        .unwrap_or(empty_quanta);
+                    let capacity_quanta: Vec<IntrinsicAnytimeSchedulerQuantum> = lane_quanta
+                    .iter()
+                    .filter(|quantum| {
+                        (quantum.producer_role == LaneCoordinatorQuantumProducerRole::CapacityCold
+                            && quantum.phase == LaneCoordinatorQuantumPhase::Resume)
+                            || ((quantum.producer_role
+                                == LaneCoordinatorQuantumProducerRole::CapacityWarmPrefix
+                                || quantum.producer_role
+                                    == LaneCoordinatorQuantumProducerRole::CapacityQualityWarmPrefix)
+                                && (quantum.phase == LaneCoordinatorQuantumPhase::Initial
+                                    || quantum.phase == LaneCoordinatorQuantumPhase::Censor
+                                    || quantum.outcome == LaneCoordinatorQuantumOutcome::Settled))
+                    })
+                    .enumerate()
+                    .map(|(index, quantum)| IntrinsicAnytimeSchedulerQuantum {
+                        ordinal: capacity_resume_ordinal + index,
+                        cohort: IntrinsicAnytimeSchedulerCohort::Partial,
+                        producer_role: lane_coordinator_producer_role_to_scheduler(
+                            quantum.producer_role,
+                        ),
+                        outcome: lane_coordinator_outcome_to_scheduler(quantum.outcome),
+                    })
+                    .collect();
+                    trace.cold_checkpoint_reused = scheduled_cold_checkpoint_reused;
+                    trace.warm_prefix_endpoints_admitted =
+                        capacity.trace.warm_prefix_endpoints_admitted;
+                    trace.cancellation_reason =
+                        Some(IntrinsicAnytimeSchedulerCancellationReason::CompleteCohortMiss);
+                    trace.quanta.extend(capacity_quanta);
+                }
+                selected = materialize_capacity_result(input, &capacity, free_material_cache)?;
+                archive_diagnostics.extend(intrinsic_capacity_diagnostics(&preflight, &capacity));
+                capacity_trace = Some(capacity.trace.clone());
+                emit_shared_archive_progress(
+                    &mut *event_sink,
+                    IrregularPortfolioPhase::Completed,
+                    Some(selected.portfolio.score.clone()),
+                    0.0,
+                );
+            }
+            Some(winner) => {
+                // TS: `:1017-1038` -- the trailing cold-cancellation quantum
+                // only fires when the scheduler actually resumed the protected
+                // cold lane at least once (`scheduledColdCheckpointReused`) and
+                // it is still paused; `cancellationReason` itself is only set
+                // when the scheduler ran at all (`scheduledColdStart !==
+                // undefined`), not merely when it happened to already settle.
+                if let Some(trace) = intrinsic_anytime_scheduler_trace.as_mut() {
+                    trace.cancellation_reason = if scheduled_cold_start.is_none() {
+                        None
+                    } else {
+                        Some(IntrinsicAnytimeSchedulerCancellationReason::CompleteEndpointFitted)
+                    };
+                    let should_cancel_cold = scheduled_cold_checkpoint_reused
+                        && matches!(
+                            &scheduled_cold_start,
+                            Some(search) if search.status == IntrinsicCapacitySearchStatus::Paused
+                        );
+                    if should_cancel_cold {
+                        trace.quanta.push(IntrinsicAnytimeSchedulerQuantum {
+                            ordinal: trace.quanta.len(),
+                            cohort: IntrinsicAnytimeSchedulerCohort::Partial,
+                            producer_role: IntrinsicAnytimeSchedulerProducerRole::CapacityCold,
+                            outcome: IntrinsicAnytimeSchedulerOutcome::Cancelled,
+                        });
+                    }
+                }
+                selected = materialize_shared_archive_result(
+                    &MaterializeSharedArchiveResultInput {
+                        sorted_piece_ids: input.sorted_piece_ids,
+                        beam_width: input.settings.optimizer.beam_width,
+                        history_mode: input.request.options.history_mode,
+                        prepared_pieces: input.prepared_pieces,
+                        sheet: input.request.sheet.clone(),
+                    },
+                    &winner,
+                    input.settings,
+                    free_material_cache,
+                )?;
+                archive_diagnostics.push(crate::result::materialize::shared_archive_diagnostic(
+                    "completed",
+                    format!(
+                        "shared archive selected {} from {} exact endpoints",
+                        winner.role,
+                        sheetless_archive.len()
+                    ),
+                ));
+                archive_diagnostics.push(CollisionGeometryDiagnostic {
                 code: "capacity_preflight_inconclusive".to_string(),
                 message:
                     "proof-only capacity preflight was inconclusive; complete mode ran unchanged"
                         .to_string(),
                 piece_id: None,
             });
-            archive_diagnostics.push(CollisionGeometryDiagnostic {
+                archive_diagnostics.push(CollisionGeometryDiagnostic {
                 code: "complete_archive_fitted".to_string(),
-                message: format!(
-                    "complete endpoint {} fits the requested sheet",
-                    winner.sheetless_canonical_geometry_hash
-                ),
+                message: match &scheduled_cold_start {
+                    None => format!(
+                        "complete endpoint {} fits the requested sheet; capacity mode did not run",
+                        winner.sheetless_canonical_geometry_hash
+                    ),
+                    Some(search) => format!(
+                        "complete endpoint {} fits the requested sheet; scheduled capacity prework {}",
+                        winner.sheetless_canonical_geometry_hash,
+                        if search.status == IntrinsicCapacitySearchStatus::Paused {
+                            "was cancelled at its checkpoint"
+                        } else {
+                            "had already settled as observer-only work"
+                        }
+                    ),
+                },
                 piece_id: None,
             });
-            emit_shared_archive_progress(
-                &mut *event_sink,
-                IrregularPortfolioPhase::Completed,
-                Some(selected.portfolio.score.clone()),
-                0.0,
-            );
+                emit_shared_archive_progress(
+                    &mut *event_sink,
+                    IrregularPortfolioPhase::Completed,
+                    Some(selected.portfolio.score.clone()),
+                    0.0,
+                );
+            }
         }
     }
 
@@ -1114,6 +1239,25 @@ fn map_capacity_error(error: IntrinsicCapacityError) -> IrregularComputeErrorTyp
     })
 }
 
+/// TS: `mapIntrinsicCapacityError` (`computeIrregularNesting.ts:1242-1252`).
+/// `capacity::mode::run_intrinsic_capacity_mode`/
+/// `run_intrinsic_capacity_scheduler_cold_quantum` return
+/// `CapacitySearchError` (the same three-arm shape TS's
+/// `IntrinsicCapacityModeError` union collapses to once the unreachable
+/// `IrregularNestingNotImplementedError` arm is dropped, per this crate's
+/// established "GREEN reused module never returns it" convention): only the
+/// `Capacity` arm is TS's own `IntrinsicCapacityError` (mapped to
+/// `IrregularPortfolioError` category `'search'`); `Geometry`/`Abort` are
+/// already full `IrregularComputeErrorType` members in TS and pass through
+/// unchanged (`mapIntrinsicCapacityError`'s own `else` branch).
+fn map_capacity_search_error(error: CapacitySearchError) -> IrregularComputeErrorType {
+    match error {
+        CapacitySearchError::Capacity(inner) => map_capacity_error(inner),
+        CapacitySearchError::Geometry(inner) => IrregularComputeErrorType::GeometryInput(inner),
+        CapacitySearchError::Abort(inner) => IrregularComputeErrorType::NfpIfpControlAbort(inner),
+    }
+}
+
 fn map_shared_archive_error(error: SharedArchiveError) -> IrregularComputeErrorType {
     match error {
         IntrinsicStrictDecoderFailure::Decoder(inner) => {
@@ -1190,7 +1334,7 @@ fn capacity_endpoint_origin_str(
 
 fn materialize_capacity_result(
     input: &CoordinateIntrinsicSharedArchiveInput<'_>,
-    capacity: &IntrinsicCapacityModeSeamResult,
+    capacity: &crate::capacity::mode::IntrinsicCapacityModeResult,
     free_material_cache: &mut FreeMaterialCache,
 ) -> Result<MaterializedDecode, IrregularComputeErrorType> {
     let endpoint = &capacity.endpoint;
@@ -1243,10 +1387,11 @@ fn materialize_capacity_result(
         diagnostics: vec![CollisionGeometryDiagnostic {
             code: "capacity_subset_settled".to_string(),
             message: format!(
-                "intrinsic-capacity-v1 settled {} placed; {} unplaced; origin {}; hash {}",
+                "intrinsic-capacity-v1 settled {} placed; {} unplaced; origin {}; q{}; hash {}",
                 endpoint.metrics.placed_count,
                 endpoint.unplaced_prepared_ids.len(),
                 capacity_endpoint_origin_str(endpoint.origin),
+                endpoint.selected_rotation_deg,
                 endpoint.canonical_geometry_hash
             ),
             piece_id: None,
@@ -1271,7 +1416,7 @@ fn materialize_capacity_result(
 
 fn intrinsic_capacity_diagnostics(
     preflight: &IntrinsicCapacityPreflightOutcome,
-    capacity: &IntrinsicCapacityModeSeamResult,
+    capacity: &crate::capacity::mode::IntrinsicCapacityModeResult,
 ) -> Vec<CollisionGeometryDiagnostic> {
     let mut diagnostics = Vec::new();
     match preflight {
@@ -1309,22 +1454,63 @@ fn intrinsic_capacity_diagnostics(
     diagnostics.push(CollisionGeometryDiagnostic {
         code: "capacity_subset_settled".to_string(),
         message: format!(
-            "settlement {}; placed {}; unplaced {}; origin {}; evaluations {}/{}; pruned-count {}; pruned-material {}; prefixes {}/{}; hash {}",
-            trace.cold_search_settlement,
-            trace.selected_placed_count,
-            trace.selected_unplaced_count,
-            trace.selected_origin,
-            trace.cold_search_consumed_placement_evaluations,
-            trace.cold_search_placement_evaluation_cap,
-            trace.cold_search_pruned_by_attainable_count,
-            trace.cold_search_pruned_by_attainable_material,
-            trace.prefixes_fitting_count,
-            trace.prefixes_captured_count,
-            trace.selected_canonical_geometry_hash,
+            "settlement {:?}; placed {}; unplaced {}; origin {}; evaluations {}/{}; pruned-count {}; pruned-material {}; prefixes {}/{}; hash {}",
+            trace.cold_search.settlement,
+            trace.selected.objective.placed_count,
+            trace.selected.unplaced_count,
+            capacity_endpoint_origin_str(trace.selected.objective.origin),
+            trace.cold_search.consumed_placement_evaluations,
+            trace.cold_search.placement_evaluation_cap,
+            trace.cold_search.pruned_by_attainable_count,
+            trace.cold_search.pruned_by_attainable_material,
+            trace.prefixes.fitting_count,
+            trace.prefixes.captured_count,
+            trace.selected.objective.canonical_geometry_hash,
         ),
         piece_id: None,
     });
     diagnostics
+}
+
+fn capacity_search_error_to_shared_archive_error(error: CapacitySearchError) -> SharedArchiveError {
+    match error {
+        CapacitySearchError::Capacity(inner) => IntrinsicStrictDecoderFailure::Decoder(
+            crate::search::strict_decoder::IntrinsicStrictDecoderError {
+                operation: inner.operation,
+                message: inner.message,
+            },
+        ),
+        CapacitySearchError::Geometry(inner) => IntrinsicStrictDecoderFailure::Geometry(inner),
+        CapacitySearchError::Abort(inner) => IntrinsicStrictDecoderFailure::Abort(inner),
+    }
+}
+
+fn lane_coordinator_producer_role_to_scheduler(
+    role: LaneCoordinatorQuantumProducerRole,
+) -> IntrinsicAnytimeSchedulerProducerRole {
+    match role {
+        LaneCoordinatorQuantumProducerRole::CapacityCold => {
+            IntrinsicAnytimeSchedulerProducerRole::CapacityCold
+        }
+        LaneCoordinatorQuantumProducerRole::CapacityQualityWarmPrefix => {
+            IntrinsicAnytimeSchedulerProducerRole::CapacityQualityWarmPrefix
+        }
+        LaneCoordinatorQuantumProducerRole::CapacityWarmPrefix => {
+            IntrinsicAnytimeSchedulerProducerRole::CapacityWarmPrefix
+        }
+    }
+}
+
+fn lane_coordinator_outcome_to_scheduler(
+    outcome: LaneCoordinatorQuantumOutcome,
+) -> IntrinsicAnytimeSchedulerOutcome {
+    match outcome {
+        LaneCoordinatorQuantumOutcome::Checkpointed => {
+            IntrinsicAnytimeSchedulerOutcome::Checkpointed
+        }
+        LaneCoordinatorQuantumOutcome::Settled => IntrinsicAnytimeSchedulerOutcome::Settled,
+        LaneCoordinatorQuantumOutcome::Censored => IntrinsicAnytimeSchedulerOutcome::Censored,
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1404,7 +1590,16 @@ fn run_short_side_profile_block(
         mut archive_diagnostics,
         intrinsic_anytime_scheduler_trace,
         focused_complete_reconstruction_trace,
-        capacity_trace,
+        // TS: `capacityTrace` in the final result comes from `selected.capacityTrace`
+        // (`computeIrregularNesting.ts:1221`, a field the *materialize*
+        // function populates -- unlike `intrinsicAnytimeSchedulerTrace`/
+        // `focusedCompleteReconstructionTrace`, which are independent
+        // coordinator-level `let`s). `materializeIntrinsicShortSideProfileResult`
+        // never sets it, so once this block's own pair-fold construction
+        // successfully replaces `selected`, any capacity trace an earlier
+        // capacity-mode call in *this same run* produced must be dropped --
+        // mutable so the success arm below can clear it.
+        mut capacity_trace,
         event_sink,
         geometry_cache,
         free_material_cache,
@@ -1524,6 +1719,9 @@ fn run_short_side_profile_block(
                     input.settings,
                     free_material_cache,
                 )?;
+                // See this function's `capacity_trace` doc comment above:
+                // this new `selected` never carries a capacity trace.
+                capacity_trace = None;
                 let mut measured = pair_fold_outcome.trace.clone();
                 measured.output_influence =
                     crate::short_side::observer::ShortSideOutputInfluence::Selected;

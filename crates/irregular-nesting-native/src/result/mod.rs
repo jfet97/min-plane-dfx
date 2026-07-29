@@ -27,52 +27,20 @@
 //! native entry point without archive eligibility, rather than silently
 //! emulating the legacy path.
 //!
-//! # Known gap: `capacity::mode`'s top-level orchestration is not yet ported
+//! # Resolved: `capacity::mode`'s top-level orchestration
 //!
-//! `capacity::mode.rs`'s own module doc ("Scope of this port: self-contained
-//! pure pieces only") explicitly defers `runIntrinsicCapacityMode` /
+//! `capacity::mode.rs` now carries the full `runIntrinsicCapacityMode` /
 //! `runProtectedCapacityLaneCoordinator` / `runIntrinsicCapacityCohesionShadow`
-//! (`intrinsicCapacityMode.ts`, 1430 lines) to a follow-up, because at the
-//! time that file was written `capacity::search`/`capacity::prefixes` were
-//! still stubs. Both of those sibling modules are fully ported now, but
-//! nobody has yet gone back to add the top-level orchestration itself to
-//! `capacity::mode`. This module's own file-ownership grant covers exactly
-//! `result/` plus two explicitly authorized edits elsewhere
-//! (`capacity/prefixes.rs`'s `IntrinsicSharedArchiveDirectRole`
-//! reconciliation, done; and wiring the real `archive::periodic_family`
-//! runner into `archive::shared`'s seam, done below) -- it does **not**
-//! extend to adding ~1000 lines of new orchestration logic to
-//! `capacity/mode.rs`, which would be exactly the kind of "guess at a
-//! sibling cluster's API" this crate's file-ownership discipline exists to
-//! prevent.
-//!
-//! One self-contained piece of that missing orchestration *is* portable
-//! today without guessing: `runIntrinsicCapacitySchedulerColdQuantum`
-//! (`intrinsicCapacityMode.ts:386-431`) is a thin wrapper -- compute
-//! material areas via `capacity::material::intrinsic_capacity_material_areas`,
-//! then call the already-ported `capacity::search::run_intrinsic_capacity_cold_search`
-//! with a default depth-boundary count -- so [`coordinator`] ports it
-//! directly (see that module's `run_capacity_scheduler_cold_quantum`).
-//!
-//! The remaining, much larger orchestration (`runIntrinsicCapacityMode`
-//! itself: the protected lane coordinator, warm-prefix lanes, quality
-//! warm-prefix, cohesion shadow, and the trace-chronology types those
-//! produce) is **not** ported. Per this crate's established "seam
-//! trait/function" convention (e.g. `archive::shared`'s
-//! `IntrinsicPeriodicFamilyPortfolioRunner` before `archive::periodic_family`
-//! was ported), [`coordinator`] takes that orchestration as an injected
-//! [`IntrinsicCapacityModeRunner`] trait object rather than guessing its
-//! shape. The two coordinator branches that need it
-//! (`preflight.kind === 'proven_impossible'`, and "no fitting shared-archive
-//! winner") call through this seam; [`coordinator::UnimplementedCapacityModeRunner`]
-//! is the default implementation, which returns a typed
-//! [`IrregularComputeErrorType::Portfolio`] error (operation
-//! `"runIntrinsicCapacityMode"`) rather than fabricating a result. Once
-//! `capacity::mode` grows the real functions, the orchestrator should: (a)
-//! delete this seam trait and its minimal projection types below, (b)
-//! import the real ones, and (c) either keep the injection (harmless) or
-//! call directly -- exactly the reconciliation `archive::shared`'s own top
-//! doc already prescribes for its periodic-family seam.
+//! / `runIntrinsicCapacitySchedulerColdQuantum` orchestration
+//! (`intrinsicCapacityMode.ts`, 1430 lines), against the real
+//! `capacity::search`/`capacity::prefixes` APIs (both fully ported). Per the
+//! reconciliation this section previously prescribed once that orchestration
+//! landed: [`coordinator`] calls `capacity::mode::run_intrinsic_capacity_mode`/
+//! `run_intrinsic_capacity_scheduler_cold_quantum` directly (no injected
+//! trait object) at both call sites (`preflight.kind === 'proven_impossible'`,
+//! and "no fitting shared-archive winner") -- both are reachable at points
+//! in the coordinator's own control flow where `geometry_cache` is not
+//! concurrently borrowed by anything else, so direct calls need no seam.
 //!
 //! # Resolved seam: `archive::shared`'s periodic-family-portfolio runner
 //!
@@ -308,7 +276,7 @@ pub struct IrregularComputeResult {
     pub beam_width: f64,
     pub portfolio: IrregularPortfolioResult,
     /// Present only when intrinsic capacity mode settled this result.
-    pub capacity_trace: Option<coordinator::IntrinsicCapacityTrace>,
+    pub capacity_trace: Option<crate::capacity::mode::IntrinsicCapacityTrace>,
     /// Present only when the scheduler cold-start ran (every archive-branch
     /// run that reaches the non-`proven_impossible` preflight outcome).
     pub intrinsic_anytime_scheduler_trace: Option<IntrinsicAnytimeSchedulerTrace>,
