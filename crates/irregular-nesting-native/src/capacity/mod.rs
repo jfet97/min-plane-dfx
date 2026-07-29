@@ -1,1 +1,9 @@
-//! TS counterpart: src/workers/algorithm/irregular/intrinsicCapacitySearch.ts and the intrinsicCapacity*.ts family (capacity preflight, material accounting, endpoints, prefixes, and lanes).
+//! Capacity tower. TS counterparts: src/workers/algorithm/irregular/intrinsicCapacity*.ts
+
+pub mod endpoint;
+pub mod material;
+pub mod mode;
+pub mod prefixes;
+pub mod preflight;
+pub mod search;
+pub mod telemetry;

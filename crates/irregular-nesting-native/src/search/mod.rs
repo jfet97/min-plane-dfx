@@ -8,3 +8,6 @@ pub mod layout_scorer;
 pub mod placement_scorer;
 pub mod score_grid;
 pub mod sort_pieces;
+pub mod gap_regions;
+pub mod strict_decoder;
+pub mod strict_family;
