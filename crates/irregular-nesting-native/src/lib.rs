@@ -15,6 +15,7 @@ pub mod capacity;
 pub mod checkpoints;
 pub mod clipper;
 pub mod geometry;
+pub mod js_number;
 pub mod nfp_ifp;
 pub mod result;
 pub mod search;
