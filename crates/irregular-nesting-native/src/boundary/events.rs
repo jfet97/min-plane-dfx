@@ -104,18 +104,7 @@ impl TerminalLatch {
             return status_for_terminal_outcome(self.state.outcome.load(Ordering::SeqCst));
         }
 
-        let _ = self.state.outcome.compare_exchange(
-            TERMINAL_CLEANUP_ADMITTING,
-            TERMINAL_CLOSING,
-            Ordering::SeqCst,
-            Ordering::SeqCst,
-        );
-        let _ = self.state.outcome.compare_exchange(
-            TERMINAL_ADMITTING,
-            TERMINAL_WAITING,
-            Ordering::SeqCst,
-            Ordering::SeqCst,
-        );
+        self.complete_successful_admission();
         self.commit_cleanup_if_requested();
 
         loop {
@@ -144,6 +133,25 @@ impl TerminalLatch {
 
     fn acknowledge(&self, status: Status) {
         self.commit_status(status);
+    }
+
+    fn complete_successful_admission(&self) {
+        loop {
+            let current = self.state.outcome.load(Ordering::SeqCst);
+            let next = match current {
+                TERMINAL_ADMITTING => TERMINAL_WAITING,
+                TERMINAL_CLEANUP_ADMITTING => TERMINAL_CLOSING,
+                _ => return,
+            };
+            if self
+                .state
+                .outcome
+                .compare_exchange(current, next, Ordering::SeqCst, Ordering::SeqCst)
+                .is_ok()
+            {
+                return;
+            }
+        }
     }
 
     fn commit_enqueue_failure(&self, status: Status) {
