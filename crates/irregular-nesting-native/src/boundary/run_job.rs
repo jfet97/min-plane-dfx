@@ -54,6 +54,7 @@ use crate::result::progress::IrregularComputeEventSink;
 use crate::search::layout_scorer::FreeMaterialCache;
 
 use super::error::BoundaryError;
+use super::parallel::JobPool;
 use super::request::{require_archive_eligible, PreparedRequest, RequestDto};
 use super::result::project_result;
 
@@ -73,20 +74,31 @@ pub fn decode_and_route(request_json: &str) -> Result<PreparedRequest, BoundaryE
 /// Always returns a JSON envelope string (see this module's top doc); the
 /// second tuple element is `None` only when decoding/routing failed before a
 /// job-local `GeometryCacheStore` was ever constructed (nothing to report
-/// cache telemetry for).
+/// cache telemetry for). The third element is the Rayon thread count this
+/// job's job-owned pool actually resolved to (`boundary::parallel`,
+/// diagnostics-only per that module's doc); `1` when decoding/routing failed
+/// before a pool was ever constructed.
+/// `thread_count_override`, when `Some`, wins over the
+/// `MIN_PLANE_IRREGULAR_NATIVE_THREADS` environment variable (see
+/// `boundary::parallel::resolve_thread_count`); the real N-API entry point
+/// (`boundary::job::run_irregular_job`) always passes `None` here (no
+/// per-call argument threads this through from TypeScript today), so only
+/// this crate's own determinism-test suite uses the override.
 pub fn run_job_from_json<'a>(
     request_json: &str,
     event_sink: &'a mut dyn IrregularComputeEventSink,
     is_cancelled: Option<&'a mut (dyn FnMut() -> bool + 'a)>,
-) -> (String, Option<GeometryCacheStore>) {
+    thread_count_override: Option<usize>,
+) -> (String, Option<GeometryCacheStore>, usize) {
     match decode_and_route(request_json) {
         Ok(prepared) => {
-            let (envelope, cache) = run_job(prepared, event_sink, is_cancelled);
-            (envelope, Some(cache))
+            let (envelope, cache, thread_count) =
+                run_job(prepared, event_sink, is_cancelled, thread_count_override);
+            (envelope, Some(cache), thread_count)
         }
         Err(error) => {
             let envelope = format!(r#"{{"ok":false,"error":{}}}"#, error.to_json());
-            (envelope, None)
+            (envelope, None, 1)
         }
     }
 }
@@ -96,12 +108,26 @@ pub fn run_job_from_json<'a>(
 /// from `Task::compute`'s libuv worker thread, never the JS thread). Always
 /// returns a JSON envelope string: `{"ok":true,"result":{...}}` or
 /// `{"ok":false,"error":{"category",...}}` -- see this module's top doc for
-/// why this is not a Rust `Result`.
+/// why this is not a Rust `Result`. The third element is the resolved Rayon
+/// thread count (`boundary::parallel`), for the caller to forward into the
+/// diagnostics sidecar; see `run_job_from_json`'s doc for
+/// `thread_count_override`.
+///
+/// Constructs and installs this job's own `rayon::ThreadPool`
+/// (`boundary::parallel::JobPool`) for the duration of the
+/// `compute_irregular_nesting` call, per `cache-concurrency-design.md` §7
+/// ("`boundary::run_job` constructs one `rayon::ThreadPool` at job start...
+/// and uses it exclusively for that job's parallel work"). The pool (and
+/// its worker threads) is dropped, and the thread-local installed-pool slot
+/// cleared, when this function returns -- including on an early return via
+/// `?`/panic-unwind, since the guard's `Drop` runs regardless (see
+/// `JobPoolGuard`'s own doc).
 pub fn run_job<'a>(
     prepared: PreparedRequest,
     event_sink: &'a mut dyn IrregularComputeEventSink,
     is_cancelled: Option<&'a mut (dyn FnMut() -> bool + 'a)>,
-) -> (String, GeometryCacheStore) {
+    thread_count_override: Option<usize>,
+) -> (String, GeometryCacheStore, usize) {
     let mut geometry_cache = GeometryCacheStore::new();
     let mut free_material_cache = FreeMaterialCache::new();
     let mut options = ComputeIrregularNestingOptions {
@@ -109,6 +135,10 @@ pub fn run_job<'a>(
         is_cancelled,
         focused_complete_reconstruction_enabled: true,
     };
+
+    let job_pool = JobPool::new(thread_count_override);
+    let thread_count = job_pool.thread_count();
+    let _pool_guard = job_pool.install();
 
     let outcome = compute_irregular_nesting(
         &prepared.request,
@@ -129,7 +159,7 @@ pub fn run_job<'a>(
             format!(r#"{{"ok":false,"error":{}}}"#, boundary_error.to_json())
         }
     };
-    (json, geometry_cache)
+    (json, geometry_cache, thread_count)
 }
 
 #[cfg(test)]
@@ -206,7 +236,7 @@ mod tests {
         let json = mixed61_like_request_json().to_string();
         let prepared = decode_and_route(&json).expect("request decodes and routes");
         let mut sink = NullEventSink;
-        let (envelope, _cache) = run_job(prepared, &mut sink, None);
+        let (envelope, _cache, _threads) = run_job(prepared, &mut sink, None, None);
         let parsed: serde_json::Value = serde_json::from_str(&envelope).expect("envelope is JSON");
         assert_eq!(parsed["ok"], serde_json::json!(true));
         assert!(parsed["result"]["placedCollisionGeometries"].is_array());
@@ -228,7 +258,7 @@ mod tests {
         json["sourcePieces"] = serde_json::json!([]);
         let prepared = decode_and_route(&json.to_string()).expect("request decodes and routes");
         let mut sink = NullEventSink;
-        let (envelope, _cache) = run_job(prepared, &mut sink, None);
+        let (envelope, _cache, _threads) = run_job(prepared, &mut sink, None, None);
         let parsed: serde_json::Value = serde_json::from_str(&envelope).expect("envelope is JSON");
         assert_eq!(parsed["ok"], serde_json::json!(false));
         assert_eq!(
@@ -243,7 +273,7 @@ mod tests {
         let prepared = decode_and_route(&json).expect("request decodes and routes");
         let mut sink = NullEventSink;
         let mut always_cancelled = || true;
-        let (envelope, _cache) = run_job(prepared, &mut sink, Some(&mut always_cancelled));
+        let (envelope, _cache, _threads) = run_job(prepared, &mut sink, Some(&mut always_cancelled), None);
         let parsed: serde_json::Value = serde_json::from_str(&envelope).expect("envelope is JSON");
         assert_eq!(parsed["ok"], serde_json::json!(false));
         assert_eq!(
@@ -261,7 +291,7 @@ mod tests {
     #[test]
     fn run_job_from_json_resolves_an_err_envelope_for_malformed_json() {
         let mut sink = NullEventSink;
-        let (envelope, cache) = run_job_from_json("not json", &mut sink, None);
+        let (envelope, cache, _threads) = run_job_from_json("not json", &mut sink, None, None);
         assert!(cache.is_none());
         let parsed: serde_json::Value = serde_json::from_str(&envelope).expect("envelope is JSON");
         assert_eq!(parsed["ok"], serde_json::json!(false));
@@ -277,7 +307,7 @@ mod tests {
         json["options"]["irregularSettings"]["optimizer"]["intrinsicSharedArchiveEnabled"] =
             serde_json::json!(false);
         let mut sink = NullEventSink;
-        let (envelope, cache) = run_job_from_json(&json.to_string(), &mut sink, None);
+        let (envelope, cache, _threads) = run_job_from_json(&json.to_string(), &mut sink, None, None);
         assert!(cache.is_none());
         let parsed: serde_json::Value = serde_json::from_str(&envelope).expect("envelope is JSON");
         assert_eq!(parsed["ok"], serde_json::json!(false));
@@ -295,7 +325,7 @@ mod tests {
     fn run_job_from_json_resolves_an_ok_envelope_and_a_populated_cache_for_a_real_request() {
         let json = mixed61_like_request_json().to_string();
         let mut sink = NullEventSink;
-        let (envelope, cache) = run_job_from_json(&json, &mut sink, None);
+        let (envelope, cache, _threads) = run_job_from_json(&json, &mut sink, None, None);
         assert!(cache.is_some());
         let parsed: serde_json::Value = serde_json::from_str(&envelope).expect("envelope is JSON");
         assert_eq!(parsed["ok"], serde_json::json!(true));

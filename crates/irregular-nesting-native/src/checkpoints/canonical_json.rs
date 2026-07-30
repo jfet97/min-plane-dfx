@@ -30,6 +30,7 @@
 
 use num_bigint::BigInt;
 use std::cmp::Ordering;
+use std::fmt::Write as _;
 
 use crate::js_number::{cmp_js_code_units, number_to_js_string};
 
@@ -583,7 +584,77 @@ pub fn locale_compare_keys(first: &str, second: &str) -> Ordering {
 /// supplementary-plane characters, which take two UTF-16 code units each
 /// but only one `char` in Rust).
 pub fn canonical_token(value: &str) -> String {
-    format!("{}:{}", value.encode_utf16().count(), value)
+    let mut buf = String::with_capacity(value.len() + 12);
+    write_canonical_token(&mut buf, value);
+    buf
+}
+
+/// R21-class allocation-reduction (`docs/planning/rust-irregular-backend/`
+/// migration prompt §21's optimization discipline): writes exactly
+/// [`canonical_token`]'s output into an existing, possibly-reused `buf`
+/// instead of allocating and returning a fresh owned `String` per call.
+/// [`canonical_token`] itself now delegates here, so the two can never
+/// silently drift apart.
+///
+/// # Semantic invariant
+///
+/// Byte-for-byte identical to `buf.push_str(&canonical_token(value))` for
+/// every input, including non-ASCII strings — this is not an approximation.
+///
+/// # ASCII fast path
+///
+/// `value.encode_utf16().count()` (the UTF-16 code-unit count `canonical_token`'s
+/// own doc requires) is mathematically identical to `value.len()` (the UTF-8
+/// *byte* count) whenever `value` is pure ASCII: every ASCII scalar value
+/// encodes to exactly one UTF-8 byte and exactly one UTF-16 code unit, so the
+/// two counts coincide term-for-term. `str::is_ascii` is a single forward
+/// byte scan with no per-`char` UTF-8 decode / UTF-16 re-encode step, so this
+/// branch is strictly cheaper than the general path for ASCII input (every
+/// value this crate's hot canonical-key-building call sites in
+/// `search::beam_state` ever pass — see that module's own callers of this
+/// function) and produces the exact same result as the always-correct
+/// `encode_utf16().count()` fallback, which remains in place for the
+/// general (non-ASCII, e.g. a user-supplied piece name elsewhere in the
+/// crate) case.
+pub(crate) fn write_canonical_token(buf: &mut String, value: &str) {
+    let units = if value.is_ascii() {
+        value.len()
+    } else {
+        value.encode_utf16().count()
+    };
+    write!(buf, "{units}:").expect("writing to a String never fails");
+    buf.push_str(value);
+}
+
+/// Writes `canonicalToken(format!("{prefix}{index}"))` (a decimal-suffixed
+/// label token, e.g. `"point-3"`/`"entry-12"`) directly into `buf` without
+/// materializing the label string first. `prefix` must be ASCII (every call
+/// site in this crate passes a fixed ASCII literal — `"point-"`,
+/// `"entry-"` — `debug_assert`ed, not merely assumed) so this UTF-16-length
+/// shortcut (`prefix.len() + decimal digit count of index`, both byte
+/// counts) is provably identical to `write_canonical_token(buf,
+/// &format!("{prefix}{index}"))`'s own ASCII fast path.
+pub(crate) fn write_indexed_canonical_token(buf: &mut String, prefix: &str, index: usize) {
+    debug_assert!(
+        prefix.is_ascii(),
+        "write_indexed_canonical_token requires an ASCII prefix (got {prefix:?})"
+    );
+    let units = prefix.len() + decimal_digit_count(index);
+    write!(buf, "{units}:{prefix}{index}").expect("writing to a String never fails");
+}
+
+/// The decimal digit count of `value` (`1` for `0` itself, matching
+/// `usize`'s `Display` rendering having exactly one digit for zero).
+fn decimal_digit_count(mut value: usize) -> usize {
+    if value == 0 {
+        return 1;
+    }
+    let mut digits = 0;
+    while value > 0 {
+        digits += 1;
+        value /= 10;
+    }
+    digits
 }
 
 /// Port of `canonicalNumber`
@@ -633,17 +704,25 @@ pub fn canonical_number(value: f64) -> String {
 /// `canonicalEntryListKey` below) only ever constructs genuine two-element
 /// rows; this guard is currently unreachable from production call sites,
 /// exactly like the TS original.
+///
+/// Rewritten (2026-07-30, migration prompt §21 optimization discipline) to
+/// write directly into one accumulating buffer via [`write_canonical_token`]
+/// instead of `map`-ping each row to its own freshly `format!`-allocated
+/// `String` and `collect`ing + `join`ing them: byte-for-byte identical
+/// output for every input (each row still contributes exactly
+/// `canonicalToken(name) + canonicalToken(value)`, or nothing for a
+/// malformed row, in the same left-to-right order), at roughly a third of
+/// the allocation count for an `N`-row call (one `buf` growth instead of `N`
+/// per-row `String`s plus the `Vec`/`join` collector).
 pub fn canonical_record(fields: &[Vec<String>]) -> String {
-    fields
-        .iter()
-        .map(|field| match (field.first(), field.get(1)) {
-            (Some(name), Some(value)) => {
-                format!("{}{}", canonical_token(name), canonical_token(value))
-            }
-            _ => String::new(),
-        })
-        .collect::<Vec<_>>()
-        .join("")
+    let mut buf = String::new();
+    for field in fields {
+        if let (Some(name), Some(value)) = (field.first(), field.get(1)) {
+            write_canonical_token(&mut buf, name);
+            write_canonical_token(&mut buf, value);
+        }
+    }
+    buf
 }
 
 /// Port of `canonicalEntryListKey`
@@ -652,21 +731,33 @@ pub fn canonical_record(fields: &[Vec<String>]) -> String {
 /// code-unit count — contrast [`canonical_token`]'s own `value.length`),
 /// rendered through [`canonical_number`] like every other numeric field in
 /// this record format.
+///
+/// Rewritten (2026-07-30, migration prompt §21 optimization discipline) to
+/// write directly into one pre-reserved buffer instead of building a
+/// `Vec<Vec<String>>` of owned rows (which, for the `entry-{index}` rows,
+/// previously `clone()`d every element of `entry_keys` — often long strings,
+/// since each is itself a full [`canonical_record`]-shaped polygon key) and
+/// handing it to [`canonical_record`]. Byte-for-byte identical output: the
+/// same five-and-`N` fields (`version`, `entry-count`, then one
+/// `entry-{index}` row per `entry_keys` element), in the same order, each
+/// still exactly `canonicalToken(name) + canonicalToken(value)`.
 pub fn canonical_entry_list_key(entry_keys: &[String]) -> String {
-    let mut fields: Vec<Vec<String>> = vec![
-        vec![
-            "version".to_string(),
-            "irregular-occupied-geometry-v2".to_string(),
-        ],
-        vec![
-            "entry-count".to_string(),
-            canonical_number(entry_keys.len() as f64),
-        ],
-    ];
+    let mut buf = String::with_capacity(
+        96 + entry_keys
+            .iter()
+            .map(|entry_key| entry_key.len() + 24)
+            .sum::<usize>(),
+    );
+    write_canonical_token(&mut buf, "version");
+    write_canonical_token(&mut buf, "irregular-occupied-geometry-v2");
+    write_canonical_token(&mut buf, "entry-count");
+    let entry_count = canonical_number(entry_keys.len() as f64);
+    write_canonical_token(&mut buf, &entry_count);
     for (index, entry_key) in entry_keys.iter().enumerate() {
-        fields.push(vec![format!("entry-{index}"), entry_key.clone()]);
+        write_indexed_canonical_token(&mut buf, "entry-", index);
+        write_canonical_token(&mut buf, entry_key);
     }
-    canonical_record(&fields)
+    buf
 }
 
 #[cfg(test)]

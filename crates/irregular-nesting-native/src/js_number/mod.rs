@@ -196,8 +196,35 @@ pub fn fold_negative_zero(value: f64) -> f64 {
 /// order coincide, but the audit's §15 item 5 leaves open whether a
 /// user-supplied label could ever carry non-BMP content, so this function
 /// remains the mandatory primitive rather than plain `str::cmp` project-wide.
+///
+/// # ASCII fast path (2026-07-30, migration prompt §21 optimization
+/// discipline)
+///
+/// When *both* inputs are pure ASCII, `first.as_bytes().cmp(second.as_bytes())`
+/// (effectively `str`'s own `Ord`, a `memcmp`-backed byte comparison) is
+/// mathematically identical to `first.encode_utf16().cmp(second.encode_utf16())`:
+/// every ASCII scalar value encodes to exactly one UTF-8 byte *and* exactly
+/// one UTF-16 code unit carrying the same numeric value (0..=127), so the two
+/// comparisons inspect the same sequence of numbers in the same order: any
+/// position where they first differ orders identically, and the length-based
+/// tie-break for one string being a strict prefix of the other (`Ordering`'s
+/// own iterator/slice comparison rule: "exhausted first" is `Less`) is
+/// applied identically by both `[u8]`'s and `Iterator<Item = u16>`'s `Ord`
+/// impls. This is a proof for *every* pair of ASCII strings, not an
+/// empirical fact about today's observed-ASCII fixtures — the doc above's
+/// "remains the mandatory primitive rather than plain `str::cmp`
+/// project-wide" concern (an unproven guess about hypothetical future
+/// non-ASCII input) is fully preserved: the general, always-correct
+/// `encode_utf16().cmp()` path below is untouched and still runs for any
+/// input containing non-ASCII content, so this crate's actual comparison
+/// *semantics* for 100% of inputs (not just ASCII ones) are unchanged; only
+/// the ASCII branch's implementation strategy is faster.
 pub fn cmp_js_code_units(first: &str, second: &str) -> Ordering {
-    first.encode_utf16().cmp(second.encode_utf16())
+    if first.is_ascii() && second.is_ascii() {
+        first.as_bytes().cmp(second.as_bytes())
+    } else {
+        first.encode_utf16().cmp(second.encode_utf16())
+    }
 }
 
 #[cfg(test)]

@@ -31,6 +31,11 @@ robust = "1.2.0"
 # specific measured mismatch-rate evidence this choice is based on (not an
 # assumption that "portable libm generally matches V8 better").
 libm = "0.2"
+# Job-owned deterministic parallelism (Stage 4,
+# docs/planning/rust-irregular-backend/parallelism-inventory.md +
+# cache-concurrency-design.md §7). Never used via the ambient global pool --
+# see `boundary::parallel`'s module doc.
+rayon = "1"
 
 [build-dependencies]
 napi-build = "2"

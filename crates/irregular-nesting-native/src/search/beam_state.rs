@@ -96,8 +96,8 @@ use std::time::Instant;
 
 use crate::canonical_grid::contact::measure_shared_convex_polygon_boundary_contact;
 use crate::checkpoints::canonical_json::{
-    canonical_entry_list_key, canonical_number, canonical_record, canonical_token,
-    json_number_token, locale_compare_keys,
+    canonical_entry_list_key, canonical_number, canonical_record, json_number_token,
+    locale_compare_keys, write_canonical_token, write_indexed_canonical_token,
 };
 #[cfg(test)]
 use crate::domain::IrregularPlacement;
@@ -1171,15 +1171,28 @@ fn canonical_placed_geometry_key_at_translation(
 /// identical logic is live via [`canonical_placed_geometry_key`] ->
 /// [`canonical_placed_geometry_key_at_translation`] -> this function; ported
 /// `pub` for completeness of the file, matching the TS export.
+///
+/// Rewritten (2026-07-30, migration prompt §21 optimization discipline) to
+/// write directly into one buffer via [`write_canonical_token`] instead of
+/// routing a single-row `Vec<Vec<String>>` through [`canonical_record`]:
+/// `canonical_record(&[vec!["polygon-ring".to_string(), ring_key]])` is, for
+/// exactly this one-row shape, *defined* to equal
+/// `canonicalToken("polygon-ring") + canonicalToken(ring_key)` (`canonical_record`'s
+/// own doc: no separator between or within rows) — this function now
+/// produces that same two-token concatenation directly, without allocating
+/// the intermediate `Vec`/row/`"polygon-ring".to_string()`. Byte-for-byte
+/// identical output, still exercised by this file's own vector suite
+/// (`tests/beam_state_vectors.rs`) and `canonical_record`'s own oracle test.
 pub fn canonical_collision_polygon_key(
     points: &[IrregularPoint],
     translate_x: f64,
     translate_y: f64,
 ) -> String {
-    canonical_record(&[vec![
-        "polygon-ring".to_string(),
-        canonical_ring_key(points, translate_x, translate_y),
-    ]])
+    let ring_key = canonical_ring_key(points, translate_x, translate_y);
+    let mut buf = String::with_capacity(24 + ring_key.len());
+    write_canonical_token(&mut buf, "polygon-ring");
+    write_canonical_token(&mut buf, &ring_key);
+    buf
 }
 
 /// TS: `irregularBeamState.ts:754` `EMPTY_RING_KEY` -- computed once at
@@ -1235,32 +1248,54 @@ fn canonical_ring_key(points: &[IrregularPoint], translate_x: f64, translate_y: 
         break;
     }
 
-    let mut ring_key = format!(
-        "{}{}",
-        canonical_token("point-count"),
-        canonical_token(&canonical_number(point_count as f64))
+    // R21 allocation reduction (2026-07-30): the header + per-offset loop
+    // below used to build several short-lived `String`s per token via
+    // `format!`/`canonical_token` (including a fresh `format!("point-{offset}")`
+    // label every iteration) and `push_str` the result. It now writes every
+    // token directly into one pre-reserved `ring_key` buffer via
+    // [`write_canonical_token`]/[`write_indexed_canonical_token`], producing
+    // byte-for-byte the same sequence of tokens (`point-count` token, its
+    // count-value token, then `point-{offset}` token + the chosen point's
+    // key token for each of `point_count` offsets, in the same forward/
+    // reverse-`point_index` order already resolved above) with far fewer
+    // heap allocations -- see `search::beam_state`'s module doc for why this
+    // function is this cluster's single hottest allocation site.
+    let point_count_str = canonical_number(point_count as f64);
+    let mut ring_key = String::with_capacity(
+        24 + point_count_str.len()
+            + point_keys.iter().map(|key| key.len() + 24).sum::<usize>(),
     );
+    write_canonical_token(&mut ring_key, "point-count");
+    write_canonical_token(&mut ring_key, &point_count_str);
     for offset in 0..point_count {
         let point_index = if forward_wins {
             (start_index + offset) % point_count
         } else {
             (start_index + point_count * 2 - offset) % point_count
         };
-        ring_key.push_str(&canonical_token(&format!("point-{offset}")));
-        ring_key.push_str(&canonical_token(&point_keys[point_index]));
+        write_indexed_canonical_token(&mut ring_key, "point-", offset);
+        write_canonical_token(&mut ring_key, &point_keys[point_index]);
     }
     ring_key
 }
 
 /// TS: `irregularBeamState.ts:820-827` `canonicalPointKey`.
+///
+/// R21 allocation reduction (2026-07-30): writes its four tokens directly
+/// into one pre-reserved buffer instead of `format!`-concatenating four
+/// separately-allocated [`canonical_token`](crate::checkpoints::canonical_json::canonical_token)
+/// results; byte-for-byte identical output (`x` token, `canonical_number(x)`
+/// token, `y` token, `canonical_number(y)` token, in that order, no
+/// separator -- exactly the old `format!("{}{}{}{}", ...)` sequence).
 fn canonical_point_key(x: f64, y: f64) -> String {
-    format!(
-        "{}{}{}{}",
-        canonical_token("x"),
-        canonical_token(&canonical_number(x)),
-        canonical_token("y"),
-        canonical_token(&canonical_number(y))
-    )
+    let x_str = canonical_number(x);
+    let y_str = canonical_number(y);
+    let mut buf = String::with_capacity(10 + x_str.len() + y_str.len() + 10);
+    write_canonical_token(&mut buf, "x");
+    write_canonical_token(&mut buf, &x_str);
+    write_canonical_token(&mut buf, "y");
+    write_canonical_token(&mut buf, &y_str);
+    buf
 }
 
 /// TS: `irregularBeamState.ts:852-857` `normalizeCanonicalCoordinate`:

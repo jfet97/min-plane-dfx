@@ -31,9 +31,13 @@
 //! and strict-boundary validation are owned by `geometry::convex` (imported,
 //! never re-implemented).
 
+use std::collections::HashSet;
+
+use rayon::prelude::*;
+
 use crate::caches::{
-    make_pairwise_nfp_cache_key, GeometryCacheKey, GeometryCacheStore, NfpConstructionAlgorithm,
-    PairwiseNfpKeyInput, NFP_GEOMETRY_CACHE_NAMESPACE,
+    make_pairwise_nfp_cache_key, serialize_geometry_cache_key, GeometryCacheKey,
+    GeometryCacheStore, NfpConstructionAlgorithm, PairwiseNfpKeyInput, NFP_GEOMETRY_CACHE_NAMESPACE,
 };
 use crate::domain::{
     IrregularGeometrySettings, IrregularPlacedPiece, IrregularPoint, IrregularPolygon,
@@ -153,6 +157,138 @@ pub fn resolve_nfp_boundary(
         boundary: translated,
         key,
     })
+}
+
+/// `PAR-CACHE-01`/`PAR-NFP-01`
+/// (`docs/planning/rust-irregular-backend/parallelism-inventory.md` §3.2-3.3,
+/// `cache-concurrency-design.md` §7). A compute-then-publish pre-pass for
+/// the per-placed-piece NFP resolution loop
+/// (`nfp_ifp::candidates::generate_placement_candidates_uncached`'s
+/// `for placed in input.placed` loop): walks `placed` once, serially, in
+/// its original order, to determine the exact deduplicated set of
+/// pairwise-NFP cache keys that loop's later, **unmodified** calls to
+/// [`resolve_nfp_boundary`] would find missing -- then dispatches the pure
+/// [`compute_relative_nfp_boundary`] computation for that deduplicated set
+/// across this job's Rayon pool (`boundary::parallel::with_job_pool`), and
+/// publishes every successfully-computed result into `cache` serially, in
+/// the exact order each key was first encountered.
+///
+/// **No cache mutation from worker threads.** Every `cache` read
+/// (`GeometryCacheStore::get`) and write (`GeometryCacheStore::set`) in
+/// this function happens on the calling (serial) thread, strictly before or
+/// strictly after the parallel `map` -- worker closures receive only plain
+/// point slices and return plain `Option<IrregularPolygon>` values, never a
+/// cache reference. This satisfies `cache-concurrency-design.md` §7's
+/// "compute-then-publish" requirement without requiring the concurrent-safe
+/// cache architecture Stage 3 left as a `NEEDS-MEASUREMENT` open question
+/// (`parallelism-inventory.md` PAR-CACHE-03) -- this function never lets two
+/// threads race the same cache key at all.
+///
+/// **A precompute failure is silently discarded, never surfaced as an
+/// error.** If [`compute_relative_nfp_boundary`] fails for some key in the
+/// deduplicated batch, this function simply does not publish anything for
+/// that key -- it does not attempt to reproduce
+/// [`resolve_nfp_boundary`]'s exact ring-validation error message/ordering
+/// here. The **immediately-following, completely unmodified** per-placed
+/// loop independently re-validates rings and re-attempts computation for
+/// any key this pass could not resolve, in its own original per-piece
+/// order, and therefore still produces the exact same
+/// first-sequentially-encountered error [`resolve_nfp_boundary`] would have
+/// raised had this pre-pass never run (`PAR-XCUT-02`). A successful
+/// precompute always publishes a value bit-identical to what that same
+/// per-piece loop's own call to [`resolve_nfp_boundary`] would have
+/// computed and published (same key-construction function, same pure
+/// compute function, same inputs) -- so the loop finds a cache **hit**
+/// instead of triggering its own recompute for those keys, with the
+/// *value* returned being identical either way. Cache-telemetry
+/// hit/miss/stale-detection *counts* may differ slightly from a fully
+/// serial run as a result; per `cache-concurrency-design.md` §7 and this
+/// crate's diagnostics-sidecar convention, that telemetry is
+/// non-authoritative and never hashed, so this is not a parity concern.
+///
+/// **No cancellation-checkpoint observation of its own (ruling R19).** This
+/// function never calls `nfp_checkpoint`/consults `NfpIfpControl` -- the
+/// existing `PlacedNfp`-phase checkpoints inside the real, unmodified
+/// per-placed loop remain the sole cancellation-observation boundary for
+/// this whole batch, exactly as before this pre-pass existed. If the job is
+/// cancelled during this pre-pass's parallel dispatch, the pre-pass still
+/// runs to completion and may publish extra (but still correct) cache
+/// entries; the real loop's very next checkpoint call aborts the whole
+/// `generate_placement_candidates_uncached` call before any of those
+/// entries are used to produce output -- no partial result is ever
+/// observable (migration-prompt §15).
+pub fn precompute_missing_relative_nfp_boundaries(
+    placed: &[std::sync::Arc<IrregularPlacedPiece>],
+    moving: &TransformedCollisionGeometry,
+    settings: &IrregularGeometrySettings,
+    cache: &mut GeometryCacheStore,
+    construction_algorithm: NfpConstructionAlgorithm,
+) {
+    if let StrictConvexBoundaryValidation::Invalid { .. } =
+        validate_strict_boundary(&moving.polygon.points)
+    {
+        // Every iteration of the real loop validates `moving` too (it is
+        // the same `moving` argument on every iteration); if that
+        // validation would fail, every iteration fails before ever
+        // touching the cache, so there is nothing this pre-pass could
+        // usefully precompute.
+        return;
+    }
+
+    // Phase 1 (serial): the exact deduplicated set of missing keys, in
+    // first-encounter order -- `parallelism-inventory.md`'s "ordinal =
+    // position in the deduplicated key list assembled before dispatch"
+    // (PAR-CACHE-01's stable-index scheme).
+    let mut seen_keys: HashSet<String> = HashSet::new();
+    let mut misses: Vec<(GeometryCacheKey, Vec<IrregularPoint>)> = Vec::new();
+    for placed_piece in placed {
+        if let StrictConvexBoundaryValidation::Invalid { .. } =
+            validate_strict_boundary(&placed_piece.collision_geometry.polygon.points)
+        {
+            continue;
+        }
+        let key_input = PairwiseNfpKeyInput {
+            fixed_polygon: &placed_piece.collision_geometry.polygon.points,
+            moving_polygon: &moving.polygon.points,
+            fixed_transform: &placed_piece.collision_geometry.transform,
+            moving_transform: &moving.transform,
+            settings,
+        };
+        let key = make_pairwise_nfp_cache_key(&key_input, construction_algorithm);
+        if !seen_keys.insert(serialize_geometry_cache_key(&key)) {
+            continue;
+        }
+        let cached: Option<IrregularPolygon> = cache.get(&key);
+        if is_valid_cached_nfp_boundary(cached.as_ref()) {
+            continue;
+        }
+        misses.push((key, placed_piece.collision_geometry.polygon.points.clone()));
+    }
+
+    if misses.is_empty() {
+        return;
+    }
+
+    // Phase 2 (parallel): pure compute only -- no `cache` reference reaches
+    // any worker closure.
+    let moving_points = &moving.polygon.points;
+    let computed: Vec<Option<IrregularPolygon>> = crate::boundary::parallel::with_job_pool(|| {
+        misses
+            .par_iter()
+            .map(|(_, fixed_points)| {
+                compute_relative_nfp_boundary(fixed_points, moving_points, construction_algorithm)
+                    .ok()
+            })
+            .collect()
+    });
+
+    // Phase 3 (serial): publish successes only, strictly in the order their
+    // keys were first encountered in Phase 1.
+    for ((key, _), boundary) in misses.into_iter().zip(computed) {
+        if let Some(boundary) = boundary {
+            cache.set(&key, boundary);
+        }
+    }
 }
 
 /// TS: `nfpBoundaryCore.ts:169-177` (`computeRelativeNfpBoundary`).

@@ -129,11 +129,11 @@ impl Task for RunIrregularJobTask {
             std::panic::AssertUnwindSafe(move || {
                 let mut sink = BoundaryEventSink::new(on_portfolio_progress, on_state_snapshot);
                 let mut is_cancelled = move || cancel_flag.load(Ordering::SeqCst);
-                let (envelope, geometry_cache) =
-                    run_job_from_json(&request_json, &mut sink, Some(&mut is_cancelled));
+                let (envelope, geometry_cache, thread_count_used) =
+                    run_job_from_json(&request_json, &mut sink, Some(&mut is_cancelled), None);
                 record_last_job_diagnostics(JobDiagnostics {
                     backend_version: env!("CARGO_PKG_VERSION").to_string(),
-                    thread_count_used: 1,
+                    thread_count_used: thread_count_used as u32,
                     wall_clock_ms: started_at.elapsed().as_secs_f64() * 1000.0,
                     cache_telemetry: geometry_cache
                         .map(|cache| cache.telemetry().clone())

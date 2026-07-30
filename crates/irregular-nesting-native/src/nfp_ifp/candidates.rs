@@ -1027,6 +1027,24 @@ pub fn generate_placement_candidates_uncached(
         .placed_collision_index
         .filter(|index| index.matches(input.placed));
 
+    // PAR-CACHE-01 / PAR-NFP-01 (parallelism-inventory.md §3.2-3.3): warm
+    // `geometry_cache` with every distinct relative-NFP boundary the loop
+    // below will need, computed in parallel across this job's Rayon pool.
+    // The loop itself is completely unmodified beneath this call -- see
+    // `super::boundary_core::precompute_missing_relative_nfp_boundaries`'s
+    // doc for the exact compute-then-publish contract this satisfies (no
+    // cache mutation from worker threads; no new cancellation-observation
+    // point; a precompute failure is silently discarded and re-derived,
+    // in original order, by the loop's own unmodified `resolve_nfp_boundary`
+    // call).
+    super::boundary_core::precompute_missing_relative_nfp_boundaries(
+        input.placed,
+        input.moving,
+        &input.settings.geometry,
+        geometry_cache,
+        construction_algorithm,
+    );
+
     let mut nfp_boundaries: Vec<NfpBoundary> = Vec::new();
     for placed in input.placed {
         nfp_checkpoint(

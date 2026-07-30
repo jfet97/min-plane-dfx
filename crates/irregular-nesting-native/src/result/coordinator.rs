@@ -43,6 +43,8 @@
 use std::sync::Arc;
 use std::time::Instant;
 
+use rayon::prelude::*;
+
 use crate::archive::shared::{
     make_intrinsic_shared_archive_endpoint, retain_ranked_shared_archive,
     run_intrinsic_shared_archive_portfolio, select_fitting_shared_archive,
@@ -65,16 +67,18 @@ use crate::capacity::preflight::{
     IntrinsicCapacityPreflightOutcome, IntrinsicCapacityProvenImpossibleReason,
 };
 use crate::capacity::search::{CapacitySearchError, IntrinsicCapacitySearchStatus};
+use crate::boundary::parallel::with_job_pool;
 use crate::domain::{
-    CollisionGeometryDiagnostic, ImportedPiece, IrregularNestingSettings, IrregularPreparedPiece,
-    IrregularPriorityOrderKey, PieceId, SheetSpec,
+    CollisionGeometry, CollisionGeometryDiagnostic, ImportedPiece, IrregularNestingSettings,
+    IrregularPreparedPiece, IrregularPriorityOrderKey, IrregularTransformCandidate, PieceId,
+    SheetSpec,
 };
 use crate::geometry::collision_builder::{build_piece, BuildCollisionGeometryInput};
 use crate::nfp_ifp::{
     NfpIfpAbortReason, NfpIfpCheckpointPhase, NfpIfpControl, NfpIfpControlAbortError,
 };
 use crate::search::layout_scorer::FreeMaterialCache;
-use crate::search::sort_pieces::sort_pieces_for_nesting;
+use crate::search::sort_pieces::{sort_pieces_for_nesting, PreparedPiece as SortedPreparedPiece};
 use crate::search::strict_decoder::IntrinsicStrictDecoderFailure;
 use crate::transforms::generator::{generate_transforms, GenerateTransformsInput};
 
@@ -285,6 +289,85 @@ fn project_continuation_status(
 // `computeIrregularNesting` (`computeIrregularNesting.ts:364-451`).
 // ===========================================================================
 
+/// The pure per-piece result [`compute_prepared_piece`] produces --
+/// everything [`compute_irregular_nesting`]'s serial reduction needs to
+/// publish one `IrregularPreparedPiece` (`source`/`allow_mirror` are
+/// threaded through separately from `collision_geometry`/`transforms`
+/// because the original serial loop computes/uses them at different
+/// points, not because they have independent lifetimes here).
+struct PreparedPieceComputation {
+    source: ImportedPiece,
+    allow_mirror: bool,
+    collision_geometry: CollisionGeometry,
+    transforms: Vec<IrregularTransformCandidate>,
+}
+
+/// TS: `computeIrregularNesting.ts:389-431`, the per-piece body of the
+/// piece-preparation loop: `findSourcePiece`, then
+/// `CollisionGeometryBuilder.buildPiece`, then
+/// `TransformGenerator.generateTransforms`. Pure given `(prepared, request,
+/// settings)`: reads no mutable shared state and writes none (this crate's
+/// Clipper2 port carries no process-global mutable state -- see
+/// `clipper::engine::Clipper64::open_paths_enabled`'s doc for why per-call
+/// instances stay independent even under concurrent invocation). This is
+/// `PAR-GEOM-01` in `docs/planning/rust-irregular-backend/parallelism-inventory.md`
+/// §3.1; [`compute_irregular_nesting`] is the ordinal-indexed parallel
+/// dispatch + serial reduction site.
+fn compute_prepared_piece(
+    prepared: &SortedPreparedPiece,
+    request: &NestingRequest,
+    settings: &IrregularNestingSettings,
+) -> Result<PreparedPieceComputation, IrregularComputeErrorType> {
+    let source = find_source_piece(
+        &prepared.source_piece_id,
+        &prepared.id,
+        &request.source_pieces,
+    )
+    .ok_or_else(|| {
+        IrregularComputeErrorType::Compute(IrregularComputeError {
+            prepared_piece_id: prepared.id.clone(),
+            source_piece_id: prepared.source_piece_id.clone(),
+            message: format!(
+                "No imported source geometry was found for prepared piece {}.",
+                prepared.id.as_str()
+            ),
+        })
+    })?
+    .clone();
+
+    let collision_geometry = build_piece(
+        &BuildCollisionGeometryInput {
+            piece: source.clone(),
+            total_padding_mm: request.padding,
+        },
+        &settings.geometry,
+    )
+    .map_err(|error| {
+        IrregularComputeErrorType::GeometryInput(geometry_input_error_from_generator(&error))
+    })?;
+
+    let allow_rotation = request.options.allow_global_rotation && prepared.allow_rotation;
+    let allow_mirror =
+        request.options.allow_global_mirror.unwrap_or(true) && prepared.allow_mirror;
+    let transforms = generate_transforms(&GenerateTransformsInput {
+        geometry: collision_geometry.clone(),
+        allow_rotation,
+        allow_mirror,
+        geometry_settings: settings.geometry.clone(),
+        settings: settings.optimizer.clone(),
+    })
+    .map_err(|error| {
+        IrregularComputeErrorType::GeometryInput(geometry_input_error_from_generator(&error))
+    })?;
+
+    Ok(PreparedPieceComputation {
+        source,
+        allow_mirror,
+        collision_geometry,
+        transforms,
+    })
+}
+
 /// TS: `computeIrregularNesting.ts:364-451`. Prepares every piece's
 /// collision geometry and transform set in stable sorted order, then
 /// delegates to [`coordinate_intrinsic_shared_archive`].
@@ -296,52 +379,46 @@ pub fn compute_irregular_nesting(
     free_material_cache: &mut FreeMaterialCache,
 ) -> Result<IrregularComputeResult, IrregularComputeErrorType> {
     let sorted_pieces = sort_pieces_for_nesting(&request.pieces);
+
+    // PAR-GEOM-01 (parallelism-inventory.md §3.1): dispatch every prepared
+    // piece's pure collision-geometry/transform computation across this
+    // job's Rayon pool, ordinal-indexed by `sorted_pieces`'s own position
+    // (`par_iter().map(...).collect()` preserves input order in its output
+    // `Vec` regardless of completion order -- this *is* the ordinal
+    // scheme, not merely convenient). No cache/mutable-shared-state
+    // interaction happens inside `compute_prepared_piece`, so no
+    // publish-ordering hazard exists here (contrast with PAR-NFP-01/
+    // PAR-CACHE-01, which do touch `geometry_cache` and are not
+    // parallelized by this call).
+    let per_piece_results: Vec<Result<PreparedPieceComputation, IrregularComputeErrorType>> =
+        with_job_pool(|| {
+            sorted_pieces
+                .par_iter()
+                .map(|prepared| compute_prepared_piece(prepared, request, settings))
+                .collect()
+        });
+
     let mut prepared_pieces: Vec<Arc<IrregularPreparedPiece>> =
         Vec::with_capacity(sorted_pieces.len());
     let mut diagnostics: Vec<CollisionGeometryDiagnostic> = Vec::new();
 
-    for prepared in &sorted_pieces {
-        let source = find_source_piece(
-            &prepared.source_piece_id,
-            &prepared.id,
-            &request.source_pieces,
-        )
-        .ok_or_else(|| {
-            IrregularComputeErrorType::Compute(IrregularComputeError {
-                prepared_piece_id: prepared.id.clone(),
-                source_piece_id: prepared.source_piece_id.clone(),
-                message: format!(
-                    "No imported source geometry was found for prepared piece {}.",
-                    prepared.id.as_str()
-                ),
-            })
-        })?
-        .clone();
-
-        let collision_geometry = build_piece(
-            &BuildCollisionGeometryInput {
-                piece: source.clone(),
-                total_padding_mm: request.padding,
-            },
-            &settings.geometry,
-        )
-        .map_err(|error| {
-            IrregularComputeErrorType::GeometryInput(geometry_input_error_from_generator(&error))
-        })?;
-
-        let allow_rotation = request.options.allow_global_rotation && prepared.allow_rotation;
-        let allow_mirror =
-            request.options.allow_global_mirror.unwrap_or(true) && prepared.allow_mirror;
-        let transforms = generate_transforms(&GenerateTransformsInput {
-            geometry: collision_geometry.clone(),
-            allow_rotation,
+    // Serial reduction, strictly in original `sorted_pieces` order: the
+    // first ordinal whose computation failed is the error `?` returns here
+    // -- the exact same "first sequentially-encountered failure in program
+    // order" identity the original serial loop produced (PAR-XCUT-02),
+    // never "whichever Rayon worker finished first." Every prepared piece
+    // published into `prepared_pieces`/`diagnostics` before that ordinal is
+    // identical byte-for-byte to the original serial loop's output; any
+    // piece *after* the failing ordinal may still have been computed by
+    // some other worker, but its result is simply never published, exactly
+    // like every other compute-then-publish site in this crate.
+    for (prepared, computation) in sorted_pieces.iter().zip(per_piece_results) {
+        let PreparedPieceComputation {
+            source,
             allow_mirror,
-            geometry_settings: settings.geometry.clone(),
-            settings: settings.optimizer.clone(),
-        })
-        .map_err(|error| {
-            IrregularComputeErrorType::GeometryInput(geometry_input_error_from_generator(&error))
-        })?;
+            collision_geometry,
+            transforms,
+        } = computation?;
 
         diagnostics.extend(collision_geometry.diagnostics.clone());
 

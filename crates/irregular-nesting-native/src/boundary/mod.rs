@@ -16,6 +16,8 @@
 //! - [`events`] -- `ThreadsafeFunction`-backed portfolio-progress/state-
 //!   snapshot event forwarding (§10-§11).
 //! - [`diagnostics`] -- the non-semantic diagnostics sidecar (§14).
+//! - [`parallel`] -- the job-owned Rayon thread pool (Stage 4,
+//!   `cache-concurrency-design.md` §7).
 //! - [`run_job`] -- the plain, N-API-free job execution function
 //!   (architecture.md §4.1).
 //! - [`job`] -- `AsyncTask`/`ThreadsafeFunction` glue and the cooperative-
@@ -25,6 +27,7 @@ pub mod diagnostics;
 pub mod error;
 pub mod events;
 pub mod job;
+pub mod parallel;
 pub mod request;
 pub mod result;
 pub mod run_job;
