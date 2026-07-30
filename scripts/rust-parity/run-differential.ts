@@ -649,6 +649,26 @@ async function main(): Promise<void> {
     console.error(`[run-differential] FIRST DIVERGENCE at path: ${divergence.path}`)
     console.error(`  typescript: ${JSON.stringify(divergence.typescript)}`)
     console.error(`  rust      : ${JSON.stringify(divergence.rust)}`)
+    if (isPlainObject(tsProjection) && isPlainObject(rustProjection)) {
+      for (const key of [
+        'placedCollisionGeometries',
+        'score',
+        'unplacedPieceIds',
+        'sortedPieceIds',
+        'diagnostics',
+        'portfolio'
+      ]) {
+        const sectionDivergence = firstDivergence(key, tsProjection[key], rustProjection[key])
+        console.error(
+          `[run-differential] ${key}: ${
+            sectionDivergence === undefined ? 'equal' : `diverges at ${sectionDivergence.path}`
+          }`
+        )
+      }
+    }
+    console.error(
+      `[run-differential] runtime: node=${process.version} platform=${process.platform} arch=${process.arch}`
+    )
     fail('the compared semantic projection diverged between backends.')
   }
 
