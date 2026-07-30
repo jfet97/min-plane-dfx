@@ -37,6 +37,7 @@ import { fileURLToPath } from 'node:url'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = join(__dirname, '..', '..')
 const RUN_DIFFERENTIAL = join(__dirname, 'run-differential.ts')
+const DIFFERENTIAL_ROW_TIMEOUT_MS = 120_000
 
 interface FixtureRow {
   readonly label: string
@@ -121,7 +122,12 @@ function runRow(row: FixtureRow): RowResult {
     const output = execFileSync(
       'pnpm',
       ['exec', 'tsx', '--tsconfig', 'tsconfig.node.json', RUN_DIFFERENTIAL, ...row.args],
-      { cwd: REPO_ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }
+      {
+        cwd: REPO_ROOT,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+        timeout: DIFFERENTIAL_ROW_TIMEOUT_MS
+      }
     )
     return { row, ok: true, output }
   } catch (error) {

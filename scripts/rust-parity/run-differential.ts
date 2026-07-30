@@ -21,11 +21,12 @@
  *
  * # What is *not* compared, and why (never a silent omission)
  *
- * - Elapsed/timing/byte-count fields: `computeIrregularNesting.ts` has no
- *   injectable clock seam of its own (only `intrinsicCapacitySearch.ts`, a
- *   lower layer, carries one -- confirmed by source grep, matching
- *   `dump-coordinator.ts`'s own finding), so every wall-clock-derived field
- *   the two backends compute independently is expected to differ in value.
+ * - Elapsed/timing/byte-count fields: most production traces have no
+ *   harness clock seam, so every wall-clock-derived field the two backends
+ *   compute independently is expected to differ in value. The TypeScript
+ *   Short Side pair-fold observer alone receives a frozen harness clock and
+ *   constant RSS reading so its deterministic candidate cap, rather than
+ *   shared-runner speed, governs differential execution.
  *   All five trace fields (`capacityTrace` / `intrinsicAnytimeSchedulerTrace` /
  *   `focusedCompleteReconstructionTrace` / `intrinsicShortSideObserverTrace` /
  *   `intrinsicShortSidePairFoldTrace`) are otherwise compared field-for-field
@@ -392,7 +393,12 @@ function runTypeScriptBackend(
   request: NestingRequest,
   geometrySettings: IrregularNestingSettings
 ): Effect.Effect<IrregularComputeResult, IrregularComputeErrorType> {
-  return computeIrregularNesting(request).pipe(
+  return computeIrregularNesting(request, {
+    intrinsicShortSidePairFoldRuntimeControl: {
+      now: () => 0,
+      currentRssBytes: () => 0
+    }
+  }).pipe(
     Effect.provide(CollisionGeometryBuilder.Live),
     Effect.provide(TransformGeneratorLive),
     Effect.provide(NfpIfpServiceLive),

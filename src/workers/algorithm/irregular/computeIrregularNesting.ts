@@ -80,6 +80,7 @@ import {
   observeIntrinsicShortSidePairFold,
   withMeasuredIntrinsicShortSidePairFoldTrace,
   type IntrinsicShortSideConstructionKind,
+  type IntrinsicShortSidePairFoldRuntimeControl,
   type IntrinsicShortSidePairFoldTrace
 } from './intrinsicShortSidePairFoldObserver.js'
 import {
@@ -176,6 +177,8 @@ export interface ComputeIrregularNestingOptions {
   ) => void
   /** Bounded exhaustive pair fold with no NFP or beam search. */
   readonly captureIntrinsicShortSidePairFoldObserver?: boolean
+  /** Test and parity-harness control; production leaves the observer bounds unchanged. */
+  readonly intrinsicShortSidePairFoldRuntimeControl?: IntrinsicShortSidePairFoldRuntimeControl
   /** Benchmark hook for one admitted exact pair fold. */
   readonly onIntrinsicShortSidePairFoldObserverWinner?: (
     winner: ReadonlyArray<IrregularPlacedPiece> | undefined
@@ -1161,7 +1164,12 @@ function coordinateIntrinsicSharedArchive(
           productionMaximumSideGrid:
             intrinsicShortSideObserverTrace.productionMaximumSideGrid,
           productionEnvelopeAreaGrid2:
-            intrinsicShortSideObserverTrace.productionEnvelopeAreaGrid2
+            intrinsicShortSideObserverTrace.productionEnvelopeAreaGrid2,
+          ...(input.options?.intrinsicShortSidePairFoldRuntimeControl === undefined
+            ? {}
+            : {
+                runtimeControl: input.options.intrinsicShortSidePairFoldRuntimeControl
+              })
         })
         intrinsicShortSidePairFoldTrace = pairFoldOutcome.trace
         input.options?.onIntrinsicShortSidePairFoldObserverWinner?.(
