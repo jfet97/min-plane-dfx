@@ -18,24 +18,31 @@
  * placeholder"), so the mapping in this module is a validated pass-through,
  * not a second copy of the section-16 table.
  *
- * # Deferred trace fidelity
+ * # Trace fidelity
  *
  * `capacityTrace`/`intrinsicAnytimeSchedulerTrace`/`focusedCompleteReconstructionTrace`/
  * `intrinsicShortSideObserverTrace`/`intrinsicShortSidePairFoldTrace` are
- * left `undefined` on the `IrregularComputeResult` this module produces.
- * The native result DTO currently projects each of these (when present) as
- * an opaque `{"raw": "<Rust Debug repr>"}` blob (`boundary::result`'s own
- * module doc, "Deferred: five optional trace fields' internal field shape"),
- * not the real structured TS shape -- fabricating a value that merely
- * type-checks would be worse than an honest absence. Verified this is safe
- * for the one production consumer: neither `computeIrregularWorkerResult`
- * nor `makeIrregularWorkerOutput` reads into any of these five fields today
- * (source-grepped; both only read `placedCollisionGeometries`, `score`,
- * `unplacedPieceIds`, `diagnostics`, `sortedPieceIds`, `stateSnapshots`,
- * `beamWidth`, `portfolio`). `capacityShadowTelemetry`/`experimentalPlaceDeferTrace`
- * are omitted for the same reason and are additionally never populated in
- * production regardless of backend (`computeIrregularWorkerResult` never
- * sets the opt-in options that would enable them).
+ * reconstructed field-for-field from the native result DTO's own
+ * field-for-field wire projection of each trace (`boundary::result`'s own
+ * module doc), matching the exact in-memory shape `computeIrregularNesting`
+ * itself would have produced. `capacityTrace`'s handful of `BigInt`-valued
+ * fields (`placedDoubledMaterialAreaGrid2` and
+ * `IntrinsicCapacityPreflightMeasurements`'s four pressure/area fields)
+ * cross the wire as decimal-digit strings (`capacity::serialize_bigint_decimal_string`'s
+ * own doc comment) and are decoded back to `bigint` via `BigInt(<string>)`
+ * below (`WireBigInt`); every other field in all five traces is
+ * already a JSON-native type (`number`/`string`/`boolean`/literal union), so
+ * `JSON.parse`'s own output already has the right runtime shape -- these
+ * decoders exist to thread the `bigint` conversion through each trace's
+ * nested structure and to give the result its exact TS type, not to
+ * re-validate field names Rust already asserts by construction.
+ * `capacityShadowTelemetry`/`experimentalPlaceDeferTrace` are omitted:
+ * neither `computeIrregularWorkerResult` nor `makeIrregularWorkerOutput`
+ * reads either field, and neither is ever populated in production
+ * regardless of backend (`computeIrregularWorkerResult` never sets the
+ * opt-in options that would enable them) -- verified by source grep, same
+ * reasoning this module already applied to the five traces above before
+ * they were reconstructed.
  *
  * # Deferred history-frame fidelity for live-streamed snapshots
  *
@@ -71,10 +78,31 @@ import {
 } from '@shared/irregular/domain.js'
 import type {
   ComputeIrregularNestingOptions,
+  IntrinsicAnytimeSchedulerTrace,
+  IntrinsicFocusedCompleteReconstructionTrace,
   IrregularComputeResult,
   IrregularStateSnapshot
 } from '../../algorithm/irregular/computeIrregularNesting.js'
 import { IrregularBeamState } from '../../algorithm/irregular/irregularBeamState.js'
+import type {
+  IntrinsicCapacityCohesionShadowTrace,
+  IntrinsicCapacityQualityWarmPrefixTrace,
+  IntrinsicCapacitySelectionTrace,
+  IntrinsicCapacityTrace,
+  IntrinsicCapacityWarmPrefixLaneTrace
+} from '../../algorithm/irregular/intrinsicCapacityMode.js'
+import type {
+  IntrinsicCapacityPreflightMeasurements,
+  IntrinsicCapacityPreflightOutcome
+} from '../../algorithm/irregular/intrinsicCapacityPreflight.js'
+import type { IntrinsicCapacityObjective } from '../../algorithm/irregular/intrinsicCapacityEndpoint.js'
+import type {
+  IntrinsicCapacitySearchTrace,
+  IntrinsicCapacityTopologyRepresentative,
+  IntrinsicCapacityTopologyRetentionDepthTrace
+} from '../../algorithm/irregular/intrinsicCapacitySearch.js'
+import type { IntrinsicShortSideObserverTrace } from '../../algorithm/irregular/intrinsicShortSideObserver.js'
+import type { IntrinsicShortSidePairFoldTrace } from '../../algorithm/irregular/intrinsicShortSidePairFoldObserver.js'
 import {
   describeError,
   loadNativeIrregularAddon,
@@ -196,6 +224,295 @@ function protocolFailure(message: string, context?: Readonly<Record<string, unkn
 }
 
 // ===========================================================================
+// Trace decoding (the five `boundary::result`-projected optional trace
+// fields on `NativeIrregularComputeResult` -> the exact TS trace types
+// `computeIrregularNesting`'s own control flow would have produced -- see
+// module doc, "Trace fidelity"). `WireBigInt<T, K>` mechanically re-types
+// every `bigint`-valued field `K` on `T` as the decimal-string wire
+// encoding `capacity::serialize_bigint_decimal_string` uses, so each "wire"
+// type below is otherwise structurally identical to its real TS
+// counterpart (same field names, same nesting) -- only the finitely many
+// `bigint` leaves actually need a manual `BigInt(<string>)` decode step.
+// ===========================================================================
+
+type WireBigInt<T, K extends keyof T> = Omit<T, K> & { readonly [P in K]: string }
+
+type WireIntrinsicCapacityObjective = WireBigInt<IntrinsicCapacityObjective, 'placedDoubledMaterialAreaGrid2'>
+
+function toIntrinsicCapacityObjective(wire: WireIntrinsicCapacityObjective): IntrinsicCapacityObjective {
+  return {
+    ...wire,
+    placedDoubledMaterialAreaGrid2: BigInt(wire.placedDoubledMaterialAreaGrid2)
+  }
+}
+
+type WireIntrinsicCapacityTopologyRepresentative = WireBigInt<
+  IntrinsicCapacityTopologyRepresentative,
+  'placedDoubledMaterialAreaGrid2'
+>
+
+function toIntrinsicCapacityTopologyRepresentative(
+  wire: WireIntrinsicCapacityTopologyRepresentative
+): IntrinsicCapacityTopologyRepresentative {
+  return {
+    ...wire,
+    placedDoubledMaterialAreaGrid2: BigInt(wire.placedDoubledMaterialAreaGrid2)
+  }
+}
+
+type WireIntrinsicCapacityTopologyRetentionDepthTrace = Omit<
+  IntrinsicCapacityTopologyRetentionDepthTrace,
+  'representatives'
+> & {
+  readonly representatives: ReadonlyArray<WireIntrinsicCapacityTopologyRepresentative>
+}
+
+function toIntrinsicCapacityTopologyRetentionDepthTrace(
+  wire: WireIntrinsicCapacityTopologyRetentionDepthTrace
+): IntrinsicCapacityTopologyRetentionDepthTrace {
+  return {
+    ...wire,
+    representatives: wire.representatives.map(toIntrinsicCapacityTopologyRepresentative)
+  }
+}
+
+type WireIntrinsicCapacitySearchTrace = Omit<IntrinsicCapacitySearchTrace, 'topologyRetentionDepths'> & {
+  readonly topologyRetentionDepths:
+    | ReadonlyArray<WireIntrinsicCapacityTopologyRetentionDepthTrace>
+    | undefined
+}
+
+function toIntrinsicCapacitySearchTrace(wire: WireIntrinsicCapacitySearchTrace): IntrinsicCapacitySearchTrace {
+  return {
+    ...wire,
+    topologyRetentionDepths: wire.topologyRetentionDepths?.map(toIntrinsicCapacityTopologyRetentionDepthTrace)
+  }
+}
+
+type WireIntrinsicCapacityWarmPrefixLaneTrace = Omit<IntrinsicCapacityWarmPrefixLaneTrace, 'endpoint'> & {
+  readonly endpoint: WireIntrinsicCapacityObjective | undefined
+}
+
+function toIntrinsicCapacityWarmPrefixLaneTrace(
+  wire: WireIntrinsicCapacityWarmPrefixLaneTrace
+): IntrinsicCapacityWarmPrefixLaneTrace {
+  return {
+    ...wire,
+    endpoint: wire.endpoint === undefined ? undefined : toIntrinsicCapacityObjective(wire.endpoint)
+  }
+}
+
+type WireIntrinsicCapacityCohesionShadowTrace = Omit<
+  IntrinsicCapacityCohesionShadowTrace,
+  'endpoint' | 'retentionDepths'
+> & {
+  readonly endpoint: WireIntrinsicCapacityObjective | undefined
+  readonly retentionDepths: ReadonlyArray<WireIntrinsicCapacityTopologyRetentionDepthTrace> | undefined
+}
+
+function toIntrinsicCapacityCohesionShadowTrace(
+  wire: WireIntrinsicCapacityCohesionShadowTrace
+): IntrinsicCapacityCohesionShadowTrace {
+  return {
+    ...wire,
+    endpoint: wire.endpoint === undefined ? undefined : toIntrinsicCapacityObjective(wire.endpoint),
+    retentionDepths: wire.retentionDepths?.map(toIntrinsicCapacityTopologyRetentionDepthTrace)
+  }
+}
+
+type WireIntrinsicCapacityQualityWarmPrefixTrace = Omit<IntrinsicCapacityQualityWarmPrefixTrace, 'endpoint'> & {
+  readonly endpoint: WireIntrinsicCapacityObjective | undefined
+}
+
+function toIntrinsicCapacityQualityWarmPrefixTrace(
+  wire: WireIntrinsicCapacityQualityWarmPrefixTrace
+): IntrinsicCapacityQualityWarmPrefixTrace {
+  return {
+    ...wire,
+    endpoint: wire.endpoint === undefined ? undefined : toIntrinsicCapacityObjective(wire.endpoint)
+  }
+}
+
+type WireIntrinsicCapacitySelectionTrace = WireBigInt<
+  IntrinsicCapacitySelectionTrace,
+  'placedDoubledMaterialAreaGrid2'
+>
+
+function toIntrinsicCapacitySelectionTrace(
+  wire: WireIntrinsicCapacitySelectionTrace
+): IntrinsicCapacitySelectionTrace {
+  return {
+    ...wire,
+    placedDoubledMaterialAreaGrid2: BigInt(wire.placedDoubledMaterialAreaGrid2)
+  }
+}
+
+type WireIntrinsicCapacityPreflightMeasurements = WireBigInt<
+  IntrinsicCapacityPreflightMeasurements,
+  | 'sheetDoubledAreaGrid2'
+  | 'minimumDoubledCollisionAreaSumGrid2'
+  | 'minimumCollisionAreaPressurePpm'
+  | 'maximumSingletonSpanPressurePpm'
+>
+
+function toIntrinsicCapacityPreflightMeasurements(
+  wire: WireIntrinsicCapacityPreflightMeasurements
+): IntrinsicCapacityPreflightMeasurements {
+  return {
+    ...wire,
+    sheetDoubledAreaGrid2: BigInt(wire.sheetDoubledAreaGrid2),
+    minimumDoubledCollisionAreaSumGrid2: BigInt(wire.minimumDoubledCollisionAreaSumGrid2),
+    minimumCollisionAreaPressurePpm: BigInt(wire.minimumCollisionAreaPressurePpm),
+    maximumSingletonSpanPressurePpm: BigInt(wire.maximumSingletonSpanPressurePpm)
+  }
+}
+
+type WireIntrinsicCapacityPreflightOutcome =
+  | {
+      readonly kind: 'proven_impossible'
+      readonly reason: 'singleton-transform-set-does-not-fit'
+      readonly pieceId: string
+      readonly measurements: WireIntrinsicCapacityPreflightMeasurements
+    }
+  | {
+      readonly kind: 'proven_impossible'
+      readonly reason: 'minimum-collision-area-exceeds-sheet-area'
+      readonly measurements: WireIntrinsicCapacityPreflightMeasurements
+    }
+  | {
+      readonly kind: 'inconclusive'
+      readonly measurements: WireIntrinsicCapacityPreflightMeasurements
+    }
+
+function toIntrinsicCapacityPreflightOutcome(
+  wire: WireIntrinsicCapacityPreflightOutcome
+): IntrinsicCapacityPreflightOutcome {
+  const measurements = toIntrinsicCapacityPreflightMeasurements(wire.measurements)
+  if (wire.kind === 'inconclusive') {
+    return { kind: 'inconclusive', measurements }
+  }
+  if (wire.reason === 'singleton-transform-set-does-not-fit') {
+    return {
+      kind: 'proven_impossible',
+      reason: wire.reason,
+      pieceId: PieceId.make(wire.pieceId),
+      measurements
+    }
+  }
+  return { kind: 'proven_impossible', reason: wire.reason, measurements }
+}
+
+type WireIntrinsicCapacityTrace = Omit<
+  IntrinsicCapacityTrace,
+  | 'preflight'
+  | 'coldSearch'
+  | 'warmPrefixLanes'
+  | 'cohesionShadow'
+  | 'qualityWarmPrefix'
+  | 'selected'
+> & {
+  readonly preflight: WireIntrinsicCapacityPreflightOutcome
+  readonly coldSearch: WireIntrinsicCapacitySearchTrace
+  readonly warmPrefixLanes: ReadonlyArray<WireIntrinsicCapacityWarmPrefixLaneTrace> | undefined
+  readonly cohesionShadow: WireIntrinsicCapacityCohesionShadowTrace | undefined
+  readonly qualityWarmPrefix: WireIntrinsicCapacityQualityWarmPrefixTrace | undefined
+  readonly selected: WireIntrinsicCapacitySelectionTrace
+}
+
+/** `boundary::result`'s `capacity_trace` wire shape -> the real `IntrinsicCapacityTrace`. */
+function toIntrinsicCapacityTrace(wire: WireIntrinsicCapacityTrace): IntrinsicCapacityTrace {
+  return {
+    ...wire,
+    preflight: toIntrinsicCapacityPreflightOutcome(wire.preflight),
+    coldSearch: toIntrinsicCapacitySearchTrace(wire.coldSearch),
+    warmPrefixLanes: wire.warmPrefixLanes?.map(toIntrinsicCapacityWarmPrefixLaneTrace),
+    cohesionShadow:
+      wire.cohesionShadow === undefined ? undefined : toIntrinsicCapacityCohesionShadowTrace(wire.cohesionShadow),
+    qualityWarmPrefix:
+      wire.qualityWarmPrefix === undefined
+        ? undefined
+        : toIntrinsicCapacityQualityWarmPrefixTrace(wire.qualityWarmPrefix),
+    selected: toIntrinsicCapacitySelectionTrace(wire.selected)
+  } as IntrinsicCapacityTrace
+}
+
+/**
+ * The remaining four traces carry no `bigint` field
+ * (`intrinsicAnytimeSchedulerTrace`/`focusedCompleteReconstructionTrace`:
+ * verified against `computeIrregularNesting.ts:185-226`;
+ * `intrinsicShortSideObserverTrace`/`intrinsicShortSidePairFoldTrace`: every
+ * `*Grid2` field in `intrinsicShortSideObserver.ts`/
+ * `intrinsicShortSidePairFoldObserver.ts` is already TS `string`, never
+ * `bigint`) -- `JSON.parse`'s own output already has the right runtime
+ * shape, so decoding is a direct, honest cast, not a fabrication (Rust's
+ * `Serialize` derive on each real trace struct, field-for-field verified
+ * against these same TS sources, is what actually guarantees the shape).
+ */
+function toIntrinsicAnytimeSchedulerTrace(wire: unknown): IntrinsicAnytimeSchedulerTrace {
+  return wire as IntrinsicAnytimeSchedulerTrace
+}
+
+function toIntrinsicFocusedCompleteReconstructionTrace(
+  wire: unknown
+): IntrinsicFocusedCompleteReconstructionTrace {
+  return wire as IntrinsicFocusedCompleteReconstructionTrace
+}
+
+function toIntrinsicShortSideObserverTrace(wire: unknown): IntrinsicShortSideObserverTrace {
+  return wire as IntrinsicShortSideObserverTrace
+}
+
+function toIntrinsicShortSidePairFoldTrace(wire: unknown): IntrinsicShortSidePairFoldTrace {
+  return wire as IntrinsicShortSidePairFoldTrace
+}
+
+/** The five optional trace fields as they appear on the raw wire envelope result. */
+interface NativeTraceFieldsJson {
+  readonly capacityTrace?: WireIntrinsicCapacityTrace
+  readonly intrinsicAnytimeSchedulerTrace?: unknown
+  readonly focusedCompleteReconstructionTrace?: unknown
+  readonly intrinsicShortSideObserverTrace?: unknown
+  readonly intrinsicShortSidePairFoldTrace?: unknown
+}
+
+/**
+ * Reconstructs the five trace fields onto `result`. `raw` is the same
+ * envelope-result value `decodeNativeComputeResult` decodes the rest of
+ * `IrregularComputeResult` from -- `Schema.decodeUnknownSync` on the
+ * narrower `NativeIrregularComputeResultSchema` silently ignores these five
+ * unrecognized wire keys (this module's own established convention, see
+ * `encodeNativeRequestJson`'s doc comment), so they are read directly off
+ * `raw` here instead.
+ */
+function withNativeTraces(
+  result: IrregularComputeResult,
+  raw: NativeTraceFieldsJson
+): IrregularComputeResult {
+  return {
+    ...result,
+    ...(raw.capacityTrace !== undefined
+      ? { capacityTrace: toIntrinsicCapacityTrace(raw.capacityTrace) }
+      : {}),
+    ...(raw.intrinsicAnytimeSchedulerTrace !== undefined
+      ? { intrinsicAnytimeSchedulerTrace: toIntrinsicAnytimeSchedulerTrace(raw.intrinsicAnytimeSchedulerTrace) }
+      : {}),
+    ...(raw.focusedCompleteReconstructionTrace !== undefined
+      ? {
+          focusedCompleteReconstructionTrace: toIntrinsicFocusedCompleteReconstructionTrace(
+            raw.focusedCompleteReconstructionTrace
+          )
+        }
+      : {}),
+    ...(raw.intrinsicShortSideObserverTrace !== undefined
+      ? { intrinsicShortSideObserverTrace: toIntrinsicShortSideObserverTrace(raw.intrinsicShortSideObserverTrace) }
+      : {}),
+    ...(raw.intrinsicShortSidePairFoldTrace !== undefined
+      ? { intrinsicShortSidePairFoldTrace: toIntrinsicShortSidePairFoldTrace(raw.intrinsicShortSidePairFoldTrace) }
+      : {})
+  }
+}
+
+// ===========================================================================
 // Result decoding (the crate's `NativeIrregularComputeResult` wire shape,
 // `crates/irregular-nesting-native/src/boundary/result.rs`, -> TS
 // `IrregularComputeResult`). Reuses every existing boundary/domain schema
@@ -274,7 +591,7 @@ function toIrregularStateSnapshot(dto: NativeStateSnapshotDto): IrregularStateSn
 /** Throws (never a typed `Result`) -- callers wrap this in `Effect.try`. */
 function decodeNativeComputeResult(raw: unknown): IrregularComputeResult {
   const dto = Schema.decodeUnknownSync(NativeIrregularComputeResultSchema)(raw)
-  return {
+  const result: IrregularComputeResult = {
     placedCollisionGeometries: dto.placedCollisionGeometries.map(
       (placed) => new IrregularPlacedPiece(placed)
     ),
@@ -288,10 +605,11 @@ function decodeNativeComputeResult(raw: unknown): IrregularComputeResult {
     stateSnapshots: dto.stateSnapshots.map(toIrregularStateSnapshot),
     beamWidth: dto.beamWidth,
     portfolio: dto.portfolio
-    // capacityTrace / intrinsicAnytimeSchedulerTrace / focusedCompleteReconstructionTrace /
-    // intrinsicShortSideObserverTrace / intrinsicShortSidePairFoldTrace: deliberately
-    // omitted -- see module doc, "Deferred trace fidelity".
   }
+  // See module doc, "Trace fidelity", and `withNativeTraces`'s own doc
+  // comment for why these five fields are read off `raw` directly rather
+  // than through `NativeIrregularComputeResultSchema`.
+  return withNativeTraces(result, raw as NativeTraceFieldsJson)
 }
 
 // ===========================================================================

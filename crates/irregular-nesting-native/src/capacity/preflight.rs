@@ -55,6 +55,7 @@
 //! covers exactly the three reachable arms.
 
 use num_bigint::BigInt;
+use serde::{Serialize, Serializer};
 
 use crate::caches::{
     resolve_transformed_collision_geometry, GeometryCacheStore, TransformCollisionGeometryKeyInput,
@@ -94,18 +95,24 @@ pub enum IntrinsicCapacityPreflightError {
 /// TS: `intrinsicCapacityPreflight.ts:24-38` `IntrinsicCapacityPreflightMeasurements`.
 /// None of these fields are optional; every variant of
 /// [`IntrinsicCapacityPreflightOutcome`] carries the full value.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct IntrinsicCapacityPreflightMeasurements {
     pub piece_count: f64,
     pub sheet_width_grid: f64,
     pub sheet_height_grid: f64,
     /// Exact doubled canonical requested-sheet area in grid-squared units.
+    /// Wire: decimal string (see `capacity::serialize_bigint_decimal_string`).
+    #[serde(serialize_with = "crate::capacity::serialize_bigint_decimal_string")]
     pub sheet_doubled_area_grid2: BigInt,
     /// Exact sum over pieces of the minimum valid doubled collision area.
+    #[serde(serialize_with = "crate::capacity::serialize_bigint_decimal_string")]
     pub minimum_doubled_collision_area_sum_grid2: BigInt,
     /// Scale-free minimum collision-area pressure, rounded up to parts per million.
+    #[serde(serialize_with = "crate::capacity::serialize_bigint_decimal_string")]
     pub minimum_collision_area_pressure_ppm: BigInt,
     /// Worst piece's best exact q0/q90 axis pressure, rounded up to parts per million.
+    #[serde(serialize_with = "crate::capacity::serialize_bigint_decimal_string")]
     pub maximum_singleton_span_pressure_ppm: BigInt,
     /// Prepared ids whose entire transform set cannot fit the sheet at q0 or q90.
     pub singleton_infeasible_piece_ids: Vec<PieceId>,
@@ -147,6 +154,47 @@ pub enum IntrinsicCapacityPreflightOutcome {
     Inconclusive {
         measurements: IntrinsicCapacityPreflightMeasurements,
     },
+}
+
+/// TS: `intrinsicCapacityPreflight.ts:40-55` `IntrinsicCapacityPreflightOutcome`'s
+/// discriminated-union wire shape: `kind: 'proven_impossible' |
+/// 'inconclusive'`, `reason`/`pieceId` present only on the
+/// `singleton-transform-set-does-not-fit` proven-impossible arm (`reason`
+/// present on both proven-impossible arms, `pieceId` only the first),
+/// `measurements` always present. A hand-written `Serialize` impl (not
+/// `derive`) since no single `#[serde(tag = ...)]` shape reproduces "two
+/// proven-impossible variants share `reason`'s field but only one also
+/// carries `pieceId`" without restructuring
+/// [`IntrinsicCapacityProvenImpossibleReason`] itself.
+impl Serialize for IntrinsicCapacityPreflightOutcome {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        use serde::ser::SerializeMap;
+        let mut map = serializer.serialize_map(None)?;
+        match self {
+            IntrinsicCapacityPreflightOutcome::ProvenImpossible {
+                reason,
+                measurements,
+            } => {
+                map.serialize_entry("kind", "proven_impossible")?;
+                map.serialize_entry("reason", reason.as_str())?;
+                if let IntrinsicCapacityProvenImpossibleReason::SingletonTransformSetDoesNotFit {
+                    piece_id,
+                } = reason
+                {
+                    map.serialize_entry("pieceId", piece_id)?;
+                }
+                map.serialize_entry("measurements", measurements)?;
+            }
+            IntrinsicCapacityPreflightOutcome::Inconclusive { measurements } => {
+                map.serialize_entry("kind", "inconclusive")?;
+                map.serialize_entry("measurements", measurements)?;
+            }
+        }
+        map.end()
+    }
 }
 
 impl IntrinsicCapacityPreflightOutcome {

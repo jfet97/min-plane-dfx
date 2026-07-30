@@ -506,8 +506,12 @@ pub struct IntrinsicShortSideObserverTrace {
 impl IntrinsicShortSideObserverTrace {
     /// TS: the object literal built at `intrinsicShortSideObserver.ts:217-263`
     /// -- exact key insertion order, used by [`with_measured_trace`] for
-    /// byte-exact `JSON.stringify` self-measurement.
-    fn to_json(&self) -> ShortSideJsonValue {
+    /// byte-exact `JSON.stringify` self-measurement, and reused as-is by
+    /// `boundary::result::project_result` (via
+    /// `short_side::json::to_serde_json`) as this trace's wire projection --
+    /// see `boundary::result`'s own module doc, "Five optional trace fields:
+    /// full field-for-field wire projections" (reuse, not a parallel DTO).
+    pub(crate) fn to_json(&self) -> ShortSideJsonValue {
         ShortSideJsonValue::Obj(vec![
             ("version", ShortSideJsonValue::str(self.version)),
             ("status", ShortSideJsonValue::str(self.status.as_str())),

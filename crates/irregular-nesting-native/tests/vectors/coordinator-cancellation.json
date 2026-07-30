@@ -1,0 +1,177 @@
+{
+  "generatedByScript": "scripts/rust-parity/dump-coordinator-cancellation.ts",
+  "generatingCommit": "69d6ff1b802b2af9f3c4d31f3484a39b62bb3241",
+  "description": "Proves result::coordinator::on_canonical_grid_checkpointed threads the cooperative-cancellation control into its nested run_intrinsic_capacity_scheduler_cold_quantum resume call, exactly as TS computeIrregularNesting.ts:673-684 does. A deterministic call-counting isCancelled (returns true on exactly the Nth control.checkpoint() invocation, false otherwise) is injected at the calibrated call ordinal window the nested resume's own checkpoint calls occupy ([3270, 6401], 1-indexed, closed interval -- confirmed identical on both the TS and Rust sides via temporary, since-reverted instrumentation; see this script's own top doc). f64/number fields are plain JSON numbers (small integers only, no precision concern here, unlike the bit-pattern-hex convention other dump scripts use for arbitrary f64 output).",
+  "scenario": {
+    "pieces": [
+      {
+        "id": "p0",
+        "width": 30,
+        "height": 20
+      },
+      {
+        "id": "p1",
+        "width": 25,
+        "height": 15
+      },
+      {
+        "id": "p2",
+        "width": 20,
+        "height": 20
+      },
+      {
+        "id": "p3",
+        "width": 18,
+        "height": 12
+      },
+      {
+        "id": "p4",
+        "width": 15,
+        "height": 15
+      }
+    ],
+    "sheet": {
+      "width": 45,
+      "height": 45,
+      "label": "s"
+    }
+  },
+  "nestedResumeFirstCallOrdinal": 3270,
+  "nestedResumeLastCallOrdinal": 6401,
+  "baseline": {
+    "outcome": "ok",
+    "totalCalls": 10098,
+    "coldStartStatus": "paused",
+    "quanta": [
+      {
+        "ordinal": 0,
+        "cohort": "partial",
+        "producerRole": "capacity-cold",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 1,
+        "cohort": "complete",
+        "producerRole": "legacy-complete",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 2,
+        "cohort": "partial",
+        "producerRole": "capacity-cold",
+        "outcome": "settled"
+      },
+      {
+        "ordinal": 3,
+        "cohort": "complete",
+        "producerRole": "legacy-complete",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 4,
+        "cohort": "complete",
+        "producerRole": "legacy-complete",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 5,
+        "cohort": "complete",
+        "producerRole": "legacy-complete",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 6,
+        "cohort": "complete",
+        "producerRole": "legacy-complete",
+        "outcome": "settled"
+      },
+      {
+        "ordinal": 7,
+        "cohort": "partial",
+        "producerRole": "capacity-warm-prefix",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 8,
+        "cohort": "partial",
+        "producerRole": "capacity-warm-prefix",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 9,
+        "cohort": "partial",
+        "producerRole": "capacity-warm-prefix",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 10,
+        "cohort": "partial",
+        "producerRole": "capacity-warm-prefix",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 11,
+        "cohort": "partial",
+        "producerRole": "capacity-warm-prefix",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 12,
+        "cohort": "partial",
+        "producerRole": "capacity-warm-prefix",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 13,
+        "cohort": "partial",
+        "producerRole": "capacity-warm-prefix",
+        "outcome": "settled"
+      },
+      {
+        "ordinal": 14,
+        "cohort": "partial",
+        "producerRole": "capacity-warm-prefix",
+        "outcome": "censored"
+      },
+      {
+        "ordinal": 15,
+        "cohort": "partial",
+        "producerRole": "capacity-warm-prefix",
+        "outcome": "censored"
+      },
+      {
+        "ordinal": 16,
+        "cohort": "partial",
+        "producerRole": "capacity-warm-prefix",
+        "outcome": "censored"
+      },
+      {
+        "ordinal": 17,
+        "cohort": "partial",
+        "producerRole": "capacity-warm-prefix",
+        "outcome": "censored"
+      },
+      {
+        "ordinal": 18,
+        "cohort": "partial",
+        "producerRole": "capacity-warm-prefix",
+        "outcome": "censored"
+      }
+    ]
+  },
+  "cancelledAtNestedResumeFirstCall": {
+    "cancelAtOrdinal": 3270,
+    "outcome": "aborted",
+    "reason": "cancelled"
+  },
+  "cancelledAtNestedResumeLastCall": {
+    "cancelAtOrdinal": 6401,
+    "outcome": "aborted",
+    "reason": "cancelled"
+  },
+  "cancelledJustBeforeNestedResume": {
+    "cancelAtOrdinal": 3269,
+    "outcome": "aborted",
+    "reason": "cancelled"
+  }
+}

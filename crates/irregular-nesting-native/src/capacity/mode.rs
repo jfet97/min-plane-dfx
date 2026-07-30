@@ -84,6 +84,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use num_bigint::BigInt;
+use serde::{Serialize, Serializer};
 
 use crate::archive::anytime::{
     retain_intrinsic_anytime_archive_namespace, IntrinsicAnytimeArchiveNamespace,
@@ -162,8 +163,29 @@ pub enum WarmPrefixLaneStatus {
     CheckpointedCensored,
 }
 
+impl WarmPrefixLaneStatus {
+    /// TS: `intrinsicCapacityMode.ts:86` literal union. Any TS-facing
+    /// string must use this, not `{:?}`.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            WarmPrefixLaneStatus::Settled => "settled",
+            WarmPrefixLaneStatus::CheckpointedCensored => "checkpointed-censored",
+        }
+    }
+}
+
+impl Serialize for WarmPrefixLaneStatus {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(self.as_str())
+    }
+}
+
 /// TS: `intrinsicCapacityMode.ts:82-93` `IntrinsicCapacityWarmPrefixLaneTrace`.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct IntrinsicCapacityWarmPrefixLaneTrace {
     pub source_role: String,
     pub prefix_depth: f64,
@@ -174,6 +196,7 @@ pub struct IntrinsicCapacityWarmPrefixLaneTrace {
     pub consumed_placement_evaluations: f64,
     pub completed_depths: f64,
     pub elapsed_ms: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub endpoint: Option<IntrinsicCapacityObjective>,
 }
 
@@ -187,6 +210,33 @@ pub enum QualityWarmPrefixStatus {
     CheckpointedCensored,
 }
 
+impl QualityWarmPrefixStatus {
+    /// TS: `intrinsicCapacityMode.ts:112-117` literal union. Any TS-facing
+    /// string must use this, not `{:?}`.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            QualityWarmPrefixStatus::SkippedBelowMinimumPieceCount => {
+                "skipped-below-minimum-piece-count"
+            }
+            QualityWarmPrefixStatus::SkippedNoFittingCanonicalPrefix => {
+                "skipped-no-fitting-canonical-prefix"
+            }
+            QualityWarmPrefixStatus::Settled => "settled",
+            QualityWarmPrefixStatus::EvaluationCap => "evaluation-cap",
+            QualityWarmPrefixStatus::CheckpointedCensored => "checkpointed-censored",
+        }
+    }
+}
+
+impl Serialize for QualityWarmPrefixStatus {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(self.as_str())
+    }
+}
+
 /// TS: `intrinsicCapacityMode.ts:118` `outputInfluence: 'none' |
 /// 'strict-count-improvement'`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -195,19 +245,40 @@ pub enum QualityWarmPrefixOutputInfluence {
     StrictCountImprovement,
 }
 
+impl QualityWarmPrefixOutputInfluence {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            QualityWarmPrefixOutputInfluence::None => "none",
+            QualityWarmPrefixOutputInfluence::StrictCountImprovement => "strict-count-improvement",
+        }
+    }
+}
+
+impl Serialize for QualityWarmPrefixOutputInfluence {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(self.as_str())
+    }
+}
+
 /// TS: `intrinsicCapacityMode.ts:109` `version`.
 pub const INTRINSIC_CAPACITY_QUALITY_WARM_PREFIX_TRACE_VERSION: &str =
     "intrinsic-capacity-quality-warm-prefix-v1";
 
 /// TS: `intrinsicCapacityMode.ts:108-130` `IntrinsicCapacityQualityWarmPrefixTrace`.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct IntrinsicCapacityQualityWarmPrefixTrace {
     pub version: &'static str,
     pub producer_role: &'static str,
     pub policy: &'static str,
     pub status: QualityWarmPrefixStatus,
     pub output_influence: QualityWarmPrefixOutputInfluence,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub source_role: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub prefix_depth: Option<f64>,
     pub reused_placed_count: f64,
     pub request_piece_count: f64,
@@ -217,6 +288,7 @@ pub struct IntrinsicCapacityQualityWarmPrefixTrace {
     pub completed_depths: f64,
     pub checkpoint_retained: bool,
     pub elapsed_ms: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub endpoint: Option<IntrinsicCapacityObjective>,
 }
 
@@ -229,12 +301,52 @@ pub enum LaneCoordinatorQuantumProducerRole {
     CapacityWarmPrefix,
 }
 
+impl LaneCoordinatorQuantumProducerRole {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            LaneCoordinatorQuantumProducerRole::CapacityCold => "capacity-cold",
+            LaneCoordinatorQuantumProducerRole::CapacityQualityWarmPrefix => {
+                "capacity-quality-warm-prefix"
+            }
+            LaneCoordinatorQuantumProducerRole::CapacityWarmPrefix => "capacity-warm-prefix",
+        }
+    }
+}
+
+impl Serialize for LaneCoordinatorQuantumProducerRole {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(self.as_str())
+    }
+}
+
 /// TS: `intrinsicCapacityMode.ts:162` `phase: 'initial' | 'resume' | 'censor'`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum LaneCoordinatorQuantumPhase {
     Initial,
     Resume,
     Censor,
+}
+
+impl LaneCoordinatorQuantumPhase {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            LaneCoordinatorQuantumPhase::Initial => "initial",
+            LaneCoordinatorQuantumPhase::Resume => "resume",
+            LaneCoordinatorQuantumPhase::Censor => "censor",
+        }
+    }
+}
+
+impl Serialize for LaneCoordinatorQuantumPhase {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(self.as_str())
+    }
 }
 
 /// TS: `intrinsicCapacityMode.ts:166` `outcome: 'checkpointed' | 'settled' | 'censored'`.
@@ -245,13 +357,35 @@ pub enum LaneCoordinatorQuantumOutcome {
     Censored,
 }
 
+impl LaneCoordinatorQuantumOutcome {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            LaneCoordinatorQuantumOutcome::Checkpointed => "checkpointed",
+            LaneCoordinatorQuantumOutcome::Settled => "settled",
+            LaneCoordinatorQuantumOutcome::Censored => "censored",
+        }
+    }
+}
+
+impl Serialize for LaneCoordinatorQuantumOutcome {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(self.as_str())
+    }
+}
+
 /// TS: `intrinsicCapacityMode.ts:154-167`
 /// `IntrinsicCapacityLaneCoordinatorTrace['quanta'][number]`.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct IntrinsicCapacityLaneCoordinatorQuantum {
     pub ordinal: f64,
     pub producer_role: LaneCoordinatorQuantumProducerRole,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub source_role: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub prefix_depth: Option<f64>,
     pub phase: LaneCoordinatorQuantumPhase,
     pub from_depth: f64,
@@ -261,15 +395,23 @@ pub struct IntrinsicCapacityLaneCoordinatorQuantum {
 }
 
 /// TS: `intrinsicCapacityMode.ts:137-151` `continuedProducers` union member.
-#[derive(Clone, Debug, PartialEq)]
+/// Wire shape: internally tagged on `role`, matching TS's own discriminated
+/// union exactly (`{"role":"capacity-cold"}` /
+/// `{"role":"capacity-warm-prefix","sourceRole":...,"prefixDepth":...}` /
+/// `{"role":"capacity-quality-warm-prefix","sourceRole":...,"prefixDepth":...}`).
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(tag = "role", rename_all = "camelCase")]
 pub enum LaneCoordinatorContinuedProducer {
+    #[serde(rename = "capacity-cold")]
     CapacityCold,
+    #[serde(rename = "capacity-warm-prefix")]
     CapacityWarmPrefix {
         source_role: String,
         prefix_depth: f64,
     },
     /// `sourceRole` is always `'canonical-grid'` at this variant's one
     /// construction site (`intrinsicCapacityMode.ts:986`).
+    #[serde(rename = "capacity-quality-warm-prefix")]
     CapacityQualityWarmPrefix {
         source_role: String,
         prefix_depth: f64,
@@ -281,7 +423,8 @@ pub const INTRINSIC_CAPACITY_LANE_COORDINATOR_TRACE_VERSION: &str =
     "intrinsic-capacity-lane-coordinator-v3";
 
 /// TS: `intrinsicCapacityMode.ts:132-168` `IntrinsicCapacityLaneCoordinatorTrace`.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct IntrinsicCapacityLaneCoordinatorTrace {
     pub version: &'static str,
     pub aggregate_placement_evaluation_cap: f64,
@@ -617,16 +760,38 @@ pub enum IntrinsicCapacityRouting {
     BoundedCompleteArchiveMiss,
 }
 
+impl IntrinsicCapacityRouting {
+    /// TS: `intrinsicCapacityMode.ts:52-55` literal union. Any TS-facing
+    /// string must use this, not `{:?}`.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            IntrinsicCapacityRouting::PreflightProvenImpossible => "preflight-proven-impossible",
+            IntrinsicCapacityRouting::BoundedCompleteArchiveMiss => "bounded-complete-archive-miss",
+        }
+    }
+}
+
+impl Serialize for IntrinsicCapacityRouting {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(self.as_str())
+    }
+}
+
 /// TS: `intrinsicCapacityMode.ts:56-65` `IntrinsicCapacityPrefixTrace`'s
 /// `descriptors` element shape.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct IntrinsicCapacityPrefixDescriptorSummary {
     pub role: String,
     pub depth: f64,
 }
 
 /// TS: `intrinsicCapacityMode.ts:56-65` `IntrinsicCapacityPrefixTrace`.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct IntrinsicCapacityPrefixTrace {
     pub captured_count: f64,
     pub fitting_count: f64,
@@ -636,9 +801,12 @@ pub struct IntrinsicCapacityPrefixTrace {
 }
 
 /// TS: `intrinsicCapacityMode.ts:67-74` `IntrinsicCapacityIncumbentTrace`.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct IntrinsicCapacityIncumbentTrace {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub source_role: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub prefix_depth: Option<f64>,
     pub placed_count: f64,
     pub placed_material_area_mm2: f64,
@@ -650,11 +818,16 @@ pub struct IntrinsicCapacityIncumbentTrace {
 /// (TS `extends IntrinsicCapacityObjective`; represented here as an
 /// explicit nested `objective` field rather than a flattened duplicate of
 /// every `IntrinsicCapacityObjective` field, since Rust has no structural
-/// "extends" -- this module's own differential-vector encoding controls the
-/// JSON shape either way, so no TS byte-level boundary depends on a flat
-/// Rust struct).
-#[derive(Clone, Debug, PartialEq)]
+/// "extends" -- `#[serde(flatten)]` reproduces the real TS object's flat
+/// key set on the wire (`objective`'s own fields alongside
+/// `unplacedCount`/`placedMaterialAreaMm2`/`selectedRotationDeg`, exactly
+/// TS's `{...intrinsicCapacityObjective(selected), unplacedCount, ...}`
+/// spread shape at `intrinsicCapacityMode.ts:1396-1401`) without a second,
+/// nested `objective` wire key the TS interface never has.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct IntrinsicCapacitySelectionTrace {
+    #[serde(flatten)]
     pub objective: IntrinsicCapacityObjective,
     pub unplaced_count: f64,
     pub placed_material_area_mm2: f64,
@@ -666,7 +839,8 @@ pub struct IntrinsicCapacitySelectionTrace {
 /// values in TS; kept as `&'static str` rather than single-variant enums,
 /// matching this crate's established fixed-literal-tag convention (e.g.
 /// `result::INTRINSIC_ANYTIME_SCHEDULER_TRACE_VERSION`).
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct IntrinsicCapacityCohesionShadowTrace {
     pub producer_role: &'static str,
     pub status: &'static str,
@@ -674,30 +848,43 @@ pub struct IntrinsicCapacityCohesionShadowTrace {
     pub consumed_placement_evaluations: f64,
     pub completed_depths: f64,
     pub elapsed_ms: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub endpoint: Option<IntrinsicCapacityObjective>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub retention_depths:
         Option<Vec<crate::capacity::search::IntrinsicCapacityTopologyRetentionDepthTrace>>,
 }
 
 /// TS: `intrinsicCapacityMode.ts:175-197` `IntrinsicCapacityTrace`.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct IntrinsicCapacityTrace {
     pub routing: IntrinsicCapacityRouting,
     pub preflight: IntrinsicCapacityPreflightOutcome,
     pub prefixes: IntrinsicCapacityPrefixTrace,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub prefix_incumbent: Option<IntrinsicCapacityIncumbentTrace>,
     pub cold_search: crate::capacity::search::IntrinsicCapacitySearchTrace,
     /// Observer-only independent warm lanes; excluded from final selection.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub warm_prefix_lanes: Option<Vec<IntrinsicCapacityWarmPrefixLaneTrace>>,
     pub warm_prefix_endpoints_admitted: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cohesion_shadow: Option<IntrinsicCapacityCohesionShadowTrace>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub quality_warm_prefix: Option<IntrinsicCapacityQualityWarmPrefixTrace>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub lane_coordinator: Option<IntrinsicCapacityLaneCoordinatorTrace>,
     pub selected: IntrinsicCapacitySelectionTrace,
-    /// Coordinator-measured proof-only preflight runtime. Diagnostic-only.
+    /// Coordinator-measured proof-only preflight runtime. Diagnostic-only
+    /// (non-semantic timing; `scripts/rust-parity/run-differential.ts`'s
+    /// `TIMING_ONLY_TRACE_FIELD_NAMES` compares this cluster's wall-clock
+    /// fields presence-only, never by value).
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub preflight_runtime_ms: Option<f64>,
     /// Coordinator-measured unchanged complete archive runtime before the
     /// miss. Diagnostic-only.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub complete_archive_runtime_ms: Option<f64>,
     /// Diagnostic-only.
     pub prefix_terminalization_ms: f64,
@@ -801,11 +988,42 @@ pub struct RunIntrinsicCapacitySchedulerColdQuantumInput<'a> {
     pub retention_mode: Option<IntrinsicCapacityRetentionMode>,
 }
 
-pub fn run_intrinsic_capacity_scheduler_cold_quantum<'a>(
+// `control` carries its own lifetime parameter `'c`, independent of `'a`
+// (used by every other borrowed parameter here). Every other caller in this
+// crate reborrows `control` from a plain local scoped to the same duration
+// as `sheet`/`settings`/`geometry_cache`, so unifying all of them under one
+// `'a` was harmless there. `result::coordinator`'s `on_canonical_grid_checkpointed`
+// closure is the one caller that must pass a `control` reborrow whose
+// lifetime is *shorter* than `sheet`/`settings`/`geometry_cache` (a
+// higher-ranked, per-invocation lifetime scoped to that one closure call,
+// coming from `archive::shared`'s `OnCanonicalGridCheckpointed` callback
+// parameter -- see that type's own doc comment): forcing it into the same
+// `'a` as the long-lived parameters is unsatisfiable (confirmed by direct
+// compiler experimentation: E0521 "borrowed data escapes outside of
+// function" pinned at exactly this unification). Splitting the lifetime
+// costs nothing for every other, already-`'a`-unified caller (Rust infers
+// `'c = 'a` for them automatically).
+// `geometry_cache` carries its own independent lifetime `'g`, for exactly
+// the same reason and via exactly the same mechanism as `control`'s `'c`
+// above: `result::coordinator`'s `on_canonical_grid_checkpointed` closure
+// reborrows the coordinator's single job-wide `GeometryCacheStore` (never a
+// phase-private one -- see `archive::shared`'s `OnCanonicalGridCheckpointed`
+// doc comment and `cache-concurrency-design.md` §2) through
+// `archive::shared`'s callback parameter, which is just as HRTB-short-lived
+// as the `control` reborrow it arrives alongside.
+//
+// clippy's `needless_lifetimes` suggests collapsing `'c`/`'g` into `'a` here;
+// that suggestion is exactly the bug the comment above this function
+// explains -- `&'c mut dyn NfpIfpControl`/`&'g mut GeometryCacheStore` are
+// both invariant, so unifying either with the longer-lived `'a` parameters
+// would re-introduce the E0521 unsatisfiable borrow this lifetime split was
+// written to fix. Deliberately allowed, not a missed elision.
+#[allow(clippy::needless_lifetimes)]
+pub fn run_intrinsic_capacity_scheduler_cold_quantum<'a, 'c, 'g>(
     input: RunIntrinsicCapacitySchedulerColdQuantumInput<'a>,
-    mut control: Option<&'a mut dyn NfpIfpControl>,
+    mut control: Option<&'c mut dyn NfpIfpControl>,
     settings: &'a IrregularNestingSettings,
-    geometry_cache: &'a mut GeometryCacheStore,
+    geometry_cache: &'g mut GeometryCacheStore,
     timing_now: Option<&'a TimingNowFn>,
 ) -> Result<IntrinsicCapacitySearchResult, CapacitySearchError> {
     let owned_pieces = owned_prepared_pieces(input.prepared_pieces);

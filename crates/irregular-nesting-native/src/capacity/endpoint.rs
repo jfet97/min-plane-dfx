@@ -43,6 +43,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use num_bigint::BigInt;
+use serde::{Serialize, Serializer};
 
 use crate::canonical_grid::layout::{
     assert_canonical_grid_legal_layout, canonical_collision_layout_identity,
@@ -89,6 +90,27 @@ pub enum IntrinsicCapacityEndpointOrigin {
     WarmPrefixContinuation,
 }
 
+impl IntrinsicCapacityEndpointOrigin {
+    /// TS: `intrinsicCapacityEndpoint.ts:34-38` `IntrinsicCapacityEndpointOrigin`
+    /// literal union. Any TS-facing string must use this, not `{:?}`.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            IntrinsicCapacityEndpointOrigin::ColdSearch => "cold-search",
+            IntrinsicCapacityEndpointOrigin::PrefixIncumbent => "prefix-incumbent",
+            IntrinsicCapacityEndpointOrigin::WarmPrefixContinuation => "warm-prefix-continuation",
+        }
+    }
+}
+
+impl Serialize for IntrinsicCapacityEndpointOrigin {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(self.as_str())
+    }
+}
+
 /// TS: `intrinsicCapacityEndpoint.ts:40-54` `IntrinsicCapacityEndpoint`. One
 /// exact partial capacity layout with a complete placed/unplaced partition.
 #[derive(Clone, Debug, PartialEq)]
@@ -111,9 +133,11 @@ pub struct IntrinsicCapacityEndpoint {
 
 /// TS: `intrinsicCapacityEndpoint.ts:57-73` `IntrinsicCapacityObjective`.
 /// Stable value projection shared by endpoint selection, traces, and gates.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct IntrinsicCapacityObjective {
     pub placed_count: f64,
+    #[serde(serialize_with = "crate::capacity::serialize_bigint_decimal_string")]
     pub placed_doubled_material_area_grid2: BigInt,
     pub enclosed_cavity_count: f64,
     pub total_enclosed_cavity_area_mm2: f64,
@@ -126,12 +150,15 @@ pub struct IntrinsicCapacityObjective {
     pub envelope_span_grid: f64,
     pub canonical_geometry_hash: String,
     pub origin: IntrinsicCapacityEndpointOrigin,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub prefix_depth: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub source_role: Option<String>,
 }
 
 /// TS: `intrinsicCapacityEndpoint.ts:75-79` `IntrinsicCapacityCavityMetrics`.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct IntrinsicCapacityCavityMetrics {
     pub count: f64,
     pub total_area_mm2: f64,
@@ -178,7 +205,8 @@ pub fn measure_intrinsic_capacity_cavities(
 }
 
 /// TS: `intrinsicCapacityEndpoint.ts:111-114` `IntrinsicCapacityGridSpan`.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct IntrinsicCapacityGridSpan {
     pub width_grid: f64,
     pub height_grid: f64,

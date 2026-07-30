@@ -559,7 +559,9 @@ pub struct IntrinsicShortSidePairFoldTrace {
 }
 
 impl IntrinsicShortSidePairFoldTrace {
-    fn to_json(&self) -> ShortSideJsonValue {
+    /// Reused as-is by `boundary::result::project_result` (via
+    /// `short_side::json::to_serde_json`) as this trace's wire projection.
+    pub(crate) fn to_json(&self) -> ShortSideJsonValue {
         ShortSideJsonValue::Obj(vec![
             ("version", ShortSideJsonValue::str(self.version)),
             ("status", ShortSideJsonValue::str(self.status.as_str())),

@@ -496,8 +496,47 @@ pub enum SharedArchivePhase {
 /// parameter -- exactly the shape `nfp_ifp::service`'s own `NfpIfpControl`
 /// callers already use everywhere else in this crate -- sidesteps the
 /// limitation entirely.
-pub type OnCanonicalGridCheckpointed<'a> =
-    &'a mut dyn FnMut(&IntrinsicStrictDirectCheckpoint) -> Result<(), SharedArchiveError>;
+///
+/// The callback itself additionally receives a fresh reborrow of that same
+/// `control` (`Option<&mut dyn NfpIfpControl>`), passed as its second
+/// argument at the one call site below (inside
+/// [`run_intrinsic_shared_archive_direct_portfolio`]'s loop) rather than
+/// captured by the closure at its definition point. TS threads the
+/// identical `control`/`isCancelled` observation into its own nested
+/// `runIntrinsicCapacitySchedulerColdQuantum` resume call inside
+/// `onCanonicalGridCheckpointed` (`computeIrregularNesting.ts:679`,
+/// `...(control === undefined ? {} : { control })`); a caller whose own
+/// closure needs to forward this reborrow into a *further* nested call (as
+/// `result::coordinator`'s `on_canonical_grid_checkpointed` does, into
+/// `run_intrinsic_capacity_scheduler_cold_quantum`) could not instead
+/// capture the coordinator-level `control` local directly at closure
+/// definition time: that same local is *simultaneously* reborrowed for the
+/// entire duration of the outer `run_intrinsic_shared_archive_portfolio`
+/// call the closure is passed into (the same E0499-style hazard this
+/// module's `SharedArchiveControl` doc comment documents, one level up).
+/// Passing the reborrow in as a callback *parameter* instead -- taken from
+/// the still-live, not-otherwise-borrowed-at-that-point `control` local
+/// inside this function's own loop body (the prior `attempt_direct_construct`
+/// call's borrow of it has already ended by the time the checkpoint fires) --
+/// sidesteps that entirely, exactly mirroring `capacity::mode`'s
+/// `reborrow_control` pattern.
+/// The callback also receives a fresh reborrow of
+/// [`run_intrinsic_shared_archive_direct_portfolio`]'s own `geometry_cache`
+/// parameter as its third argument, for exactly the same reason and via the
+/// exact same mechanism as the `control` reborrow this doc comment already
+/// documents above (see `cache-concurrency-design.md` §2: TS's
+/// `runIntrinsicCapacitySchedulerColdQuantum` reads the same single
+/// job-ambient `GeometryCacheService` instance everywhere, never a
+/// phase-private cache -- a caller whose own nested resume needs a
+/// `GeometryCacheStore` must reborrow this same one, not allocate a private
+/// `GeometryCacheStore::new()`, or it silently diverges from TS's cache
+/// hit/miss sequence for numerically-tied candidates
+/// (`differential-e2e-report.md` Finding N1)).
+pub type OnCanonicalGridCheckpointed<'a> = &'a mut dyn FnMut(
+    &IntrinsicStrictDirectCheckpoint,
+    Option<&mut dyn NfpIfpControl>,
+    &mut GeometryCacheStore,
+) -> Result<(), SharedArchiveError>;
 
 pub type OnDirectConstructed<'a> =
     &'a mut dyn FnMut(IntrinsicSharedArchiveDirectRole, &Arc<IrregularBeamState>);
@@ -651,7 +690,18 @@ pub fn run_intrinsic_shared_archive_direct_portfolio(
             }
             checkpoint = next_checkpoint;
             if let Some(callback) = options.on_canonical_grid_checkpointed.as_deref_mut() {
-                callback(checkpoint.as_ref().expect("checkpoint just set"))?;
+                // `attempt_direct_construct`'s own borrow of `control` and
+                // `geometry_cache` above has already ended (the call
+                // returned), so both are free to be reborrowed again here
+                // and handed to the callback -- see
+                // `OnCanonicalGridCheckpointed`'s own doc comment for why
+                // these are passed as callback parameters rather than
+                // captured by the closure itself.
+                callback(
+                    checkpoint.as_ref().expect("checkpoint just set"),
+                    Some(&mut control),
+                    geometry_cache,
+                )?;
             }
         }
 
@@ -1282,12 +1332,31 @@ pub struct IntrinsicPeriodicFamilyPortfolioForcedOptions<'a> {
 
 /// Seam trait standing in for the not-yet-ported
 /// `runIntrinsicPeriodicFamilyPortfolio`. See this module's top doc.
+///
+/// `geometry_cache` is an explicit method parameter, not a field an
+/// implementor captures ahead of time (e.g. at construction). TS's
+/// `runIntrinsicPeriodicFamilyPortfolio` reads the *same* single
+/// job-ambient `GeometryCacheService` instance the direct phase does
+/// (`nesting.worker.ts`'s `NfpIfpServiceLive`/`geometryCacheStoreLive.ts`
+/// provide exactly one instance per job, per `cache-concurrency-design.md`
+/// §2) -- a Rust implementor that instead captured its own
+/// separately-`GeometryCacheStore::new()`d cache at construction would
+/// silently diverge from that (two independent memoization tables can
+/// return different cache hit/miss sequences for numerically-tied
+/// candidates, which is exactly `differential-e2e-report.md`'s Finding N1).
+/// Taking it as a call parameter here lets [`run_intrinsic_shared_archive_portfolio`]
+/// hand the runner a fresh reborrow of its own single `geometry_cache`
+/// parameter, taken *after* the direct phase's own borrow of that same
+/// local has already ended (function calls, not overlapping struct-field
+/// captures) -- the same reborrow-as-a-parameter pattern this module's
+/// `OnCanonicalGridCheckpointed` doc comment documents for `control`.
 pub trait IntrinsicPeriodicFamilyPortfolioRunner {
     fn run(
         &mut self,
         sheet: &SheetSpec,
         pieces: &[Arc<IrregularPreparedPiece>],
         forced: IntrinsicPeriodicFamilyPortfolioForcedOptions<'_>,
+        geometry_cache: &mut GeometryCacheStore,
     ) -> Result<IntrinsicPeriodicFamilyPortfolioResult, SharedArchiveError>;
 }
 
@@ -1323,6 +1392,12 @@ pub fn run_intrinsic_shared_archive_portfolio(
         callback(SharedArchivePhase::Direct)?;
     }
 
+    // `run_intrinsic_shared_archive_direct_portfolio`'s own borrow of
+    // `geometry_cache` above has already ended (that call returned), so it
+    // is free to be reborrowed again here for the periodic phase -- see
+    // `IntrinsicPeriodicFamilyPortfolioRunner`'s own doc comment for why
+    // this is a call parameter rather than a field the runner captured
+    // ahead of time.
     let periodic_portfolio = periodic_runner.run(
         sheet,
         pieces,
@@ -1334,6 +1409,7 @@ pub fn run_intrinsic_shared_archive_portfolio(
             admit_source_audit_witnesses: include_source_audit_witnesses,
             control: Some(&mut control),
         },
+        geometry_cache,
     )?;
     if let Some(callback) = options.on_phase_completed.as_deref_mut() {
         callback(SharedArchivePhase::Periodic)?;

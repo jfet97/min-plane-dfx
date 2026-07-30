@@ -122,6 +122,7 @@ use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 
 use num_bigint::BigInt;
+use serde::Serialize;
 
 use crate::checkpoints::canonical_json::locale_compare_keys;
 use crate::clipper::core::{
@@ -170,7 +171,8 @@ fn to_canonical_grid_path(path: &[Point64]) -> CanonicalGridPath {
 // ===========================================================================
 
 /// TS source: `canonicalLayoutGeometry.ts:28-36` (`CanonicalLayoutTopology`).
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CanonicalLayoutTopology {
     pub enclosed_cavity_count: f64,
     pub largest_occupied_hull_gap_ratio: f64,
@@ -182,7 +184,8 @@ pub struct CanonicalLayoutTopology {
 }
 
 /// TS source: `canonicalLayoutGeometry.ts:39-47` (`CanonicalLayoutTopologyExact`).
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CanonicalLayoutTopologyExact {
     pub topology: CanonicalLayoutTopology,
     /// Rounded display/backward-compatibility projection; never use for exact ranking.

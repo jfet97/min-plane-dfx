@@ -104,6 +104,7 @@ use std::sync::{Arc, LazyLock};
 use std::time::Instant;
 
 use num_bigint::BigInt;
+use serde::{Serialize, Serializer};
 
 use crate::caches::{
     resolve_transformed_collision_geometry, CandidateDomain, GeometryCacheStore,
@@ -181,6 +182,15 @@ pub enum IntrinsicCapacitySettlement {
     Exhausted,
     EvaluationCap,
     Paused,
+}
+
+impl Serialize for IntrinsicCapacitySettlement {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(self.as_str())
+    }
 }
 
 impl IntrinsicCapacitySettlement {
@@ -405,7 +415,8 @@ pub struct IntrinsicAnytimeCheckpoint {
 }
 
 /// TS: `intrinsicCapacitySearch.ts:174-196` `IntrinsicCapacitySearchTrace`.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct IntrinsicCapacitySearchTrace {
     pub beam_width: f64,
     pub local_legal_placement_fanout: f64,
@@ -429,6 +440,7 @@ pub struct IntrinsicCapacitySearchTrace {
     /// empty) otherwise -- deliberately distinct from the checkpoint's own
     /// always-array `topology_retention_depths` field (see this module's top
     /// doc / capacity-search.md §3).
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub topology_retention_depths: Option<Vec<IntrinsicCapacityTopologyRetentionDepthTrace>>,
 }
 
@@ -440,6 +452,15 @@ pub enum IntrinsicCapacityTopologyRepresentativeRole {
     MinimumIsolated,
     MaximumLargestComponent,
     MinimumHullWaste,
+}
+
+impl Serialize for IntrinsicCapacityTopologyRepresentativeRole {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(self.as_str())
+    }
 }
 
 impl IntrinsicCapacityTopologyRepresentativeRole {
@@ -463,6 +484,15 @@ pub enum IntrinsicCapacityDecision {
     Skip,
 }
 
+impl Serialize for IntrinsicCapacityDecision {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(self.as_str())
+    }
+}
+
 impl IntrinsicCapacityDecision {
     pub fn as_str(self) -> &'static str {
         match self {
@@ -480,6 +510,15 @@ pub enum IntrinsicCapacityProposalRole {
     Skip,
 }
 
+impl Serialize for IntrinsicCapacityProposalRole {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(self.as_str())
+    }
+}
+
 impl IntrinsicCapacityProposalRole {
     pub fn as_str(self) -> &'static str {
         match self {
@@ -491,7 +530,8 @@ impl IntrinsicCapacityProposalRole {
 }
 
 /// TS: `intrinsicCapacitySearch.ts:205-219` `IntrinsicCapacityTopologyRepresentative`.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct IntrinsicCapacityTopologyRepresentative {
     pub role: IntrinsicCapacityTopologyRepresentativeRole,
     pub decision_identity: String,
@@ -501,15 +541,18 @@ pub struct IntrinsicCapacityTopologyRepresentative {
     pub piece_id: PieceId,
     pub anchored_occupied_key: String,
     pub placed_count: f64,
+    #[serde(serialize_with = "crate::capacity::serialize_bigint_decimal_string")]
     pub placed_doubled_material_area_grid2: BigInt,
     pub cavities: IntrinsicCapacityCavityMetrics,
     pub grid_span: IntrinsicCapacityGridSpan,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub topology: Option<CanonicalLayoutTopologyExact>,
     pub retained: bool,
 }
 
 /// TS: `intrinsicCapacitySearch.ts:221-237` `IntrinsicCapacityTopologyRetentionDepthTrace`.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct IntrinsicCapacityTopologyRetentionDepthTrace {
     pub depth: f64,
     pub piece_id: PieceId,

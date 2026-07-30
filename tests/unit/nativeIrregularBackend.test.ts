@@ -193,6 +193,47 @@ describeIfAvailable('computeIrregularNestingNative', () => {
     expect(result.unplacedPieceIds.length).toBe(0)
   })
 
+  it('reconstructs the five trace fields with their real TS shapes, not raw wire blobs', async () => {
+    const settings = archiveEligibleSettings()
+    const req = request(
+      [prepared('piece-1'), prepared('piece-2')],
+      [source('piece-1'), source('piece-2')]
+    )
+
+    const result = await Effect.runPromise(computeIrregularNestingNative(req, settings))
+
+    // Present on every archive-eligible run that reaches the non-`proven_impossible`
+    // preflight outcome (`result::mod`'s own doc on both fields), which every
+    // request through this test file's `archiveEligibleSettings()` does.
+    expect(result.intrinsicAnytimeSchedulerTrace).toBeDefined()
+    expect(result.intrinsicAnytimeSchedulerTrace?.version).toBe('intrinsic-anytime-scheduler-v1')
+    expect(result.intrinsicAnytimeSchedulerTrace?.quanta.length).toBeGreaterThanOrEqual(2)
+    result.intrinsicAnytimeSchedulerTrace?.quanta.forEach((quantum, index) => {
+      expect(quantum.ordinal).toBe(index)
+      expect(typeof quantum.producerRole).toBe('string')
+      expect(typeof quantum.outcome).toBe('string')
+    })
+
+    expect(result.focusedCompleteReconstructionTrace).toBeDefined()
+    expect(result.focusedCompleteReconstructionTrace?.version).toBe(
+      'intrinsic-focused-complete-reconstruction-v1'
+    )
+    expect(typeof result.focusedCompleteReconstructionTrace?.status).toBe('string')
+
+    // `capacityTrace` is only present when capacity mode actually settled
+    // this result (`result::mod`'s own doc); this small always-fitting
+    // request may or may not reach that branch, so this asserts real
+    // `bigint` reconstruction (not a wire string) only when present, rather
+    // than asserting presence itself.
+    if (result.capacityTrace !== undefined) {
+      expect(typeof result.capacityTrace.selected.placedDoubledMaterialAreaGrid2).toBe('bigint')
+      expect(typeof result.capacityTrace.preflight.measurements.sheetDoubledAreaGrid2).toBe('bigint')
+      expect(['preflight-proven-impossible', 'bounded-complete-archive-miss']).toContain(
+        result.capacityTrace.routing
+      )
+    }
+  })
+
   it('maps an archive-ineligible request to the not_implemented routing code', async () => {
     const settings = archiveEligibleSettings({ intrinsicSharedArchiveEnabled: false })
     const req = request([prepared('piece-1')], [source('piece-1')])

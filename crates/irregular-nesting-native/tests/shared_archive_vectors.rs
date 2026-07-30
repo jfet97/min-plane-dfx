@@ -606,6 +606,7 @@ impl IntrinsicPeriodicFamilyPortfolioRunner for FakeEmptyPeriodicRunner {
         _sheet: &SheetSpec,
         _pieces: &[Arc<IrregularPreparedPiece>],
         _forced: IntrinsicPeriodicFamilyPortfolioForcedOptions<'_>,
+        _geometry_cache: &mut GeometryCacheStore,
     ) -> Result<IntrinsicPeriodicFamilyPortfolioResult, SharedArchiveError> {
         Ok(self.result.clone())
     }
@@ -815,7 +816,10 @@ fn checkpoint_chronology_cases_match_ts() {
 
         let mut producer_roles: Vec<String> = Vec::new();
         let mut next_piece_indices: Vec<f64> = Vec::new();
-        let mut on_checkpoint = |checkpoint: &irregular_nesting_native::search::strict_decoder::IntrinsicStrictDirectCheckpoint| -> Result<(), SharedArchiveError> {
+        let mut on_checkpoint = |checkpoint: &irregular_nesting_native::search::strict_decoder::IntrinsicStrictDirectCheckpoint,
+                                  _control: Option<&mut dyn irregular_nesting_native::nfp_ifp::NfpIfpControl>,
+                                  _geometry_cache: &mut GeometryCacheStore|
+         -> Result<(), SharedArchiveError> {
             producer_roles.push(checkpoint.producer_role.clone());
             next_piece_indices.push(checkpoint.next_piece_index);
             Ok(())

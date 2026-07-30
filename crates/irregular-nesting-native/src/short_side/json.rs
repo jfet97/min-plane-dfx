@@ -200,6 +200,47 @@ pub fn byte_length(value: &ShortSideJsonValue) -> usize {
     stringify(value).len()
 }
 
+/// Converts a [`ShortSideJsonValue`] into a [`serde_json::Value`] tree with
+/// the exact same `JSON.stringify` semantics [`write_json`] reproduces
+/// (object fields holding `Undefined` are dropped; array elements holding
+/// `Undefined` render as `null`; non-finite numbers render as `null`) --
+/// this is `boundary::result`'s wire-projection entry point for every trace
+/// in this cluster (`IntrinsicShortSideObserverTrace`,
+/// `IntrinsicShortSidePairFoldTrace`): since this cluster's own
+/// `to_json`/`ShortSideJsonValue` pair already carries the exact, verified
+/// TS field names and insertion order (`short-side.md` §8.3), reusing it
+/// here is the same "GREEN module, never a second copy" convention this
+/// crate applies everywhere else, not a new wire-shape decision.
+pub fn to_serde_json(value: &ShortSideJsonValue) -> serde_json::Value {
+    match value {
+        ShortSideJsonValue::Undefined => serde_json::Value::Null,
+        ShortSideJsonValue::Bool(b) => serde_json::Value::Bool(*b),
+        ShortSideJsonValue::Num(n) => {
+            if n.is_finite() {
+                serde_json::Number::from_f64(*n)
+                    .map(serde_json::Value::Number)
+                    .unwrap_or(serde_json::Value::Null)
+            } else {
+                serde_json::Value::Null
+            }
+        }
+        ShortSideJsonValue::Str(s) => serde_json::Value::String(s.clone()),
+        ShortSideJsonValue::Arr(items) => {
+            serde_json::Value::Array(items.iter().map(to_serde_json).collect())
+        }
+        ShortSideJsonValue::Obj(fields) => {
+            let mut map = serde_json::Map::with_capacity(fields.len());
+            for (key, field_value) in fields {
+                if matches!(field_value, ShortSideJsonValue::Undefined) {
+                    continue;
+                }
+                map.insert((*key).to_string(), to_serde_json(field_value));
+            }
+            serde_json::Value::Object(map)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

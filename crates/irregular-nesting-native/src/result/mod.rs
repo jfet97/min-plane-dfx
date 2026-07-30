@@ -311,6 +311,38 @@ pub enum IntrinsicFocusedCompleteReconstructionStatus {
     SkippedNoFittingProtectedEndpoint,
 }
 
+impl IntrinsicFocusedCompleteReconstructionStatus {
+    /// TS: `computeIrregularNesting.ts:187-195` literal union. Any
+    /// TS-facing string must use this, not `{:?}`.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            IntrinsicFocusedCompleteReconstructionStatus::Completed => "completed",
+            IntrinsicFocusedCompleteReconstructionStatus::DuplicateOrder => "duplicate-order",
+            IntrinsicFocusedCompleteReconstructionStatus::EvaluationCap => "evaluation-cap",
+            IntrinsicFocusedCompleteReconstructionStatus::Deadline => "deadline",
+            IntrinsicFocusedCompleteReconstructionStatus::Incomplete => "incomplete",
+            IntrinsicFocusedCompleteReconstructionStatus::FailedProtectedFallback => {
+                "failed-protected-fallback"
+            }
+            IntrinsicFocusedCompleteReconstructionStatus::SkippedPreflightProvenImpossible => {
+                "skipped-preflight-proven-impossible"
+            }
+            IntrinsicFocusedCompleteReconstructionStatus::SkippedNoFittingProtectedEndpoint => {
+                "skipped-no-fitting-protected-endpoint"
+            }
+        }
+    }
+}
+
+impl serde::Serialize for IntrinsicFocusedCompleteReconstructionStatus {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(self.as_str())
+    }
+}
+
 /// TS: `computeIrregularNesting.ts:202` `outputInfluence`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum IntrinsicFocusedCompleteReconstructionOutputInfluence {
@@ -319,18 +351,44 @@ pub enum IntrinsicFocusedCompleteReconstructionOutputInfluence {
     None,
 }
 
+impl IntrinsicFocusedCompleteReconstructionOutputInfluence {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            IntrinsicFocusedCompleteReconstructionOutputInfluence::Selected => "selected",
+            IntrinsicFocusedCompleteReconstructionOutputInfluence::ProtectedFallback => {
+                "protected-fallback"
+            }
+            IntrinsicFocusedCompleteReconstructionOutputInfluence::None => "none",
+        }
+    }
+}
+
+impl serde::Serialize for IntrinsicFocusedCompleteReconstructionOutputInfluence {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(self.as_str())
+    }
+}
+
 /// TS: `computeIrregularNesting.ts:185-204` `IntrinsicFocusedCompleteReconstructionTrace`.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct IntrinsicFocusedCompleteReconstructionTrace {
     pub version: &'static str,
     pub status: IntrinsicFocusedCompleteReconstructionStatus,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub source_canonical_geometry_hash: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub candidate_canonical_geometry_hash: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub selected_canonical_geometry_hash: Option<String>,
     pub consumed_candidate_evaluations: f64,
     pub candidate_evaluation_accounting_complete: bool,
     pub runtime_ms: f64,
     pub output_influence: IntrinsicFocusedCompleteReconstructionOutputInfluence,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub failure_reason: Option<String>,
 }
 
@@ -352,6 +410,25 @@ pub enum IntrinsicAnytimeSchedulerCohort {
     ExperimentalComplete,
 }
 
+impl IntrinsicAnytimeSchedulerCohort {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            IntrinsicAnytimeSchedulerCohort::Partial => "partial",
+            IntrinsicAnytimeSchedulerCohort::Complete => "complete",
+            IntrinsicAnytimeSchedulerCohort::ExperimentalComplete => "experimental-complete",
+        }
+    }
+}
+
+impl serde::Serialize for IntrinsicAnytimeSchedulerCohort {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(self.as_str())
+    }
+}
+
 /// TS: `computeIrregularNesting.ts:218-223` `producerRole`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum IntrinsicAnytimeSchedulerProducerRole {
@@ -360,6 +437,31 @@ pub enum IntrinsicAnytimeSchedulerProducerRole {
     LegacyComplete,
     CapacityWarmPrefix,
     ExperimentalPlaceDeferComplete,
+}
+
+impl IntrinsicAnytimeSchedulerProducerRole {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            IntrinsicAnytimeSchedulerProducerRole::CapacityCold => "capacity-cold",
+            IntrinsicAnytimeSchedulerProducerRole::CapacityQualityWarmPrefix => {
+                "capacity-quality-warm-prefix"
+            }
+            IntrinsicAnytimeSchedulerProducerRole::LegacyComplete => "legacy-complete",
+            IntrinsicAnytimeSchedulerProducerRole::CapacityWarmPrefix => "capacity-warm-prefix",
+            IntrinsicAnytimeSchedulerProducerRole::ExperimentalPlaceDeferComplete => {
+                "experimental-place-defer-complete"
+            }
+        }
+    }
+}
+
+impl serde::Serialize for IntrinsicAnytimeSchedulerProducerRole {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(self.as_str())
+    }
 }
 
 /// TS: `computeIrregularNesting.ts:224` `outcome`.
@@ -371,8 +473,29 @@ pub enum IntrinsicAnytimeSchedulerOutcome {
     Censored,
 }
 
+impl IntrinsicAnytimeSchedulerOutcome {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            IntrinsicAnytimeSchedulerOutcome::Checkpointed => "checkpointed",
+            IntrinsicAnytimeSchedulerOutcome::Settled => "settled",
+            IntrinsicAnytimeSchedulerOutcome::Cancelled => "cancelled",
+            IntrinsicAnytimeSchedulerOutcome::Censored => "censored",
+        }
+    }
+}
+
+impl serde::Serialize for IntrinsicAnytimeSchedulerOutcome {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(self.as_str())
+    }
+}
+
 /// TS: `computeIrregularNesting.ts:215-225` one `quanta` entry.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct IntrinsicAnytimeSchedulerQuantum {
     pub ordinal: usize,
     pub cohort: IntrinsicAnytimeSchedulerCohort,
@@ -387,6 +510,24 @@ pub enum IntrinsicAnytimeSchedulerColdStartStatus {
     Settled,
 }
 
+impl IntrinsicAnytimeSchedulerColdStartStatus {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            IntrinsicAnytimeSchedulerColdStartStatus::Paused => "paused",
+            IntrinsicAnytimeSchedulerColdStartStatus::Settled => "settled",
+        }
+    }
+}
+
+impl serde::Serialize for IntrinsicAnytimeSchedulerColdStartStatus {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(self.as_str())
+    }
+}
+
 /// TS: `computeIrregularNesting.ts:214` `cancellationReason`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum IntrinsicAnytimeSchedulerCancellationReason {
@@ -394,8 +535,31 @@ pub enum IntrinsicAnytimeSchedulerCancellationReason {
     CompleteCohortMiss,
 }
 
+impl IntrinsicAnytimeSchedulerCancellationReason {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            IntrinsicAnytimeSchedulerCancellationReason::CompleteEndpointFitted => {
+                "complete-endpoint-fitted"
+            }
+            IntrinsicAnytimeSchedulerCancellationReason::CompleteCohortMiss => {
+                "complete-cohort-miss"
+            }
+        }
+    }
+}
+
+impl serde::Serialize for IntrinsicAnytimeSchedulerCancellationReason {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(self.as_str())
+    }
+}
+
 /// TS: `computeIrregularNesting.ts:206-226` `IntrinsicAnytimeSchedulerTrace`.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct IntrinsicAnytimeSchedulerTrace {
     pub version: &'static str,
     pub cold_quantum_depths: f64,
@@ -404,6 +568,7 @@ pub struct IntrinsicAnytimeSchedulerTrace {
     pub cold_start_consumed_placement_evaluations: f64,
     pub cold_checkpoint_reused: bool,
     pub warm_prefix_endpoints_admitted: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cancellation_reason: Option<IntrinsicAnytimeSchedulerCancellationReason>,
     pub quanta: Vec<IntrinsicAnytimeSchedulerQuantum>,
 }

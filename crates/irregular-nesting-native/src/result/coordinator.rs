@@ -137,9 +137,16 @@ impl Default for ComputeIrregularNestingOptions<'_> {
 /// `archive::shared::run_intrinsic_shared_archive_portfolio`'s
 /// `periodic_runner` parameter). Real, non-stub implementation of
 /// `archive::shared::IntrinsicPeriodicFamilyPortfolioRunner`.
+///
+/// Carries no `geometry_cache` field: per
+/// `IntrinsicPeriodicFamilyPortfolioRunner::run`'s own doc comment, the one
+/// job-wide `GeometryCacheStore` is threaded in as a call parameter
+/// instead, exactly matching TS's single job-ambient `GeometryCacheService`
+/// instance (`cache-concurrency-design.md` §2) -- see this module's top doc
+/// for why every genuinely mutable resource this coordinator threads is a
+/// plain top-level parameter, never a struct field.
 pub struct RealIntrinsicPeriodicFamilyPortfolioRunner<'a> {
     pub settings: &'a IrregularNestingSettings,
-    pub geometry_cache: &'a mut GeometryCacheStore,
 }
 
 impl IntrinsicPeriodicFamilyPortfolioRunner for RealIntrinsicPeriodicFamilyPortfolioRunner<'_> {
@@ -148,6 +155,7 @@ impl IntrinsicPeriodicFamilyPortfolioRunner for RealIntrinsicPeriodicFamilyPortf
         sheet: &SheetSpec,
         pieces: &[Arc<IrregularPreparedPiece>],
         forced: IntrinsicPeriodicFamilyPortfolioForcedOptions<'_>,
+        geometry_cache: &mut GeometryCacheStore,
     ) -> Result<crate::archive::shared::IntrinsicPeriodicFamilyPortfolioResult, SharedArchiveError>
     {
         // TS: `runIntrinsicSharedArchivePortfolio`'s periodic call
@@ -182,7 +190,7 @@ impl IntrinsicPeriodicFamilyPortfolioRunner for RealIntrinsicPeriodicFamilyPortf
             &owned_pieces,
             options,
             self.settings,
-            self.geometry_cache,
+            geometry_cache,
         )
         .map_err(periodic_portfolio_error_to_shared_archive_error)?;
 
@@ -620,26 +628,19 @@ fn coordinate_intrinsic_shared_archive(
             });
         }
 
-        // `run_intrinsic_shared_archive_portfolio` takes both `periodic_runner`
-        // (which must independently own a `&mut GeometryCacheStore` for its own
-        // `.run()` call, per `archive::shared`'s fixed trait signature) and a
-        // top-level `geometry_cache: &mut GeometryCacheStore` parameter for its
-        // own direct-phase work -- two simultaneous exclusive borrows of the
-        // *same* store are therefore structurally required by that signature.
-        // Since the coordinator's outer `geometry_cache` is already borrowed
-        // for the direct-phase parameter below, the periodic runner is given
-        // its own private, freshly-allocated `GeometryCacheStore` instead of
-        // sharing the coordinator's. Both stores compute byte-identical
-        // results for any given input (the cache is a pure memoization layer,
-        // not a correctness input); this only forgoes cross-phase cache-hit
-        // reuse between the direct and periodic phases, a performance
-        // difference, never an observable-output difference. The interleaved
-        // scheduler-resume closure below is given its own third private cache
-        // for the identical reason.
-        let mut periodic_geometry_cache = GeometryCacheStore::new();
+        // `run_intrinsic_shared_archive_portfolio` reborrows the coordinator's
+        // single job-wide `geometry_cache` for both the direct phase and (via
+        // `periodic_runner.run`'s own `geometry_cache` parameter -- see
+        // `IntrinsicPeriodicFamilyPortfolioRunner`'s doc comment) the periodic
+        // phase, and the interleaved scheduler-resume closure below reborrows
+        // that exact same store too. All three phases share one
+        // `GeometryCacheStore`, matching TS's single job-ambient
+        // `GeometryCacheService` instance exactly (`cache-concurrency-design.md`
+        // §2) -- never a phase-private `GeometryCacheStore::new()`, which
+        // would silently diverge from TS's cache hit/miss sequence for
+        // numerically-tied candidates (`differential-e2e-report.md` Finding N1).
         let mut periodic_runner = RealIntrinsicPeriodicFamilyPortfolioRunner {
             settings: input.settings,
-            geometry_cache: &mut periodic_geometry_cache,
         };
         // TS: `onPhaseCompleted: () => emitSharedArchiveProgress(input, 'shared_archive',
         // undefined, ...)` (`computeIrregularNesting.ts:710-716`) -- fires once
@@ -679,33 +680,44 @@ fn coordinate_intrinsic_shared_archive(
         // depth boundary (never a cold restart) and records the resulting
         // `capacity-cold`/`partial` quantum. This is the scheduler's own
         // chronology, independent of and prior to `capacity::mode`'s lane
-        // coordinator. Control is not threaded into this nested resume (see
-        // `capacity::mode`'s top doc, "No `timingNow` seam" section, for the
-        // analogous narrow relaxation this mirrors): production never sets
-        // `isCancelled`, so this is behaviorally inert for every real caller.
-        let mut scheduler_geometry_cache = GeometryCacheStore::new();
-        let mut on_canonical_grid_checkpointed = |_checkpoint: &crate::search::strict_decoder::IntrinsicStrictDirectCheckpoint| -> Result<(), SharedArchiveError> {
-        if let Some(trace) = intrinsic_anytime_scheduler_trace.as_mut() {
-            trace.quanta.push(IntrinsicAnytimeSchedulerQuantum {
-                ordinal: trace.quanta.len(),
-                cohort: IntrinsicAnytimeSchedulerCohort::Complete,
-                producer_role: IntrinsicAnytimeSchedulerProducerRole::LegacyComplete,
-                outcome: IntrinsicAnytimeSchedulerOutcome::Checkpointed,
-            });
-        }
-        let resumable = matches!(
-            &scheduled_cold_start,
-            Some(search) if search.status == IntrinsicCapacitySearchStatus::Paused
-                && search.checkpoint.is_some()
-        );
-        if !resumable {
-            return Ok(());
-        }
-        let checkpoint = scheduled_cold_start
-            .as_ref()
-            .and_then(|search| search.checkpoint.clone())
-            .expect("checked Some+checkpoint above");
-        let resumed = run_intrinsic_capacity_scheduler_cold_quantum(
+        // coordinator. TS threads the same `control`/`isCancelled` observation
+        // (and the same single job-ambient `GeometryCacheService` instance --
+        // `cache-concurrency-design.md` §2) into this nested resume
+        // (`computeIrregularNesting.ts:679`, `...(control === undefined ? {}
+        // : { control })`); this closure now does too, via the reborrows
+        // `archive::shared`'s `OnCanonicalGridCheckpointed` callback type
+        // hands it as its second and third parameters (see that type's own
+        // doc comment for why they must arrive as callback parameters rather
+        // than direct closure captures of this function's own `control`/
+        // `geometry_cache` locals -- both are simultaneously reborrowed for
+        // the entire duration of the `run_intrinsic_shared_archive_portfolio`
+        // call below).
+        let mut on_canonical_grid_checkpointed =
+            |_checkpoint: &crate::search::strict_decoder::IntrinsicStrictDirectCheckpoint,
+             checkpoint_control: Option<&mut dyn NfpIfpControl>,
+             checkpoint_geometry_cache: &mut GeometryCacheStore|
+             -> Result<(), SharedArchiveError> {
+                if let Some(trace) = intrinsic_anytime_scheduler_trace.as_mut() {
+                    trace.quanta.push(IntrinsicAnytimeSchedulerQuantum {
+                        ordinal: trace.quanta.len(),
+                        cohort: IntrinsicAnytimeSchedulerCohort::Complete,
+                        producer_role: IntrinsicAnytimeSchedulerProducerRole::LegacyComplete,
+                        outcome: IntrinsicAnytimeSchedulerOutcome::Checkpointed,
+                    });
+                }
+                let resumable = matches!(
+                    &scheduled_cold_start,
+                    Some(search) if search.status == IntrinsicCapacitySearchStatus::Paused
+                        && search.checkpoint.is_some()
+                );
+                if !resumable {
+                    return Ok(());
+                }
+                let checkpoint = scheduled_cold_start
+                    .as_ref()
+                    .and_then(|search| search.checkpoint.clone())
+                    .expect("checked Some+checkpoint above");
+                let resumed = run_intrinsic_capacity_scheduler_cold_quantum(
             RunIntrinsicCapacitySchedulerColdQuantumInput {
                 sheet: &input.request.sheet,
                 prepared_pieces: input.prepared_pieces,
@@ -715,31 +727,31 @@ fn coordinate_intrinsic_shared_archive(
                     crate::capacity::search::IntrinsicCapacityRetentionMode::CohesionFrontier,
                 ),
             },
-            None,
+            checkpoint_control,
             input.settings,
-            &mut scheduler_geometry_cache,
+            checkpoint_geometry_cache,
             None,
         )
         .map_err(capacity_search_error_to_shared_archive_error)?;
-        scheduled_cold_checkpoint_reused = true;
-        if let Some(trace) = intrinsic_anytime_scheduler_trace.as_mut() {
-            trace.quanta.push(IntrinsicAnytimeSchedulerQuantum {
-                ordinal: trace.quanta.len(),
-                cohort: IntrinsicAnytimeSchedulerCohort::Partial,
-                producer_role: IntrinsicAnytimeSchedulerProducerRole::CapacityCold,
-                outcome: match resumed.status {
-                    IntrinsicCapacitySearchStatus::Paused => {
-                        IntrinsicAnytimeSchedulerOutcome::Checkpointed
-                    }
-                    IntrinsicCapacitySearchStatus::Settled => {
-                        IntrinsicAnytimeSchedulerOutcome::Settled
-                    }
-                },
-            });
-        }
-        scheduled_cold_start = Some(resumed);
-        Ok(())
-    };
+                scheduled_cold_checkpoint_reused = true;
+                if let Some(trace) = intrinsic_anytime_scheduler_trace.as_mut() {
+                    trace.quanta.push(IntrinsicAnytimeSchedulerQuantum {
+                        ordinal: trace.quanta.len(),
+                        cohort: IntrinsicAnytimeSchedulerCohort::Partial,
+                        producer_role: IntrinsicAnytimeSchedulerProducerRole::CapacityCold,
+                        outcome: match resumed.status {
+                            IntrinsicCapacitySearchStatus::Paused => {
+                                IntrinsicAnytimeSchedulerOutcome::Checkpointed
+                            }
+                            IntrinsicCapacitySearchStatus::Settled => {
+                                IntrinsicAnytimeSchedulerOutcome::Settled
+                            }
+                        },
+                    });
+                }
+                scheduled_cold_start = Some(resumed);
+                Ok(())
+            };
         let mut portfolio_options = IntrinsicSharedArchivePortfolioOptions {
             maximum_direct_runtime_ms: Some(35_000.0),
             include_source_audit_witnesses: Some(true),

@@ -52,7 +52,7 @@
 
 pub mod axes;
 pub mod contact_strip;
-mod json;
+pub(crate) mod json;
 pub mod observer;
 pub mod pair_fold;
 

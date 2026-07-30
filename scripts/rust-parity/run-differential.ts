@@ -21,24 +21,25 @@
  *
  * # What is *not* compared, and why (never a silent omission)
  *
- * - Elapsed/timing fields: `computeIrregularNesting.ts` has no injectable
- *   clock seam of its own (only `intrinsicCapacitySearch.ts`, a lower layer,
- *   carries one -- confirmed by source grep, matching
- *   `dump-coordinator.ts`'s own finding), so every `elapsedMs`/wall-clock
- *   field the two backends compute independently is expected to differ and
- *   is excluded from the projection by construction (never included, then
- *   subtracted).
- * - `capacityTrace` / `intrinsicAnytimeSchedulerTrace` /
+ * - Elapsed/timing/byte-count fields: `computeIrregularNesting.ts` has no
+ *   injectable clock seam of its own (only `intrinsicCapacitySearch.ts`, a
+ *   lower layer, carries one -- confirmed by source grep, matching
+ *   `dump-coordinator.ts`'s own finding), so every wall-clock-derived field
+ *   the two backends compute independently is expected to differ in value.
+ *   All five trace fields (`capacityTrace` / `intrinsicAnytimeSchedulerTrace` /
  *   `focusedCompleteReconstructionTrace` / `intrinsicShortSideObserverTrace` /
- *   `intrinsicShortSidePairFoldTrace`: the native result DTO currently
- *   projects each of these as an opaque `{"raw": "<Rust Debug repr>"}` blob
- *   (`crates/irregular-nesting-native/src/boundary/result.rs`'s own "Deferred"
- *   module doc), and `nativeIrregularBackend.ts` deliberately leaves them
- *   `undefined` rather than fabricate a type-matching but content-fake
- *   value (see that module's own doc). This script does not silently ignore
- *   the gap: it reports, as an explicit non-fatal note, whenever the
- *   TypeScript side actually populated one of these fields for the given
- *   request (see `reportDeferredTraceFieldNotes`).
+ *   `intrinsicShortSidePairFoldTrace`) are otherwise compared field-for-field
+ *   (`nativeIrregularBackend.ts` now reconstructs every one of them from the
+ *   native boundary's real, structured wire projection -- see that module's
+ *   own "Trace fidelity" doc); every field named in
+ *   `TIMING_ONLY_TRACE_FIELD_NAMES` below (`runtimeMs`/`elapsedMs`/
+ *   `preflightRuntimeMs`/`completeArchiveRuntimeMs`/`prefixTerminalizationMs`/
+ *   `coldSearchMs`/`topologyMeasurementMs`/`contactMeasurementMs`/
+ *   `serializedTraceBytes`/`peakRssDeltaBytes`, wherever it occurs at any
+ *   nesting depth in any of the five traces) is normalized to a presence-only
+ *   marker before comparison (`normalizeTimingOnlyFields`): both backends
+ *   must agree the field is present-or-absent, but its wall-clock-derived
+ *   *value* is never compared.
  * - `IrregularBeamState.remainingPreparedPieces` inside each state
  *   snapshot: the native snapshot DTO does not carry the not-yet-decided
  *   piece queue (`nativeIrregularBackend.ts`'s own "Deferred history-frame
@@ -422,6 +423,62 @@ function describeError(error: unknown): string {
 // Semantic projection + first-divergence diff
 // ===========================================================================
 
+/**
+ * Every wall-clock/wall-clock-derived field name across all five trace
+ * types (`capacityTrace`/`intrinsicAnytimeSchedulerTrace`/
+ * `focusedCompleteReconstructionTrace`/`intrinsicShortSideObserverTrace`/
+ * `intrinsicShortSidePairFoldTrace`), compared presence-only regardless of
+ * nesting depth (`normalizeTimingOnlyFields`) -- see module doc, "What is
+ * *not* compared". Name-based (not path-based): every one of these field
+ * names is a real, single-purpose measurement field in its own trace
+ * interface (verified against `computeIrregularNesting.ts`/
+ * `intrinsicCapacitySearch.ts`/`intrinsicShortSideObserver.ts`/
+ * `intrinsicShortSidePairFoldObserver.ts`/`intrinsicShortSideContactStrip.ts`),
+ * never reused for a differently-typed, semantically-real field elsewhere in
+ * these traces.
+ */
+const TIMING_ONLY_TRACE_FIELD_NAMES: ReadonlySet<string> = new Set([
+  'runtimeMs',
+  'elapsedMs',
+  'preflightRuntimeMs',
+  'completeArchiveRuntimeMs',
+  'prefixTerminalizationMs',
+  'coldSearchMs',
+  'topologyMeasurementMs',
+  'contactMeasurementMs',
+  'serializedTraceBytes',
+  'peakRssDeltaBytes'
+])
+
+const TIMING_PRESENT_MARKER = '<timing: present>'
+
+/**
+ * Walks `value` recursively and replaces every object field whose key is in
+ * [`TIMING_ONLY_TRACE_FIELD_NAMES`] with a fixed presence marker (leaving
+ * `undefined` untouched, so an absent field stays absent through
+ * `toComparable`'s `JSON.stringify` undefined-omission) -- applied to both
+ * backends' projections identically before diffing, so `firstDivergence`
+ * still catches a presence/absence mismatch but never a wall-clock value
+ * mismatch.
+ */
+function normalizeTimingOnlyFields(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(normalizeTimingOnlyFields)
+  }
+  if (isPlainObject(value)) {
+    const normalized: Record<string, unknown> = {}
+    for (const [key, fieldValue] of Object.entries(value)) {
+      if (TIMING_ONLY_TRACE_FIELD_NAMES.has(key)) {
+        normalized[key] = fieldValue === undefined ? undefined : TIMING_PRESENT_MARKER
+      } else {
+        normalized[key] = normalizeTimingOnlyFields(fieldValue)
+      }
+    }
+    return normalized
+  }
+  return value
+}
+
 /** See module doc for exactly what this excludes and why. */
 function projectForComparison(result: IrregularComputeResult): unknown {
   return {
@@ -439,34 +496,29 @@ function projectForComparison(result: IrregularComputeResult): unknown {
       source: snapshot.source,
       placedCollisionGeometries: snapshot.state.placedCollisionGeometries,
       unplacedPieceIds: snapshot.state.unplacedPieceIds
-    }))
+    })),
+    capacityTrace: result.capacityTrace,
+    intrinsicAnytimeSchedulerTrace: result.intrinsicAnytimeSchedulerTrace,
+    focusedCompleteReconstructionTrace: result.focusedCompleteReconstructionTrace,
+    intrinsicShortSideObserverTrace: result.intrinsicShortSideObserverTrace,
+    intrinsicShortSidePairFoldTrace: result.intrinsicShortSidePairFoldTrace
   }
 }
 
-function reportDeferredTraceFieldNotes(tsResult: IrregularComputeResult): ReadonlyArray<string> {
-  const notes: string[] = []
-  const deferredFields: ReadonlyArray<keyof IrregularComputeResult> = [
-    'capacityTrace',
-    'intrinsicAnytimeSchedulerTrace',
-    'focusedCompleteReconstructionTrace',
-    'intrinsicShortSideObserverTrace',
-    'intrinsicShortSidePairFoldTrace'
-  ]
-  for (const field of deferredFields) {
-    if (tsResult[field] !== undefined) {
-      notes.push(
-        `TypeScript populated "${field}" for this request; the native boundary does not yet project ` +
-          'this trace field structurally (Stage-1 boundary limitation, see this script\'s module doc), ' +
-          'so it was excluded from comparison rather than silently ignored.'
-      )
-    }
-  }
-  return notes
-}
-
-/** Converts to a plain JSON-shaped value first (sidesteps class identity; exact for finite numbers). */
+/**
+ * Converts to a plain JSON-shaped value first (sidesteps class identity;
+ * exact for finite numbers). `bigint` fields (`capacityTrace`'s
+ * `placedDoubledMaterialAreaGrid2` and friends) are rendered as their
+ * decimal-string `toString()` -- `JSON.stringify` itself throws on a raw
+ * `bigint` (`TypeError: Do not know how to serialize a BigInt`), and a
+ * decimal string is exact and order-preserving for equality comparison,
+ * which is all `firstDivergence` needs.
+ */
 function toComparable(value: unknown): unknown {
-  return JSON.parse(JSON.stringify(value)) as unknown
+  const json = JSON.stringify(value, (_key, fieldValue: unknown) =>
+    typeof fieldValue === 'bigint' ? fieldValue.toString() : fieldValue
+  )
+  return JSON.parse(json) as unknown
 }
 
 interface Divergence {
@@ -558,13 +610,9 @@ async function main(): Promise<void> {
     fail('at least one backend did not produce a result; nothing to compare.')
   }
 
-  const tsProjection = toComparable(projectForComparison(tsOutcome.value))
-  const rustProjection = toComparable(projectForComparison(rustOutcome.value))
+  const tsProjection = normalizeTimingOnlyFields(toComparable(projectForComparison(tsOutcome.value)))
+  const rustProjection = normalizeTimingOnlyFields(toComparable(projectForComparison(rustOutcome.value)))
   const divergence = firstDivergence('', tsProjection, rustProjection)
-
-  for (const note of reportDeferredTraceFieldNotes(tsOutcome.value)) {
-    console.log(`[run-differential] NOTE: ${note}`)
-  }
 
   if (divergence !== undefined) {
     console.error(`[run-differential] FIRST DIVERGENCE at path: ${divergence.path}`)
