@@ -127,6 +127,17 @@ function f64BitsOpt(value: number | undefined): string | null {
   return value === undefined ? null : f64Bits(value)
 }
 
+function encodeJsonNumbersAsBits(value: unknown): unknown {
+  if (typeof value === 'number') return f64Bits(value)
+  if (Array.isArray(value)) return value.map(encodeJsonNumbersAsBits)
+  if (value !== null && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, nestedValue]) => [key, encodeJsonNumbersAsBits(nestedValue)])
+    )
+  }
+  return value
+}
+
 // ---------------------------------------------------------------------------
 // Mixed61 fixture loading (mirrors `dump-shared-archive.ts`'s own
 // `mixed61Fixture`/`fixtureHullRing`, but keeps the *real* line-segment
@@ -147,8 +158,17 @@ interface FixturePiece {
   readonly id: string
   readonly sourceFileId: string
   readonly label: string
-  readonly realBounds: { readonly x: number; readonly y: number; readonly width: number; readonly height: number }
-  readonly geometry: { readonly entityType: string; readonly closed: boolean; readonly segments: ReadonlyArray<FixtureLineSegment> }
+  readonly realBounds: {
+    readonly x: number
+    readonly y: number
+    readonly width: number
+    readonly height: number
+  }
+  readonly geometry: {
+    readonly entityType: string
+    readonly closed: boolean
+    readonly segments: ReadonlyArray<FixtureLineSegment>
+  }
 }
 interface Mixed61Fixture {
   readonly sourcePieces: ReadonlyArray<FixturePiece>
@@ -162,7 +182,9 @@ if (mixed61Fixture.sourcePieces.length !== 61) {
 }
 for (const piece of mixed61Fixture.sourcePieces) {
   if (piece.geometry.segments.some((segment) => segment.kind !== 'line')) {
-    throw new Error(`fixture piece ${piece.id} has a non-line segment; this script assumes line-only geometry.`)
+    throw new Error(
+      `fixture piece ${piece.id} has a non-line segment; this script assumes line-only geometry.`
+    )
   }
 }
 
@@ -212,7 +234,9 @@ function buildCombos(minCount: number, maxCount: number, combosPerSize: number):
         slots.push((startSlot + k * stride) % 61)
       }
       if (new Set(slots).size !== slots.length) {
-        throw new Error(`combo n${pieceCount}-c${comboIndex} produced duplicate slots: ${slots.join(',')}`)
+        throw new Error(
+          `combo n${pieceCount}-c${comboIndex} produced duplicate slots: ${slots.join(',')}`
+        )
       }
       const label = `n${pieceCount}-c${comboIndex}`
       combos.push({
@@ -317,7 +341,12 @@ type ComputedResult = IrregularComputeResult
 // encoders field-for-field. Every f64 is `f64Bits`; every documented
 // non-semantic timing field (`*RuntimeMs`, `*Ms`, `elapsedMs`) is omitted.
 // ---------------------------------------------------------------------------
-function encodeTransform(transform: { readonly translateX: number; readonly translateY: number; readonly rotationDeg: number; readonly mirrored: boolean }) {
+function encodeTransform(transform: {
+  readonly translateX: number
+  readonly translateY: number
+  readonly rotationDeg: number
+  readonly mirrored: boolean
+}) {
   return {
     translateX: f64Bits(transform.translateX),
     translateY: f64Bits(transform.translateY),
@@ -325,7 +354,11 @@ function encodeTransform(transform: { readonly translateX: number; readonly tran
     mirrored: transform.mirrored
   }
 }
-function encodePlacement(placement: { readonly pieceId?: unknown; readonly sourcePieceId: unknown; readonly transform: Parameters<typeof encodeTransform>[0] }) {
+function encodePlacement(placement: {
+  readonly pieceId?: unknown
+  readonly sourcePieceId: unknown
+  readonly transform: Parameters<typeof encodeTransform>[0]
+}) {
   return {
     pieceId: placement.pieceId === undefined ? null : String(placement.pieceId),
     sourcePieceId: String(placement.sourcePieceId),
@@ -344,7 +377,9 @@ function encodeScore(score: Record<string, unknown> | undefined) {
   ] as const
   const encoded: Record<string, unknown> = {
     unplacedCount: f64Bits(score.unplacedCount as number),
-    largestNetFreeMaterialRegionAreaMm2: f64Bits(score.largestNetFreeMaterialRegionAreaMm2 as number),
+    largestNetFreeMaterialRegionAreaMm2: f64Bits(
+      score.largestNetFreeMaterialRegionAreaMm2 as number
+    ),
     freeMaterialRegionCount: f64Bits(score.freeMaterialRegionCount as number),
     freeMaterialHoleCount: f64Bits(score.freeMaterialHoleCount as number),
     freeMaterialSliverMetric: f64Bits(score.freeMaterialSliverMetric as number),
@@ -376,7 +411,8 @@ function encodeSnapshot(snapshot: ComputedResult['stateSnapshots'][number]) {
     beamRank: f64Bits(snapshot.beamRank),
     candidateCount: f64Bits(snapshot.candidateCount),
     source: snapshot.source ?? null,
-    placedPieceCount: f64Bits(snapshot.state.placedCollisionGeometries.length)
+    placedPieceCount: f64Bits(snapshot.state.placedCollisionGeometries.length),
+    remainingPreparedPieces: snapshot.state.remainingPreparedPieces.map(encodeJsonNumbersAsBits)
   }
 }
 function encodeCapacityObjective(objective: Record<string, unknown> | undefined) {
@@ -409,7 +445,9 @@ function encodeWarmPrefixLane(lane: Record<string, unknown>) {
     checkpointRetained: lane.checkpointRetained,
     consumedPlacementEvaluations: f64Bits(lane.consumedPlacementEvaluations as number),
     completedDepths: f64Bits(lane.completedDepths as number),
-    endpoint: encodeCapacityObjective(lane.endpoint as unknown as Record<string, unknown> | undefined)
+    endpoint: encodeCapacityObjective(
+      lane.endpoint as unknown as Record<string, unknown> | undefined
+    )
   }
 }
 function encodeQualityWarmPrefix(trace: Record<string, unknown> | undefined) {
@@ -426,7 +464,9 @@ function encodeQualityWarmPrefix(trace: Record<string, unknown> | undefined) {
     consumedPlacementEvaluations: f64Bits(trace.consumedPlacementEvaluations as number),
     completedDepths: f64Bits(trace.completedDepths as number),
     checkpointRetained: trace.checkpointRetained,
-    endpoint: encodeCapacityObjective(trace.endpoint as unknown as Record<string, unknown> | undefined)
+    endpoint: encodeCapacityObjective(
+      trace.endpoint as unknown as Record<string, unknown> | undefined
+    )
   }
 }
 function encodeLaneCoordinatorQuantum(quantum: Record<string, unknown>) {
@@ -446,11 +486,15 @@ function encodeLaneCoordinator(trace: Record<string, unknown> | undefined) {
   if (trace === undefined) return null
   return {
     aggregatePlacementEvaluationCap: f64Bits(trace.aggregatePlacementEvaluationCap as number),
-    aggregateConsumedPlacementEvaluations: f64Bits(trace.aggregateConsumedPlacementEvaluations as number),
+    aggregateConsumedPlacementEvaluations: f64Bits(
+      trace.aggregateConsumedPlacementEvaluations as number
+    ),
     warmPilotDepthBoundaries: f64Bits(trace.warmPilotDepthBoundaries as number),
     retainedCheckpointCount: f64Bits(trace.retainedCheckpointCount as number),
     censoredLaneCount: f64Bits(trace.censoredLaneCount as number),
-    quanta: (trace.quanta as ReadonlyArray<Record<string, unknown>>).map(encodeLaneCoordinatorQuantum)
+    quanta: (trace.quanta as ReadonlyArray<Record<string, unknown>>).map(
+      encodeLaneCoordinatorQuantum
+    )
   }
 }
 function encodeCapacityTrace(trace: ComputedResult['capacityTrace']) {
@@ -464,16 +508,25 @@ function encodeCapacityTrace(trace: ComputedResult['capacityTrace']) {
     preflightKind: String(preflight.kind),
     preflightReason: preflight.reason === undefined ? null : String(preflight.reason),
     prefixes: {
-      capturedCount: f64Bits((trace.prefixes as unknown as Record<string, unknown>).capturedCount as number),
-      fittingCount: f64Bits((trace.prefixes as unknown as Record<string, unknown>).fittingCount as number),
-      rejectedCount: f64Bits((trace.prefixes as unknown as Record<string, unknown>).rejectedCount as number),
-      terminalizedCount: f64Bits((trace.prefixes as unknown as Record<string, unknown>).terminalizedCount as number)
+      capturedCount: f64Bits(
+        (trace.prefixes as unknown as Record<string, unknown>).capturedCount as number
+      ),
+      fittingCount: f64Bits(
+        (trace.prefixes as unknown as Record<string, unknown>).fittingCount as number
+      ),
+      rejectedCount: f64Bits(
+        (trace.prefixes as unknown as Record<string, unknown>).rejectedCount as number
+      ),
+      terminalizedCount: f64Bits(
+        (trace.prefixes as unknown as Record<string, unknown>).terminalizedCount as number
+      )
     },
     prefixIncumbent:
       prefixIncumbent === undefined
         ? null
         : {
-            sourceRole: prefixIncumbent.sourceRole === undefined ? null : String(prefixIncumbent.sourceRole),
+            sourceRole:
+              prefixIncumbent.sourceRole === undefined ? null : String(prefixIncumbent.sourceRole),
             prefixDepth: f64BitsOpt(prefixIncumbent.prefixDepth as number | undefined),
             placedCount: f64Bits(prefixIncumbent.placedCount as number),
             placedMaterialAreaMm2: f64Bits(prefixIncumbent.placedMaterialAreaMm2 as number),
@@ -492,11 +545,17 @@ function encodeCapacityTrace(trace: ComputedResult['capacityTrace']) {
     warmPrefixLanes:
       trace.warmPrefixLanes === undefined
         ? null
-        : (trace.warmPrefixLanes as unknown as ReadonlyArray<Record<string, unknown>>).map(encodeWarmPrefixLane),
+        : (trace.warmPrefixLanes as unknown as ReadonlyArray<Record<string, unknown>>).map(
+            encodeWarmPrefixLane
+          ),
     warmPrefixEndpointsAdmitted: trace.warmPrefixEndpointsAdmitted,
     cohesionShadow: trace.cohesionShadow === undefined ? null : 'present',
-    qualityWarmPrefix: encodeQualityWarmPrefix(trace.qualityWarmPrefix as unknown as Record<string, unknown> | undefined),
-    laneCoordinator: encodeLaneCoordinator(trace.laneCoordinator as unknown as Record<string, unknown> | undefined),
+    qualityWarmPrefix: encodeQualityWarmPrefix(
+      trace.qualityWarmPrefix as unknown as Record<string, unknown> | undefined
+    ),
+    laneCoordinator: encodeLaneCoordinator(
+      trace.laneCoordinator as unknown as Record<string, unknown> | undefined
+    ),
     selected: {
       objective: encodeCapacityObjective(selected),
       unplacedCount: f64Bits(selected.unplacedCount as number),
@@ -523,7 +582,9 @@ function encodeSchedulerTrace(trace: ComputedResult['intrinsicAnytimeSchedulerTr
     coldCheckpointReused: trace.coldCheckpointReused,
     warmPrefixEndpointsAdmitted: trace.warmPrefixEndpointsAdmitted,
     cancellationReason: trace.cancellationReason ?? null,
-    quanta: trace.quanta.map((quantum) => encodeSchedulerQuantum(quantum as unknown as unknown as Record<string, unknown>))
+    quanta: trace.quanta.map((quantum) =>
+      encodeSchedulerQuantum(quantum as unknown as unknown as Record<string, unknown>)
+    )
   }
 }
 function encodeFocusedReconstruction(trace: ComputedResult['focusedCompleteReconstructionTrace']) {
@@ -558,8 +619,10 @@ function encodeShortSidePairFold(trace: ComputedResult['intrinsicShortSidePairFo
   const record = trace as unknown as unknown as Record<string, unknown>
   return {
     status: String(record.status),
-    constructionKind: record.constructionKind === undefined ? null : String(record.constructionKind),
-    canonicalGeometryHash: record.canonicalGeometryHash === undefined ? null : String(record.canonicalGeometryHash),
+    constructionKind:
+      record.constructionKind === undefined ? null : String(record.constructionKind),
+    canonicalGeometryHash:
+      record.canonicalGeometryHash === undefined ? null : String(record.canonicalGeometryHash),
     outputInfluence: record.outputInfluence === undefined ? null : String(record.outputInfluence)
   }
 }
@@ -576,8 +639,12 @@ function encodeResult(result: ComputedResult) {
     snapshots: result.stateSnapshots.map(encodeSnapshot),
     capacityTrace: encodeCapacityTrace(result.capacityTrace),
     intrinsicAnytimeSchedulerTrace: encodeSchedulerTrace(result.intrinsicAnytimeSchedulerTrace),
-    focusedCompleteReconstructionTrace: encodeFocusedReconstruction(result.focusedCompleteReconstructionTrace),
-    intrinsicShortSideObserverTrace: encodeShortSideObserver(result.intrinsicShortSideObserverTrace),
+    focusedCompleteReconstructionTrace: encodeFocusedReconstruction(
+      result.focusedCompleteReconstructionTrace
+    ),
+    intrinsicShortSideObserverTrace: encodeShortSideObserver(
+      result.intrinsicShortSideObserverTrace
+    ),
     intrinsicShortSidePairFoldTrace: encodeShortSidePairFold(result.intrinsicShortSidePairFoldTrace)
   }
 }
@@ -601,7 +668,12 @@ function encodeImportedPiece(piece: ImportedPiece) {
       entityType: 'PRESET_SHAPE',
       closed: piece.geometry.closed,
       segments: piece.geometry.segments.map((segment) => {
-        const line = segment as { readonly x1: number; readonly y1: number; readonly x2: number; readonly y2: number }
+        const line = segment as {
+          readonly x1: number
+          readonly y1: number
+          readonly x2: number
+          readonly y2: number
+        }
         return { kind: 'line', x1: line.x1, y1: line.y1, x2: line.x2, y2: line.y2 }
       })
     },
@@ -702,7 +774,12 @@ let jobCounter = 0
  * case the real algorithm itself cannot complete, and over-generates
  * combos so the final count still clears the >= 80 floor.
  */
-function runCase(kind: 'roomy' | 'constrained', combo: Combo, sheet: SheetSpec, profile: ProfileId): void {
+function runCase(
+  kind: 'roomy' | 'constrained',
+  combo: Combo,
+  sheet: SheetSpec,
+  profile: ProfileId
+): void {
   jobCounter += 1
   const jobId = `dump-coordinator-job-${jobCounter}`
   const caseId = `${kind}-${combo.label}-${sheet.label}-${profile}`
@@ -757,9 +834,16 @@ if (cases.length < 80) {
   throw new Error(`Expected >= 80 coordinator vectors, got ${cases.length}.`)
 }
 
-const routingCounts = { none: 0, 'preflight-proven-impossible': 0, 'bounded-complete-archive-miss': 0 }
+const routingCounts = {
+  none: 0,
+  'preflight-proven-impossible': 0,
+  'bounded-complete-archive-miss': 0
+}
 for (const c of cases) {
-  const routing = c.result.capacityTrace === null ? 'none' : (c.result.capacityTrace as { routing: string }).routing
+  const routing =
+    c.result.capacityTrace === null
+      ? 'none'
+      : (c.result.capacityTrace as { routing: string }).routing
   routingCounts[routing as keyof typeof routingCounts] += 1
 }
 if (routingCounts['preflight-proven-impossible'] === 0) {
@@ -779,7 +863,7 @@ const output = {
     'computeIrregularNesting.ts full-job coverage via the real Effect-layered production entry point ' +
     '(CollisionGeometryBuilder.Live, TransformGeneratorLive, NfpIfpServiceLive, FreeMaterialServiceLive, ' +
     'IrregularPlacementScorer.Layer, IrregularLayoutScorer.Live, GeometryKernel.Live, request-derived ' +
-    'GeometrySettings -- exactly nesting.worker.ts\'s own layer stack): roomy-sheet shared-archive-winner ' +
+    "GeometrySettings -- exactly nesting.worker.ts's own layer stack): roomy-sheet shared-archive-winner " +
     'cases and constrained/tiny-sheet capacity-routed cases (both preflight-proven-impossible and ' +
     'bounded-complete-archive-miss, confirmed present), crossed with both the Compact and Compact Short ' +
     'Side production profiles. Real mixed61 fixture piece geometry through the real preparePieces() ' +

@@ -227,68 +227,38 @@ pub fn min_all(values: &[f64]) -> f64 {
     values.iter().copied().fold(f64::INFINITY, min)
 }
 
-/// `Math.hypot(x, y)` (2-argument form) — a **verbatim port of V8's own
-/// algorithm** (`v8/src/builtins/builtins-math.cc`'s `Builtin_MathHypot`,
-/// the ECMA-262 `Math.hypot` reference algorithm: normalize every argument
-/// by the largest-magnitude argument, form a Neumaier/Kahan-compensated sum
-/// of the normalized values' squares, then `sqrt(sum) * max`), not
-/// `f64::hypot`/`libm::hypot` (both of which use fdlibm's *different*,
-/// high/low-word-splitting classic `e_hypot.c` algorithm).
+/// `Math.hypot(x, y)` (two-argument form) uses a Node/V8-compatible
+/// algorithm: normalize both absolute inputs by the largest magnitude, sum
+/// their squared normalized values with Neumaier compensation, then multiply
+/// the square root by that magnitude. This deliberately differs from Rust's
+/// platform-backed `f64::hypot` and from `libm::hypot`, which ports fdlibm's
+/// high/low-word-splitting `e_hypot.c` algorithm.
 ///
-/// R21 (`stage0-rulings.md`): "if any pipeline hash mismatch traces to trig,
-/// the affected call sites must switch to a verbatim port of V8's ieee754
-/// implementations" — this is that verbatim port, added because exactly
-/// that happened: `canonical_grid::contact::collinear_overlap_segment`'s
-/// edge-length `hypot` call feeds `IrregularBeamState`'s
-/// `sharedCollisionBoundaryLengthMm`, which is one of
-/// `search::strict_decoder::compare_local_scores`'s tie-break fields — a
-/// **comparator input**, not a diagnostic-only field like the other
-/// `hypot`-derived metrics `stage0-rulings.md` R21 and
-/// `canonical_grid::contact`'s own `canonical_grid_edge_length_mm` doc
-/// already accept irreducible ULP noise on. Differential fixture
-/// `differential-fixture-matrix.ts`'s `EXPLORATORY_ROWS` (mixed61 9/10/20/40
-/// truncated subsets) traced a periodic-P2 raw-witness continuation
-/// tie-break flip to exactly this: two candidates with bit-identical exact
-/// grid metrics (`maximumSideGrid`/`envelopeAreaGrid2`/`envelopeSpanGrid`)
-/// but a `sharedBoundaryLengthMm` that ties in TS (same real contact
-/// geometry, computed via V8's `Math.hypot`) yet disagreed in the last 1-2
-/// bits under both `std::f64::hypot` and `libm::hypot`, flipping which
-/// candidate's `compareLocalScores`/`compare_local_scores` "first-wins" fold
-/// picked.
+/// The compatibility evidence is reproducible and committed. Under the
+/// repository's pinned Node 24.11.1 runtime, run `pnpm exec tsx --tsconfig
+/// tsconfig.node.json scripts/rust-parity/dump-js-hypot.ts --check` to
+/// regenerate and compare the 21,696-vector Node/V8 oracle at
+/// `tests/vectors/js-hypot.json`.
+/// `tests/js_hypot_vectors.rs` asserts every finite or infinite output by raw
+/// binary64 bits and asserts NaN classification. The corpus metadata pins the
+/// Node and V8 versions, seed, generator hash, and corpus hash. Together,
+/// that generator, corpus, and test prove parity against the committed
+/// 21,696-vector oracle for this two-argument implementation.
 ///
-/// **Measured, not assumed** (this module's own doc comment promises no
-/// less): a 21,696-case differential sweep against a real Node v24
-/// `Math.hypot` oracle (broad random log-magnitude sweep `1e-10..1e10`, an
-/// explicit edge-value matrix crossing `{0, -0, ±1, ±1000, ±5000, 1e±30,
-/// 1e±300, ...}`, and 1,500 equal-magnitude/axis-aligned cases — the shape
-/// this crate's own contact geometry produces most often) found `0/21696`
-/// bit mismatches for this algorithm, versus `7177/21696` (33%) for
-/// `std::f64::hypot` and `7468/21696` (34%) for `libm::hypot` on the exact
-/// same vectors — full parity, not a marginal improvement, confirming this
-/// really is V8's algorithm and not another approximation.
+/// This primitive was introduced after
+/// `canonical_grid::contact::collinear_overlap_segment`'s edge length reached
+/// `IrregularBeamState::sharedCollisionBoundaryLengthMm`, a tie-break input to
+/// `search::strict_decoder::compare_local_scores`. The affected candidates
+/// tied in TypeScript but differed in the final bits under both
+/// `std::f64::hypot` and `libm::hypot`, changing the first-wins fold.
 ///
-/// Scope (updated by the N2 audit; supersedes this doc comment's original
-/// N1-era text, which read "deliberately not substituted at every `.hypot()`
-/// call site — only the one with measured evidence of an observable-output
-/// divergence"): every `x.hypot(y)`-style call site in this crate whose
-/// output can reach a semantic field — a score, a metric, a comparator
-/// tie-break, or a value serialized onto a result/trace DTO — is now routed
-/// through this function, not just the single comparator-flipping site N1
-/// found. `canonical_grid::contact::collinear_overlap_segment` (N1),
-/// `canonical_grid::contact`'s other structural-contact-signature call sites
-/// and `search::layout_scorer::polygon_perimeter` (N2's
-/// `free_material_sliver_metric` finding), and
-/// `transforms::generator`'s edge-length/max-radius call sites all name
-/// their own reachability chain in their own doc comments — this remains a
-/// **per-call-site, evidence-backed decision** (R21's original policy), it
-/// is just that the audited evidence set is now broader than "does this flip
-/// a comparator today". Call sites confirmed to have **no** reachable
-/// semantic field (pure Rust-only test assertions, or code with zero
-/// production callers) are deliberately left on `std::f64::hypot`/
-/// `libm::hypot`, each with its own doc comment explaining why — see
-/// `transforms::flattening`'s and `validation::sat`'s test-only `hypot`
-/// sites, and `validation::sat`'s module-level "Liveness note" for the
-/// zero-production-caller case.
+/// Scope: every `x.hypot(y)`-style call whose result can reach a score, metric,
+/// comparator tie-break, serialized result, or trace DTO uses this function.
+/// This includes the production call sites in `canonical_grid::contact`,
+/// `search::layout_scorer`, `transforms::generator`, and
+/// `transforms::flattening`. The two Rust-only analytic assertions in
+/// `transforms::flattening` and the zero-production-caller code in
+/// `validation::sat` retain their documented `std`/`libm` choices.
 pub fn hypot(x: f64, y: f64) -> f64 {
     if x.is_infinite() || y.is_infinite() {
         return f64::INFINITY;

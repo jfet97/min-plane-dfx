@@ -583,9 +583,11 @@ fn polygon_area(polygon: &IrregularPolygon) -> f64 {
 
 /// TS: `irregularLayoutScorer.ts:401-410` `polygonPerimeter`.
 ///
-/// N2 (`differential-e2e-report.md`): routes through [`js_math::hypot`] (the
-/// verbatim V8 port), not `f64::hypot`. **Measured, not assumed**: of the 235
-/// polygon edges exercised by this crate's own free-material vector suite,
+/// N2 (`differential-e2e-report.md`): routes through the two-argument
+/// Node/V8-compatible [`js_math::hypot`], not `f64::hypot`. Its committed
+/// 21,696-vector Node/V8 oracle is generated and checked independently.
+/// **Measured, not assumed**: of the 235 polygon edges exercised by this
+/// crate's own free-material vector suite,
 /// 80 (34%) disagreed with the V8 oracle by 1 ULP under `std::f64::hypot` --
 /// the same class of divergence R21/N1 already document and fix for
 /// `canonical_grid::contact::collinear_overlap_segment`'s comparator-feeding

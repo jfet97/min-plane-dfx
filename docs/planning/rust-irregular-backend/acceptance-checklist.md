@@ -97,7 +97,8 @@ outcome.
 | 5.3 | Supported platform and architecture artifacts are built and smoke-tested | **met-with-note** | Only `x86_64-unknown-linux-gnu` was built and tested this session (this development machine's own platform, per `native-boundary.md` §3.1's target-triple capability field, confirmed `x86_64-unknown-linux-gnu` in every capability probe this session). macOS/Windows artifacts are design-only (`build-packaging.md` §9 prebuild-targets section) — not built or smoke-tested on this machine, since no macOS/Windows build host is available in this environment. This is an honest scope gap, not a claim of full multi-platform coverage. |
 | 5.4 | CI exercises Rust, addon loading, deterministic parity, production gates, and packaging | **met-with-note** | `.github/workflows/rust-native.yml` (new this port, present on disk, its own header comment cross-references `ci-matrix.md`) defines rust-fmt/rust-clippy/rust-test/native-build/addon-load-smoke/required-differential-subset/determinism jobs for the per-PR tier; **the full production-gate and packaging jobs are explicitly deferred to a "nightly" tier** (the workflow file's own header comment: "Expensive gates ... deliberately NOT run per-PR"). This workflow has not been observed to execute successfully on GitHub's own runners as part of this evidence pass (no CI run was triggered/inspected this session — only the workflow file's presence and content were reviewed). |
 | 5.5 | Missing or incompatible native binaries fail clearly or follow the explicit pre-execution fallback policy | **met** | `backend-selection-rollback.md` §3–4 (capability probe, no-retry pre-execution fallback rules); `native-boundary.md` §3.3 (load-time compatibility check); `boundary::error` module's typed error mapping (`cargo test --release`'s `boundary::error::tests` — 8 tests, all green, covering API-version mismatch, panic sanitization, archive-ineligibility routing). |
-| 5.6 | Rollback to TypeScript remains immediate and documented | **met** | `backend-selection-rollback.md` §8 ("Rollback runbook"); the default backend selection is `'typescript'` unless explicitly overridden (§4.7 above) — rollback is in fact the unmodified default state, not a separate procedure that must be invoked. |
+| 5.6 | Rollback to TypeScript remains immediate and documented | **met** | `backend-selection-rollback.md` §8 ("Rollback runbook"); the default backend selection is `'typescript'` unless explicitly overridden (§4.7 above), so rollback is the unmodified default state rather than a separate procedure. |
+| 5.7 | Native event callbacks use one ordered API-v2 channel and drain before settlement | **met** | `boundary::events` owns one Rust ordinal sequence across progress, snapshots, and terminal. `nativeIrregularBackend.test.ts` exercises delayed progress and snapshot delivery, callback rejection, malformed data, gaps, duplicates, reversals, and post-terminal callbacks through the injectable addon seam. The real-addon smoke script asserts the terminal marker appears before its promise resolves. |
 
 ---
 
@@ -125,15 +126,14 @@ outcome.
   fact: "All five trace fields ... are otherwise compared field-for-field (`nativeIrregularBackend.ts`
   now reconstructs every one of them from the native boundary's real, structured wire projection)."
   `nativeIrregularBackend.ts`'s own "Trace fidelity" doc comment (re-read this session) confirms
-  the same: full field-for-field reconstruction, not an opaque passthrough. The only remaining
-  narrow exclusion is the ten named wall-clock-derived fields (timing values only, never
-  presence/absence) and one field inside state snapshots (`remainingPreparedPieces`, a
-  not-yet-decided piece queue not carried by the native snapshot DTO, per that same module's
-  "Deferred history-frame fidelity" doc). **Net effect: this is a documentation-lag issue in one
-  older report, not an unresolved semantic gap** — the actual current behavior (full five-trace
-  projection) is strictly better than what that stale sentence describes, and every differential
-  row that depends on trace comparison (`REQUIRED_ROWS`, all 16, this session) passes with the
-  traces compared in full.
+  the same: full field-for-field reconstruction, not an opaque passthrough. Native state snapshots
+  also carry and decode the complete `remainingPreparedPieces` queue, so retained snapshots,
+  streamed snapshots, and `makeIrregularWorkerOutput` history frames preserve exact reveal titles
+  and remaining IDs. The only narrow exclusion is the ten named wall-clock-derived field values
+  (presence or absence is still compared). **Net effect: this is a documentation-lag issue in one
+  older report, not an unresolved semantic gap**. The actual current behavior is strictly better
+  than what that stale sentence describes, and every differential row that depends on trace and
+  snapshot comparison passes with those structures compared in full.
 
 ## 7. Final gate suite — this session, run serially
 

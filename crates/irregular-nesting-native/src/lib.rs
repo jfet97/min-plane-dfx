@@ -57,7 +57,7 @@ pub struct Capability {
 #[napi]
 pub fn native_capability() -> Capability {
     Capability {
-        api_version: 1,
+        api_version: 2,
         crate_version: env!("CARGO_PKG_VERSION").to_string(),
         // Set by build.rs from Cargo's `TARGET` env var at compile time.
         target_triple: env!("IRREGULAR_NATIVE_TARGET").to_string(),
@@ -72,7 +72,7 @@ mod tests {
     #[test]
     fn native_capability_reports_expected_shape() {
         let capability = native_capability();
-        assert_eq!(capability.api_version, 1);
+        assert_eq!(capability.api_version, 2);
         assert_eq!(capability.crate_version, env!("CARGO_PKG_VERSION"));
         assert!(!capability.target_triple.is_empty());
         assert_eq!(capability.profiles, vec!["compact", "compact-short-side"]);

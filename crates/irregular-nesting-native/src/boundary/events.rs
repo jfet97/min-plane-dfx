@@ -1,96 +1,159 @@
-//! Streamed event delivery: an [`IrregularComputeEventSink`] implementation
-//! that forwards portfolio progress and state snapshots to JS through
-//! `ThreadsafeFunction` callbacks supplied to `runIrregularJob`.
+//! Unified streamed event delivery over one [`ThreadsafeFunction`] callback.
 //!
-//! TS counterpart / design source: `native-boundary.md` §10-§11. Every call
-//! here happens on the job's single coordinating thread (the napi
-//! `AsyncTask::compute` libuv worker thread `boundary::job` runs the whole
-//! job on) -- never from a Rayon worker (this crate has no Rayon dependency
-//! yet; Stage 3/4 concern, migration prompt §7/§15). Calls are always
-//! `ThreadsafeFunctionCallMode::NonBlocking` and their `Status` return value
-//! is deliberately ignored: delivery failure (e.g. the JS side has already
-//! begun tearing down) must never fail or slow the job, mirroring
-//! `nesting.worker.ts`'s own `send(...)` `Effect.catchCause(() =>
-//! Effect.void)` swallow pattern (native-boundary.md §10.1).
-//!
-//! # Ordinal
-//!
-//! `native-boundary.md` §10 requires "events carry an ordinal so TS can
-//! assert exact logical order." This sink uses one monotonic `u64` counter
-//! shared across *both* channels (portfolio progress and state snapshots),
-//! not one counter per channel: a single shared counter gives TS the
-//! strongest possible ordering assertion (a total order across every event
-//! this job ever emits), and is trivially correct to implement given both
-//! channels are only ever driven from this one coordinator thread in
-//! program order.
+//! Every event is produced on the job's single coordinator thread. The sink
+//! owns the only ordinal sequence, including the terminal marker, and records
+//! the first N-API delivery status failure for `boundary::job` to expose in its
+//! final envelope after it has attempted terminal delivery.
+
+use std::sync::mpsc::sync_channel;
 
 use napi::bindgen_prelude::Unknown;
 use napi::threadsafe_function::{ThreadsafeFunction, ThreadsafeFunctionCallMode};
 use napi::Status;
+use serde::Serialize;
 
 use crate::result::progress::IrregularComputeEventSink;
 use crate::result::{IrregularPortfolioProgress, IrregularStateSnapshot};
 
-use super::result::{project_state_snapshot, NativeIrregularPortfolioProgress};
+use super::result::{
+    project_state_snapshot, NativeIrregularPortfolioProgress, NativeStateSnapshot,
+};
 
-/// `T = String` (a JSON payload), `Args = String` (what the JS callback
-/// receives), `Return = Unknown<'static>` (the callback's return value is
-/// never read -- see this module's top doc on the swallow pattern).
+/// `T = String` (a JSON payload), `Args = String` (the JS callback's argument),
+/// and `Return = Unknown<'static>` (the callback return is not consumed).
 pub type JsonEventFn =
     ThreadsafeFunction<String, Unknown<'static>, String, Status, false, false, 0>;
 
+#[derive(Serialize)]
+#[serde(
+    tag = "kind",
+    rename_all = "kebab-case",
+    rename_all_fields = "camelCase"
+)]
+pub enum NativeIrregularEvent {
+    PortfolioProgress {
+        ordinal: u64,
+        progress: NativeIrregularPortfolioProgress,
+    },
+    StateSnapshot {
+        ordinal: u64,
+        snapshot: NativeStateSnapshot,
+        beam_width: f64,
+    },
+    Terminal {
+        ordinal: u64,
+    },
+}
+
 pub struct BoundaryEventSink<'a> {
-    ordinal: u64,
-    on_portfolio_progress: &'a JsonEventFn,
-    on_state_snapshot: Option<&'a JsonEventFn>,
+    next_ordinal: u64,
+    terminal_emitted: bool,
+    emit_state_snapshots: bool,
+    on_event: &'a JsonEventFn,
+    first_delivery_failure: Option<String>,
 }
 
 impl<'a> BoundaryEventSink<'a> {
-    pub fn new(
-        on_portfolio_progress: &'a JsonEventFn,
-        on_state_snapshot: Option<&'a JsonEventFn>,
-    ) -> Self {
+    pub fn new(on_event: &'a JsonEventFn, emit_state_snapshots: bool) -> Self {
         Self {
-            ordinal: 0,
-            on_portfolio_progress,
-            on_state_snapshot,
+            next_ordinal: 0,
+            terminal_emitted: false,
+            emit_state_snapshots,
+            on_event,
+            first_delivery_failure: None,
         }
     }
 
-    fn next_ordinal(&mut self) -> u64 {
-        let ordinal = self.ordinal;
-        self.ordinal += 1;
+    pub fn emit_terminal_and_wait(&mut self) {
+        if self.terminal_emitted {
+            debug_assert!(false, "attempted to emit a native event after terminal");
+            return;
+        }
+        self.terminal_emitted = true;
+        let ordinal = self.take_ordinal();
+        let json = serde_json::to_string(&NativeIrregularEvent::Terminal { ordinal })
+            .expect("native terminal event always serializes");
+        let (sender, receiver) = sync_channel(1);
+        let status = self.on_event.call_with_return_value(
+            json,
+            ThreadsafeFunctionCallMode::NonBlocking,
+            move |callback_result, _env| {
+                let acknowledgement = callback_result
+                    .map(|_| ())
+                    .map_err(|error| format!("{:?}", error.status));
+                let _ = sender.send(acknowledgement);
+                Ok(())
+            },
+        );
+        if status != Status::Ok {
+            self.record_delivery_failure(format!("{status:?}"));
+            return;
+        }
+        match receiver.recv() {
+            Ok(Ok(())) => {}
+            Ok(Err(status)) => self.record_delivery_failure(status),
+            Err(_) => self.record_delivery_failure(format!("{:?}", Status::Closing)),
+        }
+    }
+
+    pub fn first_delivery_failure(&self) -> Option<&str> {
+        self.first_delivery_failure.as_deref()
+    }
+
+    fn take_ordinal(&mut self) -> u64 {
+        let ordinal = self.next_ordinal;
+        self.next_ordinal += 1;
         ordinal
     }
-}
 
-#[derive(serde::Serialize)]
-struct OrdinalPortfolioProgress {
-    ordinal: u64,
-    #[serde(flatten)]
-    progress: NativeIrregularPortfolioProgress,
+    fn send(&mut self, event: NativeIrregularEvent) {
+        debug_assert!(
+            !self.terminal_emitted,
+            "attempted to emit a native event after terminal"
+        );
+        let json = serde_json::to_string(&event).expect("native irregular event always serializes");
+        let status = self
+            .on_event
+            .call(json, ThreadsafeFunctionCallMode::NonBlocking);
+        if status != Status::Ok {
+            self.record_delivery_failure(format!("{status:?}"));
+        }
+    }
+
+    fn record_delivery_failure(&mut self, failure: String) {
+        if self.first_delivery_failure.is_none() {
+            self.first_delivery_failure = Some(failure);
+        }
+    }
 }
 
 impl IrregularComputeEventSink for BoundaryEventSink<'_> {
-    fn emit_state_snapshot(&mut self, snapshot: &IrregularStateSnapshot, _beam_width: f64) {
-        let Some(tsfn) = self.on_state_snapshot else {
+    fn emit_state_snapshot(&mut self, snapshot: &IrregularStateSnapshot, beam_width: f64) {
+        if !self.emit_state_snapshots || self.terminal_emitted {
+            debug_assert!(
+                !self.terminal_emitted,
+                "attempted to emit a native event after terminal"
+            );
             return;
-        };
-        let ordinal = self.next_ordinal();
-        let dto = project_state_snapshot(snapshot, ordinal);
-        let json = serde_json::to_string(&dto).expect("state snapshot always serializes");
-        tsfn.call(json, ThreadsafeFunctionCallMode::NonBlocking);
+        }
+        let ordinal = self.take_ordinal();
+        self.send(NativeIrregularEvent::StateSnapshot {
+            ordinal,
+            snapshot: project_state_snapshot(snapshot),
+            beam_width,
+        });
     }
 
     fn emit_portfolio_progress(&mut self, progress: &IrregularPortfolioProgress) {
-        let ordinal = self.next_ordinal();
-        let payload = OrdinalPortfolioProgress {
+        if self.terminal_emitted {
+            debug_assert!(false, "attempted to emit a native event after terminal");
+            return;
+        }
+        let ordinal = self.take_ordinal();
+        self.send(NativeIrregularEvent::PortfolioProgress {
             ordinal,
             progress: NativeIrregularPortfolioProgress::from(progress),
-        };
-        let json = serde_json::to_string(&payload).expect("portfolio progress always serializes");
-        self.on_portfolio_progress
-            .call(json, ThreadsafeFunctionCallMode::NonBlocking);
+        });
     }
 }
 
@@ -100,21 +163,25 @@ mod tests {
     use crate::result::IrregularPortfolioPhase;
 
     #[test]
-    fn ordinal_portfolio_progress_flattens_and_stamps_ordinal() {
-        let progress = IrregularPortfolioProgress {
-            phase: IrregularPortfolioPhase::SharedArchive,
-            best_score: None,
-            elapsed_ms: 12.5,
-            decode_role: None,
-        };
-        let payload = OrdinalPortfolioProgress {
+    fn progress_and_terminal_share_the_tagged_ordinal_sequence() {
+        let progress = NativeIrregularEvent::PortfolioProgress {
             ordinal: 3,
-            progress: NativeIrregularPortfolioProgress::from(&progress),
+            progress: NativeIrregularPortfolioProgress::from(&IrregularPortfolioProgress {
+                phase: IrregularPortfolioPhase::SharedArchive,
+                best_score: None,
+                elapsed_ms: 12.5,
+                decode_role: None,
+            }),
         };
-        let json = serde_json::to_string(&payload).expect("serializes");
+        let terminal = NativeIrregularEvent::Terminal { ordinal: 4 };
+
         assert_eq!(
-            json,
-            r#"{"ordinal":3,"phase":"shared_archive","elapsedMs":12.5}"#
+            serde_json::to_string(&progress).expect("serializes"),
+            r#"{"kind":"portfolio-progress","ordinal":3,"progress":{"phase":"shared_archive","elapsedMs":12.5}}"#
+        );
+        assert_eq!(
+            serde_json::to_string(&terminal).expect("serializes"),
+            r#"{"kind":"terminal","ordinal":4}"#
         );
     }
 }

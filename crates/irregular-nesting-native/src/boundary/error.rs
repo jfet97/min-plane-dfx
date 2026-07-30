@@ -133,6 +133,15 @@ impl BoundaryError {
         .with_context("operation", "legacy-portfolio-unsupported")
     }
 
+    pub fn native_event_delivery_failed(status: impl Into<String>) -> Self {
+        BoundaryError::new(
+            "worker_protocol_error",
+            "nativeEventDelivery",
+            "native irregular event delivery failed",
+        )
+        .with_context("napiStatus", status)
+    }
+
     // =======================================================================
     // §12: panic containment, sanitized per §12's explicit rule -- the raw
     // panic payload/backtrace never enters the default failure envelope.
@@ -245,6 +254,18 @@ mod tests {
         assert_eq!(error.category, "not_implemented");
         assert_eq!(error.operation, "legacy-portfolio-unsupported");
         assert_eq!(error.context.get("service").unwrap(), "irregular-native");
+    }
+
+    #[test]
+    fn native_event_delivery_failure_keeps_only_the_status_name() {
+        let error = BoundaryError::native_event_delivery_failed("QueueFull");
+        assert_eq!(error.category, "worker_protocol_error");
+        assert_eq!(error.operation, "nativeEventDelivery");
+        assert_eq!(error.message, "native irregular event delivery failed");
+        assert_eq!(
+            error.context.get("napiStatus"),
+            Some(&"QueueFull".to_string())
+        );
     }
 
     #[test]

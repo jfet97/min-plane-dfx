@@ -118,7 +118,7 @@ Three independent version/identity strings, never conflated:
 
 | Identifier | Meaning | Example |
 |---|---|---|
-| `native_api_version` | The N-API **contract** version defined by this document (request/result/event/error shapes). Bumped only when a boundary-visible shape changes incompatibly. | `1` |
+| `native_api_version` | The N-API **contract** version defined by this document (request/result/event/error shapes). Bumped only when a boundary-visible shape changes incompatibly. | `2` |
 | `backend_version` | The Rust algorithm crate's own semantic version (`Cargo.toml` `version`). Bumped on any algorithm-affecting change, informational only. | `"0.1.0"` |
 | `geometry_backend_id` / `geometry_backend_version` | Identity of the vendored Clipper2 translation, mirroring the existing TS concept (`IrregularGeometrySettings.geometryBackendId`/`geometryBackendVersion`, `src/shared/irregular/domain.ts:280-299`, already part of the trusted request DTO — see §7.4). This pair is *not* about the request's geometry settings; it is the Rust addon's own compiled-in Clipper2-translation identity, reported for diagnostics. | `"clipper2-rs-vendor"` / `"2.0.1-18"` |
 
@@ -178,7 +178,7 @@ The TypeScript integration layer (the future analogue of
    the backend selector must not route to Rust (migration prompt §17).
 2. On successful load, call `get_capability()` and compare
    `native_api_version` against a compile-time constant embedded in the TS
-   wrapper (e.g. `EXPECTED_NATIVE_API_VERSION = 1`).
+   wrapper (`EXPECTED_NATIVE_API_VERSION = 2`).
 3. On mismatch, treat the addon as unavailable for the **same** reason as a
    load failure — do not attempt to call `run` on a version-mismatched
    addon. If a test or gate explicitly forced the Rust backend, this must
@@ -1023,200 +1023,89 @@ that exist in both. Notes and caveats to carry forward, all sourced from
 
 ## 10. Streamed event delivery
 
-Three logical event channels, all delivered via `ThreadsafeFunction`
-callbacks supplied once, in `NativeIrregularCallbacks`, to `.run()`:
+API v2 exposes one `onEvent(json)` callback and one `emitStateSnapshots`
+boolean on `runIrregularJob`. It does not expose independent progress,
+snapshot, or decision-trace callback channels. Each JSON value uses this
+tagged wire shape:
 
 ```rust
-#[napi(object)]
-pub struct NativeIrregularCallbacks {
-    /// Called for each `IrregularPortfolioProgress` the coordinator would
-    /// emit today via `emitPortfolioProgress` — see §10.1. Always present;
-    /// production `nesting.worker.ts` always sets `emitPortfolioProgress`
-    /// (`nesting.worker.ts:348-374`, unconditionally included), so the
-    /// native boundary requires it too rather than making it optional.
-    pub on_portfolio_progress: ThreadsafeFunction<NativeIrregularPortfolioProgress, ...>,
-    /// Called for each selected beam state snapshot — see §10.2. Optional:
-    /// present iff `historyMode !== 'off'` on the TypeScript side, mirroring
-    /// `emitStateSnapshot`'s own presence rule (`nesting.worker.ts:348-374`).
-    pub on_state_snapshot: Option<ThreadsafeFunction<NativeIrregularStateSnapshotRecord, ...>>,
-    /// Called per decision-trace event batch — see §10.3. Optional: present
-    /// iff `historyMode !== 'off' && workerMode === 'irregular-convex-v2'`,
-    /// mirroring `emitDecisionTrace`'s presence rule. Expected call count is
-    /// zero for both Compact and Compact Short Side today (§10.3).
-    pub on_decision_trace_batch: Option<ThreadsafeFunction<Vec<NativeIrregularDecisionTraceEvent>, ...>>,
+#[derive(Serialize)]
+#[serde(tag = "kind", rename_all = "kebab-case", rename_all_fields = "camelCase")]
+enum NativeIrregularEvent {
+    PortfolioProgress { ordinal: u64, progress: NativeIrregularPortfolioProgress },
+    StateSnapshot { ordinal: u64, snapshot: NativeStateSnapshot, beam_width: f64 },
+    Terminal { ordinal: u64 },
 }
 ```
+
+`BoundaryEventSink` owns the sole job-wide ordinal counter. It starts at
+zero and increments for every accepted progress or enabled snapshot event,
+then for exactly one terminal event. Retained result snapshots carry no
+stream ordinal. `NativeStateSnapshot` continues to include the complete
+`remainingPreparedPieces` queue, and TypeScript validates each item through
+`IrregularPreparedPieceSchema` before rebuilding `IrregularBeamState` and
+history output.
+
+The Rust coordinator permanently closes event production after
+`contain_panics` returns, then sends terminal exactly once with
+`ThreadsafeFunction::call_with_return_value`. The native worker blocks without
+an added timeout until the JavaScript `onEvent` callback has received and
+returned from terminal. Every ordinary non-blocking call status, the terminal
+call's immediate status, and the terminal callback result are checked. The
+first delivery failure replaces the ordinary outcome with a sanitized
+`worker_protocol_error` using operation `nativeEventDelivery` and only the
+N-API status name in context.
+
+The TypeScript `onEvent` callback validates the tagged union, requires a safe
+non-negative ordinal equal to its next expected value, and records terminal
+synchronously. A single promise tail serializes progress Effects and snapshot
+reconstruction/callbacks. After the acknowledged native transport settles,
+the adapter always drains that tail before applying deterministic failure
+precedence. The first protocol or callback failure suppresses later queued
+external callbacks while the tail itself continues to drain. Decode failures,
+ordinal gaps, duplicates, reversals, callback failures, and post-terminal
+events are stable `worker_protocol_error` failures. Transport resolution
+without a synchronously recorded terminal is an immediate typed
+`nativeEventTerminal` protocol failure because API v2 guarantees terminal
+receipt before native promise resolution.
 
 ### 10.1 Portfolio progress
 
-`IrregularPortfolioProgress` (`domain.ts:1037-1049`):
-
-```rust
-#[napi(object)]
-pub struct NativeIrregularPortfolioProgress {
-    pub decode_role: Option<String>,       // "production" | "canonical-reference"
-    pub phase: String,                     // IrregularPortfolioPhase literal
-    pub generation: Option<u32>,
-    pub evaluations_completed: Option<u32>,
-    pub population_size: Option<u32>,
-    pub best_score: Option<NativeIrregularLayoutScoreSummary>,
-    pub best_source: Option<String>,       // "beam" | "ga"
-    pub elapsed_ms: f64,
-    pub remaining_ms: Option<f64>,
-}
-```
-
-`elapsed_ms` should be produced by whatever clock Rust uses internally
-(monotonic; does not need to match any TS wall-clock value byte-for-byte —
-`worker-coordination.md` §7 already establishes this class of field as
-diagnostic/telemetry, not gated by exact-value tests). The **logical**
-phase sequence, count, and `bestScore`/optional-field presence are what
-migration prompt §15/§18.3 require exact parity for: "Preserve the exact
-logical event count, phase sequence, ordering, completed and total work
-values, best-score payloads, and optional-field presence." A differential
-test must exclude only `elapsed_ms`/`remaining_ms` as explicitly documented
-non-semantic fields, never the phase/count/best-score fields.
-
-Delivery: call from the job's single logically-serial coordinator thread
-only, at exactly the call sites `coordinateIntrinsicSharedArchive`'s Rust
-port uses for `emitSharedArchiveProgress`
-(`computeIrregularNesting.ts:1454` and siblings, per
-`worker-coordination.md` §13). **Never** call this `ThreadsafeFunction`
-from inside a Rayon closure — migration prompt §14.2 explicitly forbids
-"global trace append operations from Rayon workers," and progress emission
-is the same class of hazard even though it is not itself a trace-append.
-Use non-blocking `ThreadsafeFunction` calls (`ThreadsafeFunctionCallMode::NonBlocking`)
-and treat delivery failure (e.g. the JS side has already begun tearing
-down) as ignorable — matching `send(...)`'s
-`Effect.catchCause(() => Effect.void)` swallow pattern in
-`nesting.worker.ts:182-185`. Progress delivery must never fail or slow the
-job.
+Portfolio payloads remain the existing `IrregularPortfolioProgress` wire
+shape under `kind: "portfolio-progress"`. The logical phase sequence,
+count, score payloads, and optional-field presence remain parity-relevant;
+only monotonic elapsed-time diagnostics are non-semantic.
 
 ### 10.2 State snapshots / history frames
 
-TypeScript's `emitStateSnapshot(snapshot, beamWidth)`
-(`ComputeIrregularNestingOptions`, `computeIrregularNesting.ts:118`) feeds
-`makeIrregularHistoryFrame` (`irregularWorkerOutput.ts:42-82`), which needs
-`request`, a derived `strategyRunId`, the snapshot, `beamWidth`, and a
-`createdAt` timestamp to build one `IrregularHistoryFrame`. Every one of
-those inputs except `createdAt` is already available inside the Rust job
-(the request DTO and the profile-derived `strategyRunId` construction are
-both pure functions of data Rust already owns per §7); `createdAt` is a
-plain ISO-8601 timestamp Rust can generate itself with no behavioral
-difference (`worker-coordination.md` §12 confirms this class of field is
-not gated by exact-value tests, only by round-tripping through
-`Schema.String`).
+State payloads use `kind: "state-snapshot"` and contain the exact snapshot
+DTO plus `beamWidth`. TypeScript remains responsible for constructing the
+history frame. The snapshot queue is complete data, not reduced IDs: it
+contains the original prepared-piece source geometry, transforms, collision
+geometry, identity, and priority information. Retained `stateSnapshots`
+use the same projection for post-hoc parity checks.
 
-**Design choice: Rust emits the complete, already-assembled history-frame
-record**, not raw snapshot pieces that TypeScript reassembles:
+### 10.3 Terminal
 
-```rust
-#[napi(object)]
-pub struct NativeIrregularStateSnapshotRecord {
-    pub step_index: u32,
-    pub beam_rank: u32,
-    pub candidate_count: u32,
-    pub source: Option<String>,       // "beam" | "shared-archive"
-    pub state: NativeIrregularBeamStateSnapshot,  // see below
-    pub beam_width_for_frame: u32,    // hardcoded `1` for every shared-archive-sourced
-                                        // frame, mirroring irregularWorkerOutput.ts:78
-                                        // exactly — NOT input.beamWidth
-    pub title: String,                // 'shared-archive-final-selected' | 'shared-archive-selected-layout-reveal'
-    pub strategy_label: Option<String>,
-    pub created_at: String,           // ISO-8601, generated by Rust
-}
-```
-
-This mirrors the migration prompt's own framing exactly: "Rust owns the
-complete algorithm execution ... This includes ... result materialization
-... selected-layout reveal data needed by TypeScript history persistence"
-(§1). TypeScript's role becomes a dumb pass-through: append the record to
-the NDJSON file, optionally forward it over the existing RPC stream when
-`historyMode === 'stream'`, and increment `frameCount` — exactly what
-`makeFrameEmitter` (`nesting.worker.ts:156-188`) does today with a
-TS-constructed `IrregularHistoryFrame`, minus the construction step, which
-Rust now performs. **`beamWidthForFrame`'s hardcoded-`1` rule
-(`irregularWorkerOutput.ts:78`: `sharedArchive ? 1 : input.beamWidth`) and
-the `title`/`strategyLabel` selection rules (`:51-70`) must be ported
-verbatim into Rust**, not "cleaned up" into always using the real beam
-width or a computed title — these are exact, currently-accepted output
-values per `worker-coordination.md` §3.5.
-
-`NativeIrregularBeamStateSnapshot` mirrors `IrregularBeamState`'s
-externally-relevant fields (placements so far, remaining/unplaced piece
-IDs, occupied geometry identity, etc.) — full enumeration deferred to the
-semantic mapping table (`search-scoring.md`'s subject).
-
-Delivery: same threading rule as §10.1 — job coordinator thread only, in
-program order, non-blocking calls, delivery failure ignored. Ordering must
-be strict emission order (matches `Queue.offerUnsafe`/`Stream.runForEach`'s
-FIFO semantics, `nesting.worker.ts:212-230`); napi-rs's `ThreadsafeFunction`
-preserves call order for calls made from one calling thread in program
-order (verify this specific ordering guarantee for the exact napi 3.12
-API surface chosen in Stage 1, per §18).
-
-`state_snapshots` is also retained on `NativeIrregularComputeResult` (§8)
-as a complete post-hoc array for differential testing convenience
-(comparing a whole run's snapshot sequence against TypeScript's without
-needing to capture the live callback stream in a test), mirroring
-`IrregularComputeResult.stateSnapshots` (`computeIrregularNesting.ts:335`)
-directly — this is not a new field, it already exists on the plain
-TypeScript algorithm output today.
-
-### 10.3 Decision trace
-
-Per `worker-coordination.md` §1: for Compact and Compact Short Side,
-`emitDecisionTrace` is **accepted but never invoked** —
-`grep -n "emitDecisionTrace" computeIrregularNesting.ts` shows exactly two
-hits, the field declaration and one forwarding site inside
-`runSingleSheetPortfolio` (the legacy, non-archive, not-ported branch).
-`decisionTraceEventCount` is always `0` for these two profiles in
-production; the NDJSON file is still created (empty) whenever
-`historyMode !== 'off'`.
-
-**Design decision (flagged for explicit orchestrator confirmation, §18):**
-this design wires `on_decision_trace_batch` into the N-API surface (present
-under the same condition TypeScript uses today) but the Rust archive-path
-coordinator does not call it — matching current behavior exactly, with the
-callback plumbing present for uniformity with `on_portfolio_progress`/
-`on_state_snapshot` and to keep the door open for a future profile that
-does emit decision-trace events without a boundary-shape change. This is
-the conservative choice: it reproduces "accepted but zero calls" exactly,
-rather than either (a) silently dropping the callback field, which would
-be a boundary-shape difference for no behavioral reason, or (b) inventing
-new decision-trace emission for these two profiles, which the migration
-prompt's absolute-preservation rule (§2: "decision-trace ordering" is in
-the do-not-change list) would forbid without an explicit ruling.
-
-`NativeIrregularDecisionTraceEvent`'s exact field shape is
-`errors-protocol.md`/`decisionTrace.ts`'s subject, deferred to the semantic
-mapping table; since it is never constructed on the ported path today, its
-exact shape is not load-bearing for Stage 1/2 acceptance.
+`kind: "terminal"` has an ordinal and no result. The resolved native envelope
+remains the sole success or domain-error carrier. Terminal means every logical
+algorithm event was enqueued; it does not change cancellation or result
+semantics.
 
 ---
 
-## 11. Threading and ownership rules for all three event channels
+## 11. Threading and ownership rules for the unified event channel
 
-- All three `ThreadsafeFunction`s are invoked **only** from the job's
-  single dedicated coordinator OS thread (§6.1), never from a Rayon worker
-  thread, per migration prompt §7 ("Do not invoke JavaScript from Rayon
-  worker threads") and §15 ("Progress reporting must not require
-  JavaScript callbacks from Rayon threads. Aggregate native progress at
-  the same logical serial boundaries as TypeScript"). If a future Rayon
-  batch (Stage 4) produces information that would otherwise feed one of
-  these events, the batch must complete and be reduced back to the
-  coordinator thread before the event fires — exactly the "construct
-  ordered input → parallelize pure work → reassemble in order → apply ...
-  trace emission in the same logical order as TypeScript" pattern
-  (migration prompt §14.3).
-- The addon does not retain a raw N-API `Env` handle inside the coordinator
-  thread or any Rayon task (migration prompt §7); only `ThreadsafeFunction`
-  handles (which are explicitly designed by napi-rs for cross-thread use)
-  and owned Rust data cross into those threads.
-- `ThreadsafeFunction` handles are released as part of `dispose()` (§6.4),
-  not left to `Drop` timing alone, so that a `.cancel()`-then-`.dispose()`
-  sequence deterministically stops any further JS calls before returning
-  control to the caller.
+- The one `ThreadsafeFunction` is invoked only by the job's single
+  coordinator thread. Rayon work reduces to that thread before event
+  emission; no Rayon closure may own or call the sink.
+- The addon retains no raw N-API `Env` on coordinator or Rayon threads. Only
+  the `ThreadsafeFunction` and owned Rust data cross to the coordinator.
+- The TypeScript callback is synchronous at the N-API boundary. It validates
+  arrivals and appends ordered work only. It never fire-and-forgets a progress
+  Effect, and it accepts no callback after terminal or failure.
+- Existing cancellation polling and registry cleanup remain unchanged. This
+  API does not add RPC cancellation or registry-ownership behavior.
 
 ---
 

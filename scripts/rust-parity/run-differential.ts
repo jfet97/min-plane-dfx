@@ -3,11 +3,11 @@
  * Differential harness (docs/planning/rust-irregular-backend/backend-selection-rollback.md
  * §5): runs one real `NestingRequest` through **both** the TypeScript
  * (`computeIrregularNesting`) and native (`computeIrregularNestingNative`)
- * irregular-nesting backends -- sequentially, TypeScript first, never
- * concurrently -- and diffs the documented semantic projection (placements,
- * score, portfolio, diagnostics, sorted-piece order, and the
- * step/rank/candidate/source/placement/unplaced-id state-snapshot
- * sequence). Prints the exact first field where the two backends disagree
+ * irregular-nesting backends, sequentially with TypeScript first, and diffs
+ * the documented semantic projection (placements, score, portfolio,
+ * diagnostics, sorted-piece order, and the complete state-snapshot sequence,
+ * including remaining prepared pieces). Prints the exact first field where
+ * the two backends disagree
  * and exits nonzero on any real difference.
  *
  * This is a development/CI diagnostic instrument, never a production code
@@ -40,12 +40,6 @@
  *   marker before comparison (`normalizeTimingOnlyFields`): both backends
  *   must agree the field is present-or-absent, but its wall-clock-derived
  *   *value* is never compared.
- * - `IrregularBeamState.remainingPreparedPieces` inside each state
- *   snapshot: the native snapshot DTO does not carry the not-yet-decided
- *   piece queue (`nativeIrregularBackend.ts`'s own "Deferred history-frame
- *   fidelity" doc); the projection below compares only the
- *   step/rank/candidate-count/source/placements/unplaced-id fields every
- *   snapshot's wire representation actually carries on both sides.
  *
  * Usage:
  *   pnpm exec tsx --tsconfig tsconfig.node.json scripts/rust-parity/run-differential.ts \
@@ -71,10 +65,7 @@ import {
   DEFAULT_IRREGULAR_GEOMETRY_SETTINGS,
   makeCompactQualityIrregularOptimizerSettings
 } from '@shared/irregular/defaults.js'
-import {
-  IrregularNestingSettings,
-  IrregularOptimizerSettings
-} from '@shared/irregular/domain.js'
+import { IrregularNestingSettings, IrregularOptimizerSettings } from '@shared/irregular/domain.js'
 import { intrinsicSharedArchiveEligibility } from '@shared/irregular/executionMode.js'
 import { makePresetShapeDocument } from '@shared/presetShapes.js'
 import { preparePieces } from '@shared/preparePieces.js'
@@ -133,7 +124,9 @@ function parseArgs(argv: ReadonlyArray<string>): Args {
       } else {
         const parsed = Number(raw)
         if (!Number.isInteger(parsed) || parsed <= 0) {
-          throw new Error(`--pieces must be a positive integer or "all", received ${JSON.stringify(raw)}`)
+          throw new Error(
+            `--pieces must be a positive integer or "all", received ${JSON.stringify(raw)}`
+          )
         }
         pieces = parsed
       }
@@ -162,7 +155,10 @@ function parseArgs(argv: ReadonlyArray<string>): Args {
 // ===========================================================================
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
-const MIXED61_FIXTURE_PATH = join(REPO_ROOT, 'tests/fixtures/irregularSheetInvariance/mixed61-request.json')
+const MIXED61_FIXTURE_PATH = join(
+  REPO_ROOT,
+  'tests/fixtures/irregularSheetInvariance/mixed61-request.json'
+)
 const SHAPES_17_DIR = join(REPO_ROOT, 'tests/fixtures/irregularSeventeenShapes')
 
 interface FixtureJson {
@@ -175,7 +171,8 @@ interface FixtureJson {
  * own `sheetArgument` produces (label mirrors the raw string). */
 function parseSheet(value: string): SheetSpec {
   const match = /^(\d+(?:\.\d+)?)x(\d+(?:\.\d+)?)$/.exec(value)
-  if (match === null) throw new Error(`--sheet must be WIDTHxHEIGHT, received ${JSON.stringify(value)}`)
+  if (match === null)
+    throw new Error(`--sheet must be WIDTHxHEIGHT, received ${JSON.stringify(value)}`)
   const width = Number(match[1])
   const height = Number(match[2])
   if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
@@ -187,7 +184,10 @@ function parseSheet(value: string): SheetSpec {
 /** Applies `--profile`'s `intrinsicObjectiveProfileId` override the same way
  * `scripts/irregular-compact-baseline.ts` does at its own request-construction
  * site: replace only that one optimizer field, keep everything else. */
-function applyProfileOverride(request: NestingRequest, profile: 'compact' | 'short-side' | undefined): NestingRequest {
+function applyProfileOverride(
+  request: NestingRequest,
+  profile: 'compact' | 'short-side' | undefined
+): NestingRequest {
   if (profile === undefined) return request
   const settings = request.options.irregularSettings
   if (settings === undefined) throw new Error(`${request.jobId}: request has no irregular settings`)
@@ -206,13 +206,17 @@ function applyProfileOverride(request: NestingRequest, profile: 'compact' | 'sho
   })
 }
 
-/** Same production options literal `scripts/irregular-compact-baseline.ts`'s
- * `requestOptions` builds for its synthetic (triangle-20/shapes-17) fixtures. */
+/**
+ * Mirrors `scripts/irregular-compact-baseline.ts`'s synthetic fixture options,
+ * except that the differential worker boundary requires a positive timeout.
+ * `Number.MAX_SAFE_INTEGER` preserves the baseline harness's practical
+ * no-timeout behavior while satisfying the strict request schema.
+ */
 function compactBaselineRequestOptions(settings: IrregularNestingSettings): NestingOptions {
   return new NestingOptions({
     allowGlobalRotation: true,
     allowGlobalMirror: true,
-    timeoutMs: 0,
+    timeoutMs: Number.MAX_SAFE_INTEGER,
     workerMode: 'irregular-convex-v2',
     historyMode: 'off',
     historyScope: 'winning_path',
@@ -233,9 +237,19 @@ function buildSyntheticRequest(input: {
   readonly sources: ReadonlyArray<ImportedPiece>
 }): NestingRequest {
   const jobId = JobId.make(`run-differential-${input.fixtureLabel}-${input.sheet.label}`)
-  const prepared = preparePieces(input.sources, input.sheet, 10, jobId, undefined, undefined, () => input.fixtureLabel)
+  const prepared = preparePieces(
+    input.sources,
+    input.sheet,
+    10,
+    jobId,
+    undefined,
+    undefined,
+    () => input.fixtureLabel
+  )
   if (prepared.warnings.length > 0) {
-    throw new Error(`${input.fixtureLabel}: preparation warnings ${JSON.stringify(prepared.warnings)}`)
+    throw new Error(
+      `${input.fixtureLabel}: preparation warnings ${JSON.stringify(prepared.warnings)}`
+    )
   }
   const settings = new IrregularNestingSettings({
     geometry: DEFAULT_IRREGULAR_GEOMETRY_SETTINGS,
@@ -253,7 +267,12 @@ function buildSyntheticRequest(input: {
 }
 
 function triangle20Request(sheet: SheetSpec): NestingRequest {
-  const triangle = makePresetShapeDocument({ kind: 'triangle', width: 70, height: 60, label: 'triangle' }).pieces[0]
+  const triangle = makePresetShapeDocument({
+    kind: 'triangle',
+    width: 70,
+    height: 60,
+    label: 'triangle'
+  }).pieces[0]
   if (triangle === undefined) throw new Error('triangle preset must contain one piece')
   const sources = Array.from(
     { length: 20 },
@@ -311,7 +330,7 @@ function mixed61RequestAtSheet(raw: FixtureJson, sheet: SheetSpec): NestingReque
     sheet,
     options: new NestingOptions({
       ...decoded.options,
-      timeoutMs: 0,
+      timeoutMs: Number.MAX_SAFE_INTEGER,
       historyMode: 'off',
       irregularSettings: settings
     })
@@ -320,7 +339,8 @@ function mixed61RequestAtSheet(raw: FixtureJson, sheet: SheetSpec): NestingReque
 
 async function loadRequest(args: Args): Promise<NestingRequest> {
   if (args.requestFile !== undefined) {
-    if (!existsSync(args.requestFile)) throw new Error(`Request file not found: ${args.requestFile}`)
+    if (!existsSync(args.requestFile))
+      throw new Error(`Request file not found: ${args.requestFile}`)
     const raw = JSON.parse(readFileSync(args.requestFile, 'utf8')) as unknown
     return applyProfileOverride(Schema.decodeUnknownSync(NestingRequest)(raw), args.profile)
   }
@@ -494,6 +514,7 @@ function projectForComparison(result: IrregularComputeResult): unknown {
       beamRank: snapshot.beamRank,
       candidateCount: snapshot.candidateCount,
       source: snapshot.source,
+      remainingPreparedPieces: snapshot.state.remainingPreparedPieces,
       placedCollisionGeometries: snapshot.state.placedCollisionGeometries,
       unplacedPieceIds: snapshot.state.unplacedPieceIds
     })),
@@ -544,7 +565,9 @@ function firstDivergence(path: string, a: unknown, b: unknown): Divergence | und
     return undefined
   }
   if (isPlainObject(a) && isPlainObject(b)) {
-    const keys = [...new Set([...Object.keys(a), ...Object.keys(b)])].toSorted((x, y) => x.localeCompare(y))
+    const keys = [...new Set([...Object.keys(a), ...Object.keys(b)])].toSorted((x, y) =>
+      x.localeCompare(y)
+    )
     for (const key of keys) {
       const found = firstDivergence(path === '' ? key : `${path}.${key}`, a[key], b[key])
       if (found !== undefined) return found
@@ -596,7 +619,9 @@ async function main(): Promise<void> {
   console.log('[run-differential] running TypeScript backend...')
   const tsOutcome = await runToOutcome(runTypeScriptBackend(request, geometrySettings))
 
-  console.log('[run-differential] running Rust backend (sequentially, after TypeScript completed)...')
+  console.log(
+    '[run-differential] running Rust backend (sequentially, after TypeScript completed)...'
+  )
   const rustOutcome = await runToOutcome(runRustBackend(request, geometrySettings))
 
   console.log(
@@ -605,13 +630,19 @@ async function main(): Promise<void> {
   )
 
   if (!tsOutcome.ok || !rustOutcome.ok) {
-    if (!tsOutcome.ok) console.error(`[run-differential] TypeScript backend failed: ${tsOutcome.errorSummary}`)
-    if (!rustOutcome.ok) console.error(`[run-differential] Rust backend failed: ${rustOutcome.errorSummary}`)
+    if (!tsOutcome.ok)
+      console.error(`[run-differential] TypeScript backend failed: ${tsOutcome.errorSummary}`)
+    if (!rustOutcome.ok)
+      console.error(`[run-differential] Rust backend failed: ${rustOutcome.errorSummary}`)
     fail('at least one backend did not produce a result; nothing to compare.')
   }
 
-  const tsProjection = normalizeTimingOnlyFields(toComparable(projectForComparison(tsOutcome.value)))
-  const rustProjection = normalizeTimingOnlyFields(toComparable(projectForComparison(rustOutcome.value)))
+  const tsProjection = normalizeTimingOnlyFields(
+    toComparable(projectForComparison(tsOutcome.value))
+  )
+  const rustProjection = normalizeTimingOnlyFields(
+    toComparable(projectForComparison(rustOutcome.value))
+  )
   const divergence = firstDivergence('', tsProjection, rustProjection)
 
   if (divergence !== undefined) {

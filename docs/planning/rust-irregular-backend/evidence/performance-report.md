@@ -19,7 +19,7 @@ instructed batch list) — see §7, P5.
   ("perf: canonical-key buffer writing + deterministic Rayon infrastructure"), **working
   tree dirty** (per task instructions: do not commit). Uncommitted diff at measurement time:
   10 files changed (223 insertions, 52 deletions) — the N2 fix (`js_number/js_math.rs`
-  V8-exact `Math.hypot`), canonical-key/contact/transform/validation follow-on changes,
+  Node/V8-compatible two-argument `Math.hypot`), canonical-key/contact/transform/validation follow-on changes,
   packaging additions (`package.json` `build:native`/`test:differential` scripts,
   `.github/workflows/rust-native.yml`, `electron-builder.yml`), plus this batch's own
   additions: `examples/run_mixed61.rs` (VmHWM printer, +27 lines, additive-only),

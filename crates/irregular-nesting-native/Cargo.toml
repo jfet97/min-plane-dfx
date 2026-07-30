@@ -23,13 +23,11 @@ sha2 = "0.10"
 num-bigint = "0.4"
 ryu-js = "1"
 robust = "1.2.0"
-# Pure-Rust, platform-independent libm port (musl/fdlibm lineage). Used only
-# by `transforms::generator` for `atan2`/`asin`, whose Rust std results
-# (glibc's system libm on Linux) were measured to disagree with V8's own
-# fdlibm-derived `Math.atan2`/`Math.asin` implementation far more often than
-# this crate does -- see `transforms::generator`'s module doc for the
-# specific measured mismatch-rate evidence this choice is based on (not an
-# assumption that "portable libm generally matches V8 better").
+# Pure-Rust, platform-independent libm port (musl/fdlibm lineage). Used by
+# audited `Math.*` ports, including `transforms::generator`'s `atan2`/`asin`
+# and `transforms::flattening`'s remaining non-`hypot` trig calls. Each module
+# documents its own measured parity evidence; this is not a blanket claim that
+# portable libm matches V8 for every operation.
 libm = "0.2"
 # Job-owned deterministic parallelism (Stage 4,
 # docs/planning/rust-irregular-backend/parallelism-inventory.md +

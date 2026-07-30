@@ -25,7 +25,7 @@ jobs:
           run_install: false
       - uses: actions/setup-node@v4
         with:
-          node-version: 24.11.0
+          node-version: 24.11.1
           cache: pnpm
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm gate:capacity:production --output "$RUNNER_TEMP/capacity" --quiet
@@ -41,7 +41,7 @@ jobs:
           run_install: false
       - uses: actions/setup-node@v4
         with:
-          node-version: 24.11.0
+          node-version: 24.11.1
           cache: pnpm
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm gate:compact-nine-baselines --output-dir "$RUNNER_TEMP/layouts" --skip-png

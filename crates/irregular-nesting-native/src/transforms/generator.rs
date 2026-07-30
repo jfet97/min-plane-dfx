@@ -375,15 +375,15 @@ fn derive_effective_transform_policy(
         COMPACT_EDGE_SMALLER_DIMENSION_RATIO * smaller_collision_dimension_mm,
     );
 
-    // collision vertices are already local to placementReference, whose
-    // local coordinate is (0, 0) -- TS: `transformGenerator.ts:181-185`.
-    //
-    // N2 audit: routed through `js_math::hypot` (V8-exact), not `f64::hypot`
-    // -- `maximum_radius_mm` feeds `angle_deduplication_tolerance_deg` below,
-    // which determines the adaptive Compact policy's transform candidate
-    // deduplication tolerance and therefore which rotation candidates this
-    // function returns; a semantic (candidate-set-shaping) value, not a
-    // diagnostic one.
+    /*
+     * Collision vertices are already local to placementReference, whose local
+     * coordinate is (0, 0), matching TS: `transformGenerator.ts:181-185`.
+     *
+     * N2 audit: `js_math::hypot` supplies `maximum_radius_mm`, which feeds
+     * `angle_deduplication_tolerance_deg` below and determines the adaptive
+     * Compact policy's transform candidate deduplication tolerance. This is a
+     * semantic candidate-set-shaping value, not a diagnostic one.
+     */
     let maximum_radius_mm = boundary.iter().fold(0.0_f64, |maximum, point| {
         js_math::max(maximum, js_math::hypot(point.x, point.y))
     });
@@ -481,14 +481,15 @@ fn derive_usable_edges(
 
         let delta_x = end.x - start.x;
         let delta_y = end.y - start.y;
-        // N2 audit: routed through `js_math::hypot` (V8-exact), not
-        // `f64::hypot` -- `length` is stored as `UsableEdge::length_mm` /
-        // `AngleCandidate::edge_length_mm`, which
-        // `compare_representative_significance`/`compare_output_order`
-        // below subtract directly as a tie-break comparator input
-        // (`second.edge_length_mm - first.edge_length_mm`); a 1-ULP
-        // divergence here can flip candidate ordering exactly like N1's
-        // `sharedCollisionBoundaryLengthMm` case.
+        /*
+         * N2 audit: the Node/V8-compatible `js_math::hypot` supplies `length`,
+         * which is stored as `UsableEdge::length_mm` and
+         * `AngleCandidate::edge_length_mm`. The
+         * `compare_representative_significance` and `compare_output_order`
+         * tie-breaks subtract these fields directly; a one-ULP divergence can
+         * flip candidate ordering as it did for N1's
+         * `sharedCollisionBoundaryLengthMm`.
+         */
         let length = js_math::hypot(delta_x, delta_y);
         if !delta_x.is_finite() || !delta_y.is_finite() || !length.is_finite() {
             return Err("derived polygon edge length must be finite.".to_string());

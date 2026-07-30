@@ -87,35 +87,30 @@ them.
   vector-exact; flattening carries a documented 1e-9 tolerance on its
   deliberately-adversarial synthetic matrix, ~10⁶× below the 0.001 mm grid
   step). The authoritative gate is the end-to-end differential harness: if any
-  pipeline hash mismatch traces to trig, the affected call sites must switch
-  to a verbatim port of V8's ieee754 implementations. No tolerance may ever
+  pipeline hash mismatch traces to trig, the affected call sites need a
+  specifically measured compatibility implementation. No tolerance may ever
   migrate into comparators, keys, or hashes.
 
-  **Addendum (2026-07-30, Findings N1/N2 closure): a V8-exact `hypot` now
-  exists and is the mandated primitive for any `hypot` reaching a semantic
-  field.** `Math.hypot` specifically no longer needs the "neither std nor
-  libm reproduces it" tradeoff above — `js_number::js_math::hypot` is a
-  verbatim port of V8's own `Builtin_MathHypot` (Neumaier-compensated
-  normalized-sum algorithm, not fdlibm's high/low-word-splitting
-  `std`/`libm` algorithm), measured `0/21696` bit mismatches against a real
-  Node v24 oracle versus `7177/21696` (33%) for `std::f64::hypot` and
-  `7468/21696` (34%) for `libm::hypot` on the same vectors. N1
-  (`collinear_overlap_segment`'s comparator-flipping edge length) and N2
-  (`polygon_perimeter`'s metric-corrupting edge length, plus a fuller audit
-  of `canonical_grid::contact`'s and `transforms::generator`'s other
-  `.hypot(` call sites) both trace to exactly this divergence — see
+  **Addendum (2026-07-30, Findings N1/N2 closure): a Node/V8-compatible
+  two-argument `hypot` is the mandated primitive for any `hypot` reaching a
+  semantic field.** `js_number::js_math::hypot` normalizes both inputs by the
+  larger magnitude and uses a Neumaier-compensated normalized-square sum,
+  rather than fdlibm's high/low-word-splitting `std`/`libm` algorithm. Its
+  current evidence is reproducible: `scripts/rust-parity/dump-js-hypot.ts`
+  generates the committed 21,696-vector Node/V8 corpus at
+  `tests/vectors/js-hypot.json`, and `tests/js_hypot_vectors.rs` asserts it.
+  N1 (`collinear_overlap_segment`'s comparator-flipping edge length) and N2
+  (`polygon_perimeter`'s metric-corrupting edge length, plus a fuller audit of
+  `canonical_grid::contact`'s and `transforms::generator`'s other `.hypot(`
+  call sites) both trace to this divergence. See
   `differential-e2e-report.md`'s N1/N2 addenda for the full evidence trail.
   Ruling, going forward: **any call site whose `hypot` output can reach a
-  score, a metric, a comparator tie-break, or a value serialized onto a
-  result/trace DTO must route through `js_math::hypot`, not `f64::hypot` or
-  `libm::hypot`** — this is no longer a per-call-site tossup between two
-  imperfect options the way `atan2`/`asin`/`sin`/`cos` still are (no
-  verbatim V8 port exists for those yet); it is a strictly-better drop-in
-  replacement with proven full parity. Call sites confirmed to have **no**
-  reachable semantic field (pure Rust-only test assertions, or code with
-  zero production callers) may stay on `std`/`libm`, each such choice
-  documented at its own call site per this ruling's existing "per-call-site,
-  evidence-backed" policy.
+  score, metric, comparator tie-break, serialized result, or trace DTO must
+  route through `js_math::hypot`, not `f64::hypot` or `libm::hypot`**. Call
+  sites confirmed to have **no** reachable semantic field (pure Rust-only test
+  assertions, or code with zero production callers) may stay on `std`/`libm`,
+  each choice documented at its call site under this ruling's per-call-site,
+  evidence-backed policy.
 
 - **R22 — spatial-index continuation identity ordering — REVOKED 2026-07-30.**
   Originally: the Rust `PlacedCollisionSpatialIndex::continuation_identity`

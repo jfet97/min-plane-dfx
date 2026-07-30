@@ -507,6 +507,25 @@ fn opt_f64_bits(value: Option<f64>) -> Value {
     }
 }
 
+fn encode_json_numbers_as_bits(value: Value) -> Value {
+    match value {
+        Value::Array(values) => Value::Array(
+            values
+                .into_iter()
+                .map(encode_json_numbers_as_bits)
+                .collect(),
+        ),
+        Value::Object(values) => Value::Object(
+            values
+                .into_iter()
+                .map(|(key, value)| (key, encode_json_numbers_as_bits(value)))
+                .collect(),
+        ),
+        Value::Number(value) => f64_bits(value.as_f64().expect("prepared-piece number is f64")),
+        value => value,
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Request decoding: reconstructs a real Rust `NestingRequest` +
 // `IrregularNestingSettings` from one vector case's `request` object.
@@ -722,6 +741,11 @@ fn encode_snapshot(snapshot: &IrregularStateSnapshot) -> Value {
             Src::SharedArchive => "shared-archive",
         }),
         "placedPieceCount": f64_bits(snapshot.state.placed_collision_geometries.len() as f64),
+        "remainingPreparedPieces": snapshot.state.remaining_prepared_pieces.iter().map(|piece| {
+            encode_json_numbers_as_bits(
+                serde_json::to_value(&**piece).expect("prepared piece serializes"),
+            )
+        }).collect::<Vec<_>>(),
     })
 }
 

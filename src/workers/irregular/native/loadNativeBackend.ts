@@ -35,9 +35,8 @@ export interface NativeIrregularAddon {
   readonly nativeCapability: () => NativeCapability
   readonly runIrregularJob: (
     requestJson: string,
-    onPortfolioProgress: (json: string) => void,
-    onStateSnapshot: ((json: string) => void) | null,
-    onDecisionTraceBatch: ((json: string) => void) | null
+    onEvent: (json: string) => void,
+    emitStateSnapshots: boolean
   ) => Promise<string>
   readonly cancelIrregularJob: (jobId: string) => boolean
   readonly getLastJobDiagnostics: () => string
@@ -64,7 +63,7 @@ export type NativeCapabilityProbe =
     }
 
 /** N-API contract version this TypeScript build was written against. */
-export const EXPECTED_NATIVE_API_VERSION = 1
+export const EXPECTED_NATIVE_API_VERSION = 2
 
 function candidateAddonEntryPaths(): ReadonlyArray<string> {
   const moduleDir = dirname(fileURLToPath(import.meta.url))

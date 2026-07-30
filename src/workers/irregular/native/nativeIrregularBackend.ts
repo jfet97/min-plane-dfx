@@ -44,21 +44,13 @@
  * reasoning this module already applied to the five traces above before
  * they were reconstructed.
  *
- * # Deferred history-frame fidelity for live-streamed snapshots
+ * # State-snapshot fidelity
  *
- * A streamed/retained native state snapshot does not carry the queued,
- * not-yet-decided prepared-piece list (`native-boundary.md`'s own note on
- * `NativeStateSnapshot`: it "carries the real, exact placements/unplaced-ids/
- * step/rank/source data every consumer ... actually needs", deliberately
- * narrower than the full `IrregularBeamState`). This module reconstructs a
- * real `IrregularBeamState` from the exact placement/unplaced data (so
- * `canonicalOccupiedGeometryKey`, contact metrics, etc. are genuine, derived
- * values, not fabricated), with `remainingPreparedPieces: []` always -- the
- * only field this cannot reconstruct. The one downstream reader sensitive to
- * this is `makeIrregularHistoryFrame`'s title/`remainingPieceIds` heuristic,
- * used both for the live-streamed history frame and for
- * `makeIrregularWorkerOutput`'s `historyFrames` output (itself discarded by
- * `computeIrregularWorkerResult`, which only reads `.result`).
+ * Streamed and retained native snapshots carry the complete remaining
+ * prepared-piece queue alongside placements and unplaced IDs. The adapter
+ * decodes each prepared piece through the shared boundary schema and
+ * reconstructs the exact `IrregularBeamState` shape consumed by
+ * `makeIrregularHistoryFrame`, including reveal titles and remaining IDs.
  */
 import { Effect, Schema } from 'effect'
 import { PieceId } from '@shared/domain/ids.js'
@@ -73,6 +65,8 @@ import {
   IrregularNestingSettings,
   IrregularPlacedPiece,
   IrregularPlacedPieceSchema,
+  IrregularPreparedPiece,
+  IrregularPreparedPieceSchema,
   IrregularPortfolioProgress,
   IrregularPortfolioResult
 } from '@shared/irregular/domain.js'
@@ -159,7 +153,8 @@ export function encodeNativeRequestJson(
     options: { irregularSettings?: unknown }
   } & Record<string, unknown>
   if (encoded.options.irregularSettings === undefined) {
-    encoded.options.irregularSettings = Schema.encodeSync(IrregularNestingSettings)(geometrySettings)
+    encoded.options.irregularSettings =
+      Schema.encodeSync(IrregularNestingSettings)(geometrySettings)
   }
   return JSON.stringify(encoded)
 }
@@ -215,7 +210,10 @@ function addonUnavailableFailure(
   })
 }
 
-function protocolFailure(message: string, context?: Readonly<Record<string, unknown>>): WorkerResponseFailureError {
+function protocolFailure(
+  message: string,
+  context?: Readonly<Record<string, unknown>>
+): WorkerResponseFailureError {
   return new WorkerResponseFailureError({
     code: 'worker_protocol_error',
     message,
@@ -237,9 +235,14 @@ function protocolFailure(message: string, context?: Readonly<Record<string, unkn
 
 type WireBigInt<T, K extends keyof T> = Omit<T, K> & { readonly [P in K]: string }
 
-type WireIntrinsicCapacityObjective = WireBigInt<IntrinsicCapacityObjective, 'placedDoubledMaterialAreaGrid2'>
+type WireIntrinsicCapacityObjective = WireBigInt<
+  IntrinsicCapacityObjective,
+  'placedDoubledMaterialAreaGrid2'
+>
 
-function toIntrinsicCapacityObjective(wire: WireIntrinsicCapacityObjective): IntrinsicCapacityObjective {
+function toIntrinsicCapacityObjective(
+  wire: WireIntrinsicCapacityObjective
+): IntrinsicCapacityObjective {
   return {
     ...wire,
     placedDoubledMaterialAreaGrid2: BigInt(wire.placedDoubledMaterialAreaGrid2)
@@ -276,20 +279,30 @@ function toIntrinsicCapacityTopologyRetentionDepthTrace(
   }
 }
 
-type WireIntrinsicCapacitySearchTrace = Omit<IntrinsicCapacitySearchTrace, 'topologyRetentionDepths'> & {
+type WireIntrinsicCapacitySearchTrace = Omit<
+  IntrinsicCapacitySearchTrace,
+  'topologyRetentionDepths'
+> & {
   readonly topologyRetentionDepths:
     | ReadonlyArray<WireIntrinsicCapacityTopologyRetentionDepthTrace>
     | undefined
 }
 
-function toIntrinsicCapacitySearchTrace(wire: WireIntrinsicCapacitySearchTrace): IntrinsicCapacitySearchTrace {
+function toIntrinsicCapacitySearchTrace(
+  wire: WireIntrinsicCapacitySearchTrace
+): IntrinsicCapacitySearchTrace {
   return {
     ...wire,
-    topologyRetentionDepths: wire.topologyRetentionDepths?.map(toIntrinsicCapacityTopologyRetentionDepthTrace)
+    topologyRetentionDepths: wire.topologyRetentionDepths?.map(
+      toIntrinsicCapacityTopologyRetentionDepthTrace
+    )
   }
 }
 
-type WireIntrinsicCapacityWarmPrefixLaneTrace = Omit<IntrinsicCapacityWarmPrefixLaneTrace, 'endpoint'> & {
+type WireIntrinsicCapacityWarmPrefixLaneTrace = Omit<
+  IntrinsicCapacityWarmPrefixLaneTrace,
+  'endpoint'
+> & {
   readonly endpoint: WireIntrinsicCapacityObjective | undefined
 }
 
@@ -307,7 +320,9 @@ type WireIntrinsicCapacityCohesionShadowTrace = Omit<
   'endpoint' | 'retentionDepths'
 > & {
   readonly endpoint: WireIntrinsicCapacityObjective | undefined
-  readonly retentionDepths: ReadonlyArray<WireIntrinsicCapacityTopologyRetentionDepthTrace> | undefined
+  readonly retentionDepths:
+    | ReadonlyArray<WireIntrinsicCapacityTopologyRetentionDepthTrace>
+    | undefined
 }
 
 function toIntrinsicCapacityCohesionShadowTrace(
@@ -320,7 +335,10 @@ function toIntrinsicCapacityCohesionShadowTrace(
   }
 }
 
-type WireIntrinsicCapacityQualityWarmPrefixTrace = Omit<IntrinsicCapacityQualityWarmPrefixTrace, 'endpoint'> & {
+type WireIntrinsicCapacityQualityWarmPrefixTrace = Omit<
+  IntrinsicCapacityQualityWarmPrefixTrace,
+  'endpoint'
+> & {
   readonly endpoint: WireIntrinsicCapacityObjective | undefined
 }
 
@@ -427,7 +445,9 @@ function toIntrinsicCapacityTrace(wire: WireIntrinsicCapacityTrace): IntrinsicCa
     coldSearch: toIntrinsicCapacitySearchTrace(wire.coldSearch),
     warmPrefixLanes: wire.warmPrefixLanes?.map(toIntrinsicCapacityWarmPrefixLaneTrace),
     cohesionShadow:
-      wire.cohesionShadow === undefined ? undefined : toIntrinsicCapacityCohesionShadowTrace(wire.cohesionShadow),
+      wire.cohesionShadow === undefined
+        ? undefined
+        : toIntrinsicCapacityCohesionShadowTrace(wire.cohesionShadow),
     qualityWarmPrefix:
       wire.qualityWarmPrefix === undefined
         ? undefined
@@ -494,7 +514,11 @@ function withNativeTraces(
       ? { capacityTrace: toIntrinsicCapacityTrace(raw.capacityTrace) }
       : {}),
     ...(raw.intrinsicAnytimeSchedulerTrace !== undefined
-      ? { intrinsicAnytimeSchedulerTrace: toIntrinsicAnytimeSchedulerTrace(raw.intrinsicAnytimeSchedulerTrace) }
+      ? {
+          intrinsicAnytimeSchedulerTrace: toIntrinsicAnytimeSchedulerTrace(
+            raw.intrinsicAnytimeSchedulerTrace
+          )
+        }
       : {}),
     ...(raw.focusedCompleteReconstructionTrace !== undefined
       ? {
@@ -504,10 +528,18 @@ function withNativeTraces(
         }
       : {}),
     ...(raw.intrinsicShortSideObserverTrace !== undefined
-      ? { intrinsicShortSideObserverTrace: toIntrinsicShortSideObserverTrace(raw.intrinsicShortSideObserverTrace) }
+      ? {
+          intrinsicShortSideObserverTrace: toIntrinsicShortSideObserverTrace(
+            raw.intrinsicShortSideObserverTrace
+          )
+        }
       : {}),
     ...(raw.intrinsicShortSidePairFoldTrace !== undefined
-      ? { intrinsicShortSidePairFoldTrace: toIntrinsicShortSidePairFoldTrace(raw.intrinsicShortSidePairFoldTrace) }
+      ? {
+          intrinsicShortSidePairFoldTrace: toIntrinsicShortSidePairFoldTrace(
+            raw.intrinsicShortSidePairFoldTrace
+          )
+        }
       : {})
   }
 }
@@ -546,12 +578,12 @@ const NativeIrregularLayoutScoreSchema = Schema.Struct({
 
 /** `boundary::events`/`boundary::result`'s `NativeStateSnapshot` wire shape. */
 const NativeStateSnapshotSchema = Schema.Struct({
-  ordinal: Schema.Number,
   stepIndex: Schema.Number,
   beamRank: Schema.Number,
   candidateCount: Schema.Number,
   source: Schema.optional(Schema.Literals(['beam', 'shared-archive'])),
   placements: Schema.Array(IrregularPlacedPieceSchema),
+  remainingPreparedPieces: Schema.Array(IrregularPreparedPieceSchema),
   unplacedPieceIds: Schema.Array(PieceId)
 })
 type NativeStateSnapshotDto = Schema.Schema.Type<typeof NativeStateSnapshotSchema>
@@ -567,14 +599,16 @@ const NativeIrregularComputeResultSchema = Schema.Struct({
   portfolio: IrregularPortfolioResult
 })
 
-/** See module doc, "Deferred history-frame fidelity for live-streamed snapshots". */
+/** Reconstructs the complete state snapshot, including the exact pending queue. */
 function toIrregularStateSnapshot(dto: NativeStateSnapshotDto): IrregularStateSnapshot {
   const placedCollisionGeometries = dto.placements.map((placed) => new IrregularPlacedPiece(placed))
   const placementOrder = placedCollisionGeometries.map(
     (placed) => placed.placement.pieceId ?? placed.placement.sourcePieceId
   )
   const state = new IrregularBeamState({
-    remainingPreparedPieces: [],
+    remainingPreparedPieces: dto.remainingPreparedPieces.map(
+      (piece) => new IrregularPreparedPiece(piece)
+    ),
     placedCollisionGeometries,
     unplacedPieceIds: dto.unplacedPieceIds,
     placementOrder
@@ -613,9 +647,46 @@ function decodeNativeComputeResult(raw: unknown): IrregularComputeResult {
 }
 
 // ===========================================================================
-// Streamed event envelope shape (`boundary::events`'s `OrdinalPortfolioProgress`
-// -- `{"ordinal", ...flattened NativeIrregularPortfolioProgress}`).
+// Unified streamed event channel (`boundary::events`'s `NativeIrregularEvent`).
 // ===========================================================================
+
+const NativeIrregularEventSchema = Schema.Union([
+  Schema.Struct({
+    kind: Schema.Literal('portfolio-progress'),
+    ordinal: Schema.Number,
+    progress: IrregularPortfolioProgress
+  }),
+  Schema.Struct({
+    kind: Schema.Literal('state-snapshot'),
+    ordinal: Schema.Number,
+    snapshot: NativeStateSnapshotSchema,
+    beamWidth: Schema.Number
+  }),
+  Schema.Struct({
+    kind: Schema.Literal('terminal'),
+    ordinal: Schema.Number
+  })
+])
+type NativeIrregularEvent = Schema.Schema.Type<typeof NativeIrregularEventSchema>
+
+type EventChannelState = 'open' | 'terminal-seen' | 'closed'
+
+export interface NativeIrregularJobTransport {
+  readonly run: (
+    requestJson: string,
+    onEvent: (json: string) => void,
+    emitStateSnapshots: boolean
+  ) => Promise<string>
+  readonly cancel: (jobId: string) => boolean
+}
+
+interface NativeEventDispatcher {
+  readonly onEvent: (json: string) => void
+  readonly drain: () => Promise<void>
+  readonly close: () => void
+  readonly failure: () => WorkerResponseFailureError | undefined
+  readonly terminalSeen: () => boolean
+}
 
 interface NativeEnvelope {
   readonly ok: boolean
@@ -623,23 +694,126 @@ interface NativeEnvelope {
   readonly error?: NativeBoundaryErrorJson
 }
 
-/**
- * Tracks the shared cross-channel ordinal `boundary::events`'s `BoundaryEventSink`
- * assigns (one counter across both the portfolio-progress and state-snapshot
- * channels). Node/napi's `ThreadsafeFunctionCallMode::NonBlocking` calls from
- * one coordinating native thread are delivered to JS in call order (libuv's
- * own FIFO guarantee), so this is a defensive tripwire -- logged, never
- * thrown -- rather than the sole mechanism preserving logical order.
- */
-function makeOrdinalTripwire(jobId: string): (ordinal: number) => void {
-  let lastOrdinal = -1
-  return (ordinal: number) => {
-    if (ordinal <= lastOrdinal) {
-      console.error(
-        `[nativeIrregularBackend] out-of-order event ordinal ${ordinal} (last ${lastOrdinal}) for job ${jobId}`
-      )
+function nativeEventFailure(
+  operation: string,
+  context: Readonly<Record<string, unknown>> = {}
+): WorkerResponseFailureError {
+  return protocolFailure('native irregular event channel failed', { operation, ...context })
+}
+
+function decodedEventKind(json: string): string | undefined {
+  try {
+    const value: unknown = JSON.parse(json)
+    if (
+      typeof value === 'object' &&
+      value !== null &&
+      'kind' in value &&
+      typeof value.kind === 'string'
+    ) {
+      return value.kind
     }
-    lastOrdinal = Math.max(lastOrdinal, ordinal)
+  } catch {
+    return undefined
+  }
+  return undefined
+}
+
+function createNativeEventDispatcher(
+  options: NativeIrregularBackendOptions | undefined
+): NativeEventDispatcher {
+  let expectedOrdinal = 0
+  let state: EventChannelState = 'open'
+  let terminalOrdinal: number | undefined
+  let firstFailure: WorkerResponseFailureError | undefined
+  let externalCallbacksStopped = false
+  let tail = Promise.resolve()
+
+  const fail = (error: WorkerResponseFailureError): void => {
+    externalCallbacksStopped = true
+    if (firstFailure === undefined) firstFailure = error
+  }
+
+  const append = (operation: () => Promise<void> | void, eventKind: string): void => {
+    tail = tail.then(async () => {
+      if (externalCallbacksStopped) return
+      try {
+        await operation()
+      } catch {
+        fail(nativeEventFailure('nativeEventCallback', { eventKind }))
+      }
+    })
+  }
+
+  const emitPortfolioProgress =
+    options?.emitPortfolioProgress === undefined
+      ? undefined
+      : (progress: IrregularPortfolioProgress) =>
+          Effect.runPromise(options.emitPortfolioProgress?.(progress) ?? Effect.void)
+  const emitStateSnapshot = options?.emitStateSnapshot
+
+  return {
+    onEvent: (json: string): void => {
+      if (state === 'closed') return
+      if (state === 'terminal-seen') {
+        fail(
+          nativeEventFailure('nativeEventAfterTerminal', {
+            ...(decodedEventKind(json) === undefined ? {} : { eventKind: decodedEventKind(json) }),
+            ...(terminalOrdinal === undefined ? {} : { terminalOrdinal })
+          })
+        )
+        return
+      }
+      if (firstFailure !== undefined) return
+
+      let event: NativeIrregularEvent
+      try {
+        event = Schema.decodeUnknownSync(NativeIrregularEventSchema)(JSON.parse(json))
+      } catch {
+        fail(nativeEventFailure('nativeEventDecode', { nativeEventFailure: 'decode' }))
+        return
+      }
+
+      if (
+        !Number.isSafeInteger(event.ordinal) ||
+        event.ordinal < 0 ||
+        event.ordinal !== expectedOrdinal
+      ) {
+        fail(
+          nativeEventFailure('nativeEventOrdinal', {
+            expectedOrdinal,
+            receivedOrdinal: event.ordinal,
+            eventKind: event.kind
+          })
+        )
+        return
+      }
+      expectedOrdinal += 1
+
+      switch (event.kind) {
+        case 'portfolio-progress':
+          if (emitPortfolioProgress !== undefined) {
+            append(() => emitPortfolioProgress(event.progress), event.kind)
+          }
+          return
+        case 'state-snapshot':
+          if (emitStateSnapshot !== undefined) {
+            append(
+              () => emitStateSnapshot(toIrregularStateSnapshot(event.snapshot), event.beamWidth),
+              event.kind
+            )
+          }
+          return
+        case 'terminal':
+          state = 'terminal-seen'
+          terminalOrdinal = event.ordinal
+      }
+    },
+    drain: () => tail,
+    close: () => {
+      state = 'closed'
+    },
+    failure: () => firstFailure,
+    terminalSeen: () => terminalOrdinal !== undefined
   }
 }
 
@@ -649,19 +823,8 @@ function makeOrdinalTripwire(jobId: string): (ordinal: number) => void {
 
 /**
  * Runs one archive-eligible job on the native backend. Mirrors
- * `computeIrregularNesting`'s contract; see module doc for the exact
- * differences (error channel, deferred trace/history-frame fidelity).
- *
- * Cancellation: `options.isCancelled`, when supplied, is polled (never
- * pushed) at a configurable interval (production default 50ms) and bridged to the
- * native job's own push-based `cancelIrregularJob(jobId)` registry
- * (`boundary::job`'s cooperative `Arc<AtomicBool>` flag) -- the same
- * logical observation-point contract `computeIrregularNesting`'s own
- * `isCancelled` seam has (R19), adapted across the pull/push boundary
- * mismatch between the two backends' cancellation designs. Once the native
- * promise has been created, no code path here retries the job in
- * TypeScript on any failure, cancellation, or deadline outcome (§4.1's
- * no-retry rule).
+ * `computeIrregularNesting`'s contract and waits for the terminal event before
+ * exposing either a native result or a mapped native domain error.
  */
 export function computeIrregularNestingNative(
   request: NestingRequest,
@@ -670,9 +833,7 @@ export function computeIrregularNestingNative(
 ): Effect.Effect<IrregularComputeResult, WorkerResponseFailureError> {
   return Effect.gen(function* () {
     const probe = probeNativeIrregularAddon()
-    if (!probe.available) {
-      return yield* Effect.fail(addonUnavailableFailure(probe))
-    }
+    if (!probe.available) return yield* Effect.fail(addonUnavailableFailure(probe))
 
     const addon = yield* Effect.try({
       try: () => loadNativeIrregularAddon(),
@@ -681,72 +842,119 @@ export function computeIrregularNestingNative(
           requestedBackend: 'rust'
         })
     })
+    return yield* computeIrregularNestingNativeWithTransportForTests(
+      {
+        run: (requestJson, onEvent, emitStateSnapshots) =>
+          addon.runIrregularJob(requestJson, onEvent, emitStateSnapshots),
+        cancel: (jobId) => addon.cancelIrregularJob(jobId)
+      },
+      request,
+      geometrySettings,
+      options
+    )
+  })
+}
 
+/** Test-only transport seam for deterministic event-channel lifecycle coverage. */
+export function computeIrregularNestingNativeWithTransportForTests(
+  transport: NativeIrregularJobTransport,
+  request: NestingRequest,
+  geometrySettings: IrregularNestingSettings,
+  options?: NativeIrregularBackendOptions
+): Effect.Effect<IrregularComputeResult, WorkerResponseFailureError> {
+  return Effect.gen(function* () {
     const requestJson = yield* Effect.try({
       try: () => encodeNativeRequestJson(request, geometrySettings),
       catch: (cause) =>
-        protocolFailure(`failed to encode NestingRequest for the native backend: ${describeError(cause)}`, {
-          requestedBackend: 'rust'
-        })
+        protocolFailure(
+          `failed to encode NestingRequest for the native backend: ${describeError(cause)}`,
+          { requestedBackend: 'rust' }
+        )
     })
-
-    const noteOrdinal = makeOrdinalTripwire(request.jobId)
-
-    const onPortfolioProgress = (json: string): void => {
-      if (options?.emitPortfolioProgress === undefined) return
-      const parsed = JSON.parse(json) as { readonly ordinal: number } & Record<string, unknown>
-      noteOrdinal(parsed.ordinal)
-      // Schema decode silently ignores unrecognized wire keys by default, so the shared
-      // `ordinal` key (consumed only by `noteOrdinal` above) does not need stripping first.
-      const progress = Schema.decodeUnknownSync(IrregularPortfolioProgress)(parsed)
-      void Effect.runPromise(options.emitPortfolioProgress(progress)).catch(() => {})
-    }
-
-    const emitStateSnapshot = options?.emitStateSnapshot
-    const onStateSnapshot =
-      emitStateSnapshot === undefined
-        ? null
-        : (json: string): void => {
-            const parsed = JSON.parse(json) as { readonly ordinal: number }
-            noteOrdinal(parsed.ordinal)
-            const dto = Schema.decodeUnknownSync(NativeStateSnapshotSchema)(parsed)
-            emitStateSnapshot(toIrregularStateSnapshot(dto), geometrySettings.optimizer.beamWidth)
-          }
-
+    const dispatcher = createNativeEventDispatcher(options)
     let cancelPollTimer: ReturnType<typeof setInterval> | undefined
+    let cancellationPollingStopped = false
+    const stopCancellationPolling = (): void => {
+      if (cancellationPollingStopped) return
+      cancellationPollingStopped = true
+      if (cancelPollTimer !== undefined) {
+        clearInterval(cancelPollTimer)
+        cancelPollTimer = undefined
+      }
+    }
     const isCancelled = options?.isCancelled
     if (isCancelled !== undefined) {
       cancelPollTimer = setInterval(() => {
         if (isCancelled()) {
-          addon.cancelIrregularJob(request.jobId)
-          if (cancelPollTimer !== undefined) clearInterval(cancelPollTimer)
+          transport.cancel(request.jobId)
+          stopCancellationPolling()
         }
       }, isCancelledPollIntervalMs)
     }
 
-    const envelopeJson = yield* Effect.tryPromise({
-      try: () => addon.runIrregularJob(requestJson, onPortfolioProgress, onStateSnapshot, null),
-      catch: (cause) =>
-        protocolFailure(
-          `irregular-nesting-native runIrregularJob rejected unexpectedly: ${describeError(cause)}`,
-          { requestedBackend: 'rust' }
-        )
-    }).pipe(
-      Effect.ensuring(
-        Effect.sync(() => {
-          if (cancelPollTimer !== undefined) clearInterval(cancelPollTimer)
-        })
-      )
-    )
-
-    const envelope = yield* Effect.try({
-      try: () => JSON.parse(envelopeJson) as NativeEnvelope,
-      catch: () =>
-        protocolFailure('irregular-nesting-native returned a response that did not parse as JSON.', {
-          requestedBackend: 'rust'
-        })
+    const transportOutcome = yield* Effect.promise(async () => {
+      try {
+        return {
+          ok: true as const,
+          envelopeJson: await transport.run(
+            requestJson,
+            dispatcher.onEvent,
+            options?.emitStateSnapshot !== undefined
+          )
+        }
+      } catch (cause) {
+        return { ok: false as const, cause }
+      } finally {
+        stopCancellationPolling()
+      }
     })
 
+    const envelopeOutcome = transportOutcome.ok
+      ? (() => {
+          try {
+            return {
+              ok: true as const,
+              envelope: JSON.parse(transportOutcome.envelopeJson) as NativeEnvelope
+            }
+          } catch {
+            return { ok: false as const }
+          }
+        })()
+      : undefined
+
+    yield* Effect.promise(() => dispatcher.drain())
+    dispatcher.close()
+
+    const callbackFailure = dispatcher.failure()
+    if (callbackFailure !== undefined) return yield* Effect.fail(callbackFailure)
+
+    if (!transportOutcome.ok) {
+      return yield* Effect.fail(
+        protocolFailure(
+          `irregular-nesting-native runIrregularJob rejected unexpectedly: ${describeError(transportOutcome.cause)}`,
+          { operation: 'nativeTransport', requestedBackend: 'rust' }
+        )
+      )
+    }
+    if (envelopeOutcome?.ok !== true) {
+      return yield* Effect.fail(
+        protocolFailure(
+          'irregular-nesting-native returned a response that did not parse as JSON.',
+          {
+            operation: 'nativeEnvelopeDecode',
+            requestedBackend: 'rust'
+          }
+        )
+      )
+    }
+
+    const envelope = envelopeOutcome.envelope
+    if (!envelope.ok && envelope.error?.operation === 'nativeEventDelivery') {
+      return yield* Effect.fail(mapNativeErrorToWorkerFailure(envelope.error))
+    }
+    if (!dispatcher.terminalSeen()) {
+      return yield* Effect.fail(nativeEventFailure('nativeEventTerminal'))
+    }
     if (!envelope.ok) {
       if (envelope.error === undefined) {
         return yield* Effect.fail(
@@ -757,7 +965,6 @@ export function computeIrregularNestingNative(
       }
       return yield* Effect.fail(mapNativeErrorToWorkerFailure(envelope.error))
     }
-
     return yield* Effect.try({
       try: () => decodeNativeComputeResult(envelope.result),
       catch: (cause) =>

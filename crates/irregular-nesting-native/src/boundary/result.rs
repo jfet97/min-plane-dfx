@@ -89,7 +89,8 @@ use std::sync::Arc;
 use serde::Serialize;
 
 use crate::domain::{
-    CollisionGeometryDiagnostic, IrregularLayoutScoreSummary, IrregularPlacedPiece, PieceId,
+    CollisionGeometryDiagnostic, IrregularLayoutScoreSummary, IrregularPlacedPiece,
+    IrregularPreparedPiece, PieceId,
 };
 use crate::result::{
     IrregularComputeResult, IrregularPortfolioPhase, IrregularPortfolioProgress,
@@ -255,33 +256,27 @@ impl From<&IrregularPortfolioProgress> for NativeIrregularPortfolioProgress {
 // ===========================================================================
 // State snapshots. Simplified relative to native-boundary.md §10.2's full
 // "already-assembled history-frame record" design (title/strategyLabel/
-// beamWidthForFrame/createdAt require porting `makeIrregularHistoryFrame`/
-// `irregularStrategyRunId`, `irregularWorkerOutput.ts:30-82`, a separate,
-// not-yet-ported unit) -- this DTO carries the real, exact placements/
-// unplaced-ids/step/rank/source data every consumer of a snapshot actually
-// needs to reconstruct or forward a frame, plus the ordinal every streamed
-// event on this boundary carries.
+// beamWidthForFrame/createdAt remain TypeScript adapter concerns). This DTO
+// carries the complete beam-state data needed to reconstruct exact history
+// frames, including each full remaining prepared piece. Stream ordinals are
+// owned solely by `boundary::events` and are never retained result data.
 // ===========================================================================
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NativeStateSnapshot {
-    pub ordinal: u64,
     pub step_index: f64,
     pub beam_rank: f64,
     pub candidate_count: f64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source: Option<&'static str>,
     pub placements: Vec<Arc<IrregularPlacedPiece>>,
+    pub remaining_prepared_pieces: Vec<Arc<IrregularPreparedPiece>>,
     pub unplaced_piece_ids: Vec<PieceId>,
 }
 
-pub fn project_state_snapshot(
-    snapshot: &IrregularStateSnapshot,
-    ordinal: u64,
-) -> NativeStateSnapshot {
+pub fn project_state_snapshot(snapshot: &IrregularStateSnapshot) -> NativeStateSnapshot {
     NativeStateSnapshot {
-        ordinal,
         step_index: snapshot.step_index,
         beam_rank: snapshot.beam_rank,
         candidate_count: snapshot.candidate_count,
@@ -290,6 +285,7 @@ pub fn project_state_snapshot(
             IrregularStateSnapshotSource::SharedArchive => "shared-archive",
         }),
         placements: snapshot.state.placed_collision_geometries.clone(),
+        remaining_prepared_pieces: snapshot.state.remaining_prepared_pieces.clone(),
         unplaced_piece_ids: snapshot.state.unplaced_piece_ids.clone(),
     }
 }
@@ -337,8 +333,7 @@ pub fn project_result(result: &IrregularComputeResult) -> NativeIrregularCompute
     let state_snapshots = result
         .state_snapshots
         .iter()
-        .enumerate()
-        .map(|(ordinal, snapshot)| project_state_snapshot(snapshot, ordinal as u64))
+        .map(project_state_snapshot)
         .collect();
 
     NativeIrregularComputeResult {

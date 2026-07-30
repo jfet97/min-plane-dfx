@@ -98,8 +98,8 @@ fn extract_job_id_best_effort(request_json: &str) -> Option<String> {
 pub struct RunIrregularJobTask {
     job_id: Option<String>,
     request_json: String,
-    on_portfolio_progress: JsonEventFn,
-    on_state_snapshot: Option<JsonEventFn>,
+    on_event: JsonEventFn,
+    emit_state_snapshots: bool,
     cancel_flag: Arc<AtomicBool>,
 }
 
@@ -121,14 +121,12 @@ impl Task for RunIrregularJobTask {
         let started_at = Instant::now();
         let request_json = std::mem::take(&mut self.request_json);
         let cancel_flag = Arc::clone(&self.cancel_flag);
-        let on_portfolio_progress = &self.on_portfolio_progress;
-        let on_state_snapshot = self.on_state_snapshot.as_ref();
+        let mut sink = BoundaryEventSink::new(&self.on_event, self.emit_state_snapshots);
 
         let outcome = super::contain_panics(
             "runIrregularJob",
-            std::panic::AssertUnwindSafe(move || {
-                let mut sink = BoundaryEventSink::new(on_portfolio_progress, on_state_snapshot);
-                let mut is_cancelled = move || cancel_flag.load(Ordering::SeqCst);
+            std::panic::AssertUnwindSafe(|| {
+                let mut is_cancelled = || cancel_flag.load(Ordering::SeqCst);
                 let (envelope, geometry_cache, thread_count_used) =
                     run_job_from_json(&request_json, &mut sink, Some(&mut is_cancelled), None);
                 record_last_job_diagnostics(JobDiagnostics {
@@ -142,9 +140,19 @@ impl Task for RunIrregularJobTask {
                 Ok(envelope)
             }),
         );
+        sink.emit_terminal_and_wait();
+        let delivery_failure = sink.first_delivery_failure().map(str::to_string);
 
         if let Some(job_id) = &self.job_id {
             registry_lock().remove(job_id);
+        }
+
+        if let Some(status) = delivery_failure {
+            let boundary_error = super::error::BoundaryError::native_event_delivery_failed(status);
+            return Ok(format!(
+                r#"{{"ok":false,"error":{}}}"#,
+                boundary_error.to_json()
+            ));
         }
 
         match outcome {
@@ -179,22 +187,10 @@ impl Task for RunIrregularJobTask {
 #[napi]
 pub fn run_irregular_job(
     request_json: String,
-    on_portfolio_progress: Function<'_, String, Unknown<'static>>,
-    on_state_snapshot: Option<Function<'_, String, Unknown<'static>>>,
-    // Accepted for uniformity with `on_portfolio_progress`/`on_state_snapshot`
-    // and to keep the door open for a future profile that does emit
-    // decision-trace events, but never invoked -- the ported archive-path
-    // coordinator does not call `emitDecisionTrace` either (see
-    // `result::mod`'s "Deliberately not ported"; native-boundary.md §10.3).
-    _on_decision_trace_batch: Option<Function<'_, String, Unknown<'static>>>,
+    on_event: Function<'_, String, Unknown<'static>>,
+    emit_state_snapshots: bool,
 ) -> NapiResult<AsyncTask<RunIrregularJobTask>> {
-    let on_portfolio_progress = on_portfolio_progress
-        .build_threadsafe_function::<String>()
-        .build()?;
-    let on_state_snapshot = match on_state_snapshot {
-        Some(function) => Some(function.build_threadsafe_function::<String>().build()?),
-        None => None,
-    };
+    let on_event = on_event.build_threadsafe_function::<String>().build()?;
 
     let cancel_flag = Arc::new(AtomicBool::new(false));
     let job_id = extract_job_id_best_effort(&request_json);
@@ -205,8 +201,8 @@ pub fn run_irregular_job(
     Ok(AsyncTask::new(RunIrregularJobTask {
         job_id,
         request_json,
-        on_portfolio_progress,
-        on_state_snapshot,
+        on_event,
+        emit_state_snapshots,
         cancel_flag,
     }))
 }

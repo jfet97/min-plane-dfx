@@ -551,9 +551,10 @@ fn longest_canonical_grid_edge_length(edges: &[CanonicalGridEdge]) -> Option<f64
 /// serialized onto `IrregularLayoutScore`/`IrregularBeamState`. A `hypot`
 /// call whose output can reach a signature string, a comparator, or a
 /// serialized metric is exactly the case R21 and [`js_math::hypot`]'s own
-/// doc comment call out — routed through [`js_math::hypot`] (the verbatim
-/// V8 port, 0/21696 oracle mismatches) accordingly, same as this module's
-/// [`collinear_overlap_segment`] precedent.
+/// doc comment call out. It therefore routes through the two-argument
+/// Node/V8-compatible [`js_math::hypot`], validated by its committed
+/// 21,696-vector oracle, like this module's [`collinear_overlap_segment`]
+/// precedent.
 fn canonical_grid_edge_length_mm(edge: &CanonicalGridEdge) -> Option<f64> {
     let dx = edge.end.x - edge.start.x;
     let dy = edge.end.y - edge.start.y;
@@ -964,16 +965,15 @@ fn collinear_overlap_length(first: &PolygonEdge, second: &PolygonEdge) -> Option
 /// already-translated floating-mm convex polygons, never on canonical-grid
 /// integers.
 ///
-/// R21/N1: this function's `edge_length` routes through [`js_math::hypot`] (a
-/// verbatim port of V8's `Math.hypot`), not `f64::hypot` — this was the
-/// original call site with **measured** evidence of an observable
+/// R21/N1: this function's `edge_length` routes through [`js_math::hypot`],
+/// the two-argument Node/V8-compatible implementation, not `f64::hypot`.
+/// This was the original call site with **measured** evidence of an observable
 /// comparator-flipping divergence: `segment.length_mm` (summed into
 /// `shared_convex_polygon_boundary_length`'s total, which becomes
 /// `IrregularBeamState::shared_collision_boundary_length_mm`) feeds
 /// `search::strict_decoder::IntrinsicStrictLocalScore::shared_boundary_length_mm`,
-/// a `compare_local_scores` tie-break field — see [`js_math::hypot`]'s own
-/// doc for the full evidence trail (differential fixture matrix repro, the
-/// 21,696-case V8 oracle sweep).
+/// a `compare_local_scores` tie-break field. See [`js_math::hypot`]'s doc for
+/// the reproducible 21,696-vector generator, committed corpus, and test.
 ///
 /// N2 addendum: this module's *other* `hypot` call sites
 /// (`polygon_edge_length`/`point_distance`/`convex_turn_cosine`/
@@ -985,8 +985,9 @@ fn collinear_overlap_length(first: &PolygonEdge, second: &PolygonEdge) -> Option
 /// both `compare_local_scores` and serialized result DTOs — so they are now
 /// routed through [`js_math::hypot`] too (see each function's own doc
 /// comment). Every `.hypot(`-style call site in this module is therefore
-/// V8-exact today; the "per-call-site, not blanket" framing in R21's
-/// original text was about auditing each site on its own evidence, not
+/// Node/V8-compatible against the committed oracle today; the "per-call-site,
+/// not blanket" framing in R21's original text was about auditing each site
+/// on its own evidence, not
 /// about deliberately leaving proven-semantic sites on `f64::hypot`.
 fn collinear_overlap_segment(
     first: &PolygonEdge,

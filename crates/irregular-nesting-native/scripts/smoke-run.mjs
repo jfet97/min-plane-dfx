@@ -109,7 +109,9 @@ async function main() {
   buildAddon();
   const native = loadAddon();
 
-  log(`native capability: ${JSON.stringify(native.nativeCapability())}`);
+  const capability = native.nativeCapability();
+  log(`native capability: ${JSON.stringify(capability)}`);
+  assert(capability.apiVersion === 2, 'native capability reports API version 2');
 
   const request = deriveTwoPieceRequest();
   log(`derived a ${request.pieces.length}-piece request from the mixed61 fixture (sheet ${request.sheet.width}x${request.sheet.height}mm)`);
@@ -117,11 +119,16 @@ async function main() {
   const progressEvents = [];
   const stateSnapshotEvents = [];
 
+  let terminalEvent;
   const promiseValue = native.runIrregularJob(
     JSON.stringify(request),
-    (json) => progressEvents.push(JSON.parse(json)),
-    (json) => stateSnapshotEvents.push(JSON.parse(json)),
-    null
+    (json) => {
+      const event = JSON.parse(json);
+      if (event.kind === 'portfolio-progress') progressEvents.push(event);
+      if (event.kind === 'state-snapshot') stateSnapshotEvents.push(event);
+      if (event.kind === 'terminal') terminalEvent = event;
+    },
+    true
   );
   assert(promiseValue instanceof Promise, 'runIrregularJob returns a real Promise');
 
@@ -145,6 +152,11 @@ async function main() {
   }
   log(`portfolio progress events: ${progressEvents.length} (ordinals: ${progressEvents.map((e) => e.ordinal).join(',')})`);
   log(`state snapshot events: ${stateSnapshotEvents.length}`);
+  assert(terminalEvent !== undefined, 'terminal event fired before the promise resolved');
+  assert(
+    terminalEvent.ordinal === progressEvents.length + stateSnapshotEvents.length,
+    'terminal ordinal follows every algorithm event'
+  );
 
   const result = envelope.result;
   assert(Array.isArray(result.placedCollisionGeometries), 'result carries placedCollisionGeometries');
@@ -175,7 +187,7 @@ async function main() {
   // Malformed-request and archive-ineligible-routing paths both resolve
   // (never reject/throw) with a distinguishable `ok:false` envelope -- see
   // `boundary::run_job`'s own doc for why.
-  const malformedEnvelope = JSON.parse(await native.runIrregularJob('not json', () => {}, null, null));
+  const malformedEnvelope = JSON.parse(await native.runIrregularJob('not json', () => {}, false));
   assert(malformedEnvelope.ok === false, 'malformed JSON resolves ok:false');
   assert(malformedEnvelope.error.category === 'worker_protocol_error', 'malformed JSON maps to worker_protocol_error');
 

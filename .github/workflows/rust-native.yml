@@ -91,13 +91,18 @@ jobs:
           run_install: false
       - uses: actions/setup-node@v4
         with:
-          node-version: 24.11.0
+          node-version: 24.11.1
           cache: pnpm
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: crates/irregular-nesting-native -> target
       - run: pnpm install --frozen-lockfile --ignore-scripts
+      # `--ignore-scripts` also skips Electron's binary download. Install that
+      # runtime explicitly so the Electron-as-Node smoke exercises the addon
+      # instead of failing in `electron/index.js` before addon loading begins.
+      - name: Install Electron runtime explicitly
+        run: node node_modules/electron/install.js
       # Deliberate, explicit, non-lifecycle build step -- native
       # compilation is never triggered by `pnpm install` itself
       # (build-packaging.md §3).
@@ -111,8 +116,8 @@ jobs:
             const addon = require('./crates/irregular-nesting-native/npm/index.cjs');
             const capability = addon.nativeCapability();
             console.log('nativeCapability():', JSON.stringify(capability));
-            if (typeof capability.apiVersion !== 'number') {
-              throw new Error('bad capability shape: apiVersion is not a number');
+            if (capability.apiVersion !== 2) {
+              throw new Error('native addon API mismatch: expected apiVersion 2, received ' + capability.apiVersion);
             }
           "
       # `pnpm test` runs vitest inside Electron's bundled (ELECTRON_RUN_AS_NODE)
@@ -125,8 +130,8 @@ jobs:
             const addon = require('./crates/irregular-nesting-native/npm/index.cjs');
             const capability = addon.nativeCapability();
             console.log('nativeCapability() under Electron-as-node:', JSON.stringify(capability));
-            if (typeof capability.apiVersion !== 'number') {
-              throw new Error('bad capability shape: apiVersion is not a number');
+            if (capability.apiVersion !== 2) {
+              throw new Error('native addon API mismatch: expected apiVersion 2, received ' + capability.apiVersion);
             }
           "
 
@@ -142,13 +147,15 @@ jobs:
           run_install: false
       - uses: actions/setup-node@v4
         with:
-          node-version: 24.11.0
+          node-version: 24.11.1
           cache: pnpm
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: crates/irregular-nesting-native -> target
       - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Verify Node/V8 hypot oracle corpus
+        run: pnpm exec tsx --tsconfig tsconfig.node.json scripts/rust-parity/dump-js-hypot.ts --check
       # Deliberate, explicit, non-lifecycle build step (same rationale as
       # native-build-smoke above) -- required before `pnpm test:differential`
       # can load the native backend at all.
