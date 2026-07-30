@@ -120,6 +120,13 @@ jobs:
               throw new Error('native addon API mismatch: expected apiVersion 2, received ' + capability.apiVersion);
             }
           "
+      # The fixture directly requires the staged addon and throws if it is
+      # absent. The cleanup proof accepts termination only after its parent
+      # observes both lifecycle counters with the JavaScript callback blocked.
+      - name: Worker terminal barrier and cleanup proof (plain Node)
+        run: |
+          node crates/irregular-nesting-native/scripts/worker-terminal-lifecycle-probe.mjs terminal-barrier
+          node crates/irregular-nesting-native/scripts/worker-terminal-lifecycle-probe.mjs cleanup-proof
       # `pnpm test` runs vitest inside Electron's bundled (ELECTRON_RUN_AS_NODE)
       # Node, a distinct ABI context from plain system Node
       # (tests-gates-inventory.md §12's dual-runtime finding) -- prove the
@@ -134,6 +141,10 @@ jobs:
               throw new Error('native addon API mismatch: expected apiVersion 2, received ' + capability.apiVersion);
             }
           "
+      - name: Worker terminal barrier and cleanup proof (Electron-as-node)
+        run: |
+          ELECTRON_RUN_AS_NODE=1 pnpm exec electron crates/irregular-nesting-native/scripts/worker-terminal-lifecycle-probe.mjs terminal-barrier
+          ELECTRON_RUN_AS_NODE=1 pnpm exec electron crates/irregular-nesting-native/scripts/worker-terminal-lifecycle-probe.mjs cleanup-proof
 
   differential-required:
     name: Differential tests (required rows)

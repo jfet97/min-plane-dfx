@@ -13,6 +13,7 @@
 //! surface: nothing about the shape of `runIrregularJob`'s resolved
 //! envelope changes depending on whether a caller ever calls it.
 
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
 
 use serde::Serialize;
@@ -31,6 +32,40 @@ pub struct JobDiagnostics {
     pub thread_count_used: u32,
     pub wall_clock_ms: f64,
     pub cache_telemetry: CacheTelemetrySnapshot,
+}
+
+#[derive(Debug, Clone, Copy, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ProcessLifecycleDiagnostics {
+    terminal_cleanup_hooks_fired: u64,
+    terminal_latch_close_requests_by_cleanup: u64,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct LastJobDiagnosticsJson<'a> {
+    #[serde(flatten)]
+    job: &'a JobDiagnostics,
+    process_lifecycle: ProcessLifecycleDiagnostics,
+}
+
+static TERMINAL_CLEANUP_HOOKS_FIRED: AtomicU64 = AtomicU64::new(0);
+static TERMINAL_LATCH_CLOSE_REQUESTS_BY_CLEANUP: AtomicU64 = AtomicU64::new(0);
+
+pub fn increment_terminal_cleanup_hooks_fired() {
+    TERMINAL_CLEANUP_HOOKS_FIRED.fetch_add(1, Ordering::SeqCst);
+}
+
+pub fn increment_terminal_latch_close_requests_by_cleanup() {
+    TERMINAL_LATCH_CLOSE_REQUESTS_BY_CLEANUP.fetch_add(1, Ordering::SeqCst);
+}
+
+fn process_lifecycle_diagnostics() -> ProcessLifecycleDiagnostics {
+    ProcessLifecycleDiagnostics {
+        terminal_cleanup_hooks_fired: TERMINAL_CLEANUP_HOOKS_FIRED.load(Ordering::SeqCst),
+        terminal_latch_close_requests_by_cleanup: TERMINAL_LATCH_CLOSE_REQUESTS_BY_CLEANUP
+            .load(Ordering::SeqCst),
+    }
 }
 
 fn last_job_diagnostics_slot() -> &'static Mutex<Option<JobDiagnostics>> {
@@ -56,9 +91,11 @@ pub fn last_job_diagnostics_json() -> String {
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner());
     match slot.as_ref() {
-        Some(diagnostics) => {
-            serde_json::to_string(diagnostics).expect("JobDiagnostics always serializes")
-        }
+        Some(diagnostics) => serde_json::to_string(&LastJobDiagnosticsJson {
+            job: diagnostics,
+            process_lifecycle: process_lifecycle_diagnostics(),
+        })
+        .expect("JobDiagnostics always serializes"),
         None => "null".to_string(),
     }
 }
@@ -79,5 +116,13 @@ mod tests {
         let parsed: serde_json::Value = serde_json::from_str(&json).expect("valid JSON");
         assert_eq!(parsed["backendVersion"], serde_json::json!("0.1.0"));
         assert_eq!(parsed["threadCountUsed"], serde_json::json!(1));
+        assert_eq!(
+            parsed["processLifecycle"]["terminalCleanupHooksFired"],
+            serde_json::json!(0)
+        );
+        assert_eq!(
+            parsed["processLifecycle"]["terminalLatchCloseRequestsByCleanup"],
+            serde_json::json!(0)
+        );
     }
 }

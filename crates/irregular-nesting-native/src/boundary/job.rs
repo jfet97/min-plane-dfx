@@ -37,16 +37,20 @@
 //! `false`).
 
 use std::collections::HashMap;
+use std::ffi::c_void;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Instant;
 
 use napi::bindgen_prelude::{AsyncTask, Function, Unknown};
-use napi::{Env, Result as NapiResult, Task};
+use napi::{Env, Error, Result as NapiResult, Status, Task};
 use napi_derive::napi;
 
-use super::diagnostics::{last_job_diagnostics_json, record_last_job_diagnostics, JobDiagnostics};
-use super::events::{BoundaryEventSink, JsonEventFn};
+use super::diagnostics::{
+    increment_terminal_cleanup_hooks_fired, last_job_diagnostics_json, record_last_job_diagnostics,
+    JobDiagnostics,
+};
+use super::events::{BoundaryEventSink, JsonEventFn, TerminalLatch};
 use super::run_job::run_job_from_json;
 
 fn job_registry() -> &'static Mutex<HashMap<String, Arc<AtomicBool>>> {
@@ -58,6 +62,78 @@ fn registry_lock() -> std::sync::MutexGuard<'static, HashMap<String, Arc<AtomicB
     job_registry()
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+struct TerminalCleanupHookData {
+    terminal_latch: TerminalLatch,
+    fired: Arc<AtomicBool>,
+}
+
+struct TerminalCleanupHook {
+    data: *mut TerminalCleanupHookData,
+    fired: Arc<AtomicBool>,
+}
+
+unsafe impl Send for TerminalCleanupHook {}
+
+impl TerminalCleanupHook {
+    fn register(env: &Env, terminal_latch: TerminalLatch) -> NapiResult<Self> {
+        let fired = Arc::new(AtomicBool::new(false));
+        let data = Box::into_raw(Box::new(TerminalCleanupHookData {
+            terminal_latch,
+            fired: Arc::clone(&fired),
+        }));
+        let status = Status::from(unsafe {
+            napi::sys::napi_add_env_cleanup_hook(
+                env.raw(),
+                Some(terminal_cleanup_hook),
+                data.cast::<c_void>(),
+            )
+        });
+        if status != Status::Ok {
+            unsafe {
+                drop(Box::from_raw(data));
+            }
+            return Err(Error::new(
+                status,
+                "native irregular terminal cleanup hook registration failed",
+            ));
+        }
+        Ok(Self { data, fired })
+    }
+
+    fn remove_and_reclaim(self, env: &Env) -> NapiResult<()> {
+        if self.fired.load(Ordering::Acquire) {
+            return Ok(());
+        }
+        let status = Status::from(unsafe {
+            napi::sys::napi_remove_env_cleanup_hook(
+                env.raw(),
+                Some(terminal_cleanup_hook),
+                self.data.cast::<c_void>(),
+            )
+        });
+        if status != Status::Ok {
+            return Err(Error::new(
+                status,
+                "native irregular terminal cleanup hook removal failed",
+            ));
+        }
+        unsafe {
+            drop(Box::from_raw(self.data));
+        }
+        Ok(())
+    }
+}
+
+unsafe extern "C" fn terminal_cleanup_hook(data: *mut c_void) {
+    if data.is_null() {
+        return;
+    }
+    let hook_data = unsafe { Box::from_raw(data.cast::<TerminalCleanupHookData>()) };
+    hook_data.fired.store(true, Ordering::Release);
+    increment_terminal_cleanup_hooks_fired();
+    hook_data.terminal_latch.close_for_cleanup();
 }
 
 /// Requests cooperative cancellation of the job identified by `job_id`.
@@ -101,6 +177,8 @@ pub struct RunIrregularJobTask {
     on_event: JsonEventFn,
     emit_state_snapshots: bool,
     cancel_flag: Arc<AtomicBool>,
+    terminal_latch: TerminalLatch,
+    terminal_cleanup_hook: Option<TerminalCleanupHook>,
 }
 
 impl Task for RunIrregularJobTask {
@@ -121,7 +199,11 @@ impl Task for RunIrregularJobTask {
         let started_at = Instant::now();
         let request_json = std::mem::take(&mut self.request_json);
         let cancel_flag = Arc::clone(&self.cancel_flag);
-        let mut sink = BoundaryEventSink::new(&self.on_event, self.emit_state_snapshots);
+        let mut sink = BoundaryEventSink::new(
+            &self.on_event,
+            self.emit_state_snapshots,
+            self.terminal_latch.clone(),
+        );
 
         let outcome = super::contain_panics(
             "runIrregularJob",
@@ -141,14 +223,15 @@ impl Task for RunIrregularJobTask {
             }),
         );
         sink.emit_terminal_and_wait();
-        let delivery_failure = sink.first_delivery_failure().map(str::to_string);
+        let delivery_failure = sink.first_delivery_failure();
 
         if let Some(job_id) = &self.job_id {
             registry_lock().remove(job_id);
         }
 
         if let Some(status) = delivery_failure {
-            let boundary_error = super::error::BoundaryError::native_event_delivery_failed(status);
+            let boundary_error =
+                super::error::BoundaryError::native_event_delivery_failed(format!("{status:?}"));
             return Ok(format!(
                 r#"{{"ok":false,"error":{}}}"#,
                 boundary_error.to_json()
@@ -174,6 +257,13 @@ impl Task for RunIrregularJobTask {
     fn resolve(&mut self, _env: Env, output: Self::Output) -> NapiResult<Self::JsValue> {
         Ok(output)
     }
+
+    fn finally(mut self, env: Env) -> NapiResult<()> {
+        if let Some(terminal_cleanup_hook) = self.terminal_cleanup_hook.take() {
+            terminal_cleanup_hook.remove_and_reclaim(&env)?;
+        }
+        Ok(())
+    }
 }
 
 /// TS-facing entry point (re-exported by `lib.rs`'s `#[napi]`
@@ -186,11 +276,14 @@ impl Task for RunIrregularJobTask {
 /// -- see `run_job`'s own top doc for why.
 #[napi]
 pub fn run_irregular_job(
+    env: Env,
     request_json: String,
     on_event: Function<'_, String, Unknown<'static>>,
     emit_state_snapshots: bool,
 ) -> NapiResult<AsyncTask<RunIrregularJobTask>> {
     let on_event = on_event.build_threadsafe_function::<String>().build()?;
+    let terminal_latch = TerminalLatch::new();
+    let terminal_cleanup_hook = TerminalCleanupHook::register(&env, terminal_latch.clone())?;
 
     let cancel_flag = Arc::new(AtomicBool::new(false));
     let job_id = extract_job_id_best_effort(&request_json);
@@ -204,6 +297,8 @@ pub fn run_irregular_job(
         on_event,
         emit_state_snapshots,
         cancel_flag,
+        terminal_latch,
+        terminal_cleanup_hook: Some(terminal_cleanup_hook),
     }))
 }
 

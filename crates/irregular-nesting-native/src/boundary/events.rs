@@ -5,7 +5,7 @@
 //! the first N-API delivery status failure for `boundary::job` to expose in its
 //! final envelope after it has attempted terminal delivery.
 
-use std::sync::mpsc::sync_channel;
+use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 
 use napi::bindgen_prelude::Unknown;
 use napi::threadsafe_function::{ThreadsafeFunction, ThreadsafeFunctionCallMode};
@@ -15,6 +15,7 @@ use serde::Serialize;
 use crate::result::progress::IrregularComputeEventSink;
 use crate::result::{IrregularPortfolioProgress, IrregularStateSnapshot};
 
+use super::diagnostics::increment_terminal_latch_close_requests_by_cleanup;
 use super::result::{
     project_state_snapshot, NativeIrregularPortfolioProgress, NativeStateSnapshot,
 };
@@ -45,59 +46,200 @@ pub enum NativeIrregularEvent {
     },
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TerminalLatchOutcome {
+    Pending,
+    Acknowledged,
+    CallbackFailure(Status),
+    Closing,
+}
+
+struct TerminalLatchState {
+    outcome: Mutex<TerminalLatchOutcome>,
+    changed: Condvar,
+}
+
+#[derive(Clone)]
+pub struct TerminalLatch {
+    state: Arc<TerminalLatchState>,
+}
+
+pub struct TerminalAcknowledgement {
+    latch: TerminalLatch,
+}
+
+impl TerminalLatch {
+    pub fn new() -> Self {
+        Self {
+            state: Arc::new(TerminalLatchState {
+                outcome: Mutex::new(TerminalLatchOutcome::Pending),
+                changed: Condvar::new(),
+            }),
+        }
+    }
+
+    pub fn enqueue_terminal_and_wait(
+        &self,
+        enqueue: impl FnOnce(TerminalAcknowledgement) -> Status,
+    ) -> Status {
+        let mut outcome = self.lock_outcome();
+        if *outcome != TerminalLatchOutcome::Pending {
+            return status_for_terminal_outcome(*outcome);
+        }
+
+        let enqueue_status = enqueue(TerminalAcknowledgement {
+            latch: self.clone(),
+        });
+        if enqueue_status != Status::Ok {
+            self.commit(
+                &mut outcome,
+                TerminalLatchOutcome::CallbackFailure(enqueue_status),
+            );
+            return enqueue_status;
+        }
+
+        while *outcome == TerminalLatchOutcome::Pending {
+            outcome = self
+                .state
+                .changed
+                .wait(outcome)
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+        }
+        status_for_terminal_outcome(*outcome)
+    }
+
+    pub fn close_for_cleanup(&self) {
+        increment_terminal_latch_close_requests_by_cleanup();
+        self.close();
+    }
+
+    fn close(&self) {
+        let mut outcome = self.lock_outcome();
+        self.commit(&mut outcome, TerminalLatchOutcome::Closing);
+    }
+
+    fn acknowledge(&self, status: Status) {
+        let outcome = if status == Status::Ok {
+            TerminalLatchOutcome::Acknowledged
+        } else {
+            TerminalLatchOutcome::CallbackFailure(status)
+        };
+        let mut current = self.lock_outcome();
+        self.commit(&mut current, outcome);
+    }
+
+    fn lock_outcome(&self) -> MutexGuard<'_, TerminalLatchOutcome> {
+        self.state
+            .outcome
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+
+    fn commit(&self, current: &mut TerminalLatchOutcome, next: TerminalLatchOutcome) -> bool {
+        if *current != TerminalLatchOutcome::Pending {
+            return false;
+        }
+        *current = next;
+        self.state.changed.notify_all();
+        true
+    }
+}
+
+impl Default for TerminalLatch {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl TerminalAcknowledgement {
+    pub fn acknowledge(self, status: Status) {
+        self.latch.acknowledge(status);
+    }
+}
+
+fn status_for_terminal_outcome(outcome: TerminalLatchOutcome) -> Status {
+    match outcome {
+        TerminalLatchOutcome::Pending => unreachable!("terminal latch outcome must be committed"),
+        TerminalLatchOutcome::Acknowledged => Status::Ok,
+        TerminalLatchOutcome::CallbackFailure(status) => status,
+        TerminalLatchOutcome::Closing => Status::Closing,
+    }
+}
+
+#[derive(Default)]
+struct DeliveryFailure {
+    first: Option<Status>,
+}
+
+impl DeliveryFailure {
+    fn record(&mut self, status: Status) {
+        if self.first.is_none() {
+            self.first = Some(status);
+        }
+    }
+
+    fn status(&self) -> Option<Status> {
+        self.first
+    }
+}
+
 pub struct BoundaryEventSink<'a> {
     next_ordinal: u64,
     terminal_emitted: bool,
     emit_state_snapshots: bool,
     on_event: &'a JsonEventFn,
-    first_delivery_failure: Option<String>,
+    terminal_latch: TerminalLatch,
+    delivery_failure: DeliveryFailure,
 }
 
 impl<'a> BoundaryEventSink<'a> {
-    pub fn new(on_event: &'a JsonEventFn, emit_state_snapshots: bool) -> Self {
+    pub fn new(
+        on_event: &'a JsonEventFn,
+        emit_state_snapshots: bool,
+        terminal_latch: TerminalLatch,
+    ) -> Self {
         Self {
             next_ordinal: 0,
             terminal_emitted: false,
             emit_state_snapshots,
             on_event,
-            first_delivery_failure: None,
+            terminal_latch,
+            delivery_failure: DeliveryFailure::default(),
         }
     }
 
-    pub fn emit_terminal_and_wait(&mut self) {
+    pub fn emit_terminal_and_wait(&mut self) -> Status {
         if self.terminal_emitted {
             debug_assert!(false, "attempted to emit a native event after terminal");
-            return;
+            return Status::Ok;
         }
         self.terminal_emitted = true;
         let ordinal = self.take_ordinal();
         let json = serde_json::to_string(&NativeIrregularEvent::Terminal { ordinal })
             .expect("native terminal event always serializes");
-        let (sender, receiver) = sync_channel(1);
-        let status = self.on_event.call_with_return_value(
-            json,
-            ThreadsafeFunctionCallMode::NonBlocking,
-            move |callback_result, _env| {
-                let acknowledgement = callback_result
-                    .map(|_| ())
-                    .map_err(|error| format!("{:?}", error.status));
-                let _ = sender.send(acknowledgement);
-                Ok(())
-            },
-        );
+        let terminal_latch = self.terminal_latch.clone();
+        let on_event = self.on_event;
+        let status = terminal_latch.enqueue_terminal_and_wait(|acknowledgement| {
+            on_event.call_with_return_value(
+                json,
+                ThreadsafeFunctionCallMode::NonBlocking,
+                move |callback_result, _env| {
+                    let status = callback_result
+                        .map(|_| Status::Ok)
+                        .unwrap_or_else(|error| error.status);
+                    acknowledgement.acknowledge(status);
+                    Ok(())
+                },
+            )
+        });
         if status != Status::Ok {
-            self.record_delivery_failure(format!("{status:?}"));
-            return;
+            self.record_delivery_failure(status);
         }
-        match receiver.recv() {
-            Ok(Ok(())) => {}
-            Ok(Err(status)) => self.record_delivery_failure(status),
-            Err(_) => self.record_delivery_failure(format!("{:?}", Status::Closing)),
-        }
+        status
     }
 
-    pub fn first_delivery_failure(&self) -> Option<&str> {
-        self.first_delivery_failure.as_deref()
+    pub fn first_delivery_failure(&self) -> Option<Status> {
+        self.delivery_failure.status()
     }
 
     fn take_ordinal(&mut self) -> u64 {
@@ -116,14 +258,12 @@ impl<'a> BoundaryEventSink<'a> {
             .on_event
             .call(json, ThreadsafeFunctionCallMode::NonBlocking);
         if status != Status::Ok {
-            self.record_delivery_failure(format!("{status:?}"));
+            self.record_delivery_failure(status);
         }
     }
 
-    fn record_delivery_failure(&mut self, failure: String) {
-        if self.first_delivery_failure.is_none() {
-            self.first_delivery_failure = Some(failure);
-        }
+    fn record_delivery_failure(&mut self, status: Status) {
+        self.delivery_failure.record(status);
     }
 }
 
@@ -159,8 +299,176 @@ impl IrregularComputeEventSink for BoundaryEventSink<'_> {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::{mpsc, Arc, Mutex};
+    use std::thread;
+
     use super::*;
     use crate::result::IrregularPortfolioPhase;
+
+    #[test]
+    fn accepted_terminal_with_retained_acknowledgement_unblocks_as_closing_on_cleanup() {
+        let latch = TerminalLatch::new();
+        let retained_acknowledgement = Arc::new(Mutex::new(None));
+        let (accepted_sender, accepted_receiver) = mpsc::channel();
+        let (result_sender, result_receiver) = mpsc::channel();
+        let waiter_latch = latch.clone();
+        let waiter_acknowledgement = Arc::clone(&retained_acknowledgement);
+
+        let waiter = thread::spawn(move || {
+            let status = waiter_latch.enqueue_terminal_and_wait(move |acknowledgement| {
+                *waiter_acknowledgement
+                    .lock()
+                    .expect("retained acknowledgement lock") = Some(acknowledgement);
+                accepted_sender.send(()).expect("accepted notification");
+                Status::Ok
+            });
+            result_sender.send(status).expect("terminal result");
+        });
+
+        accepted_receiver.recv().expect("accepted terminal enqueue");
+        assert_eq!(result_receiver.try_recv(), Err(mpsc::TryRecvError::Empty));
+
+        latch.close();
+
+        assert_eq!(
+            result_receiver.recv().expect("cleanup releases waiter"),
+            Status::Closing
+        );
+        waiter.join().expect("waiter thread completes");
+    }
+
+    #[test]
+    fn live_terminal_waits_until_acknowledgement_callback_returns() {
+        let latch = TerminalLatch::new();
+        let retained_acknowledgement = Arc::new(Mutex::new(None));
+        let (accepted_sender, accepted_receiver) = mpsc::channel();
+        let (result_sender, result_receiver) = mpsc::channel();
+        let waiter_latch = latch.clone();
+        let waiter_acknowledgement = Arc::clone(&retained_acknowledgement);
+
+        let waiter = thread::spawn(move || {
+            let status = waiter_latch.enqueue_terminal_and_wait(move |acknowledgement| {
+                *waiter_acknowledgement
+                    .lock()
+                    .expect("retained acknowledgement lock") = Some(acknowledgement);
+                accepted_sender.send(()).expect("accepted notification");
+                Status::Ok
+            });
+            result_sender.send(status).expect("terminal result");
+        });
+
+        accepted_receiver.recv().expect("accepted terminal enqueue");
+        assert_eq!(result_receiver.try_recv(), Err(mpsc::TryRecvError::Empty));
+
+        retained_acknowledgement
+            .lock()
+            .expect("retained acknowledgement lock")
+            .take()
+            .expect("retained acknowledgement")
+            .acknowledge(Status::Ok);
+
+        assert_eq!(
+            result_receiver.recv().expect("callback releases waiter"),
+            Status::Ok
+        );
+        waiter.join().expect("waiter thread completes");
+    }
+
+    #[test]
+    fn callback_failure_wins_over_later_cleanup() {
+        let latch = TerminalLatch::new();
+        let retained_acknowledgement = Arc::new(Mutex::new(None));
+        let (accepted_sender, accepted_receiver) = mpsc::channel();
+        let (result_sender, result_receiver) = mpsc::channel();
+        let waiter_latch = latch.clone();
+        let waiter_acknowledgement = Arc::clone(&retained_acknowledgement);
+
+        let waiter = thread::spawn(move || {
+            let status = waiter_latch.enqueue_terminal_and_wait(move |acknowledgement| {
+                *waiter_acknowledgement
+                    .lock()
+                    .expect("retained acknowledgement lock") = Some(acknowledgement);
+                accepted_sender.send(()).expect("accepted notification");
+                Status::Ok
+            });
+            result_sender.send(status).expect("terminal result");
+        });
+
+        accepted_receiver.recv().expect("accepted terminal enqueue");
+        retained_acknowledgement
+            .lock()
+            .expect("retained acknowledgement lock")
+            .take()
+            .expect("retained acknowledgement")
+            .acknowledge(Status::PendingException);
+        latch.close();
+
+        assert_eq!(
+            result_receiver
+                .recv()
+                .expect("callback failure releases waiter"),
+            Status::PendingException
+        );
+        waiter.join().expect("waiter thread completes");
+    }
+
+    #[test]
+    fn cleanup_wins_over_late_callback() {
+        let latch = TerminalLatch::new();
+        let retained_acknowledgement = Arc::new(Mutex::new(None));
+        let (accepted_sender, accepted_receiver) = mpsc::channel();
+        let (result_sender, result_receiver) = mpsc::channel();
+        let waiter_latch = latch.clone();
+        let waiter_acknowledgement = Arc::clone(&retained_acknowledgement);
+
+        let waiter = thread::spawn(move || {
+            let status = waiter_latch.enqueue_terminal_and_wait(move |acknowledgement| {
+                *waiter_acknowledgement
+                    .lock()
+                    .expect("retained acknowledgement lock") = Some(acknowledgement);
+                accepted_sender.send(()).expect("accepted notification");
+                Status::Ok
+            });
+            result_sender.send(status).expect("terminal result");
+        });
+
+        accepted_receiver.recv().expect("accepted terminal enqueue");
+        latch.close();
+        retained_acknowledgement
+            .lock()
+            .expect("retained acknowledgement lock")
+            .take()
+            .expect("retained acknowledgement")
+            .acknowledge(Status::Ok);
+
+        assert_eq!(
+            result_receiver.recv().expect("cleanup releases waiter"),
+            Status::Closing
+        );
+        waiter.join().expect("waiter thread completes");
+    }
+
+    #[test]
+    fn immediate_enqueue_failure_does_not_wait_for_acknowledgement() {
+        let latch = TerminalLatch::new();
+
+        assert_eq!(
+            latch.enqueue_terminal_and_wait(|_acknowledgement| Status::QueueFull),
+            Status::QueueFull
+        );
+    }
+
+    #[test]
+    fn ordinary_delivery_failure_remains_authoritative_after_terminal_cleanup() {
+        let latch = TerminalLatch::new();
+        let mut delivery_failure = DeliveryFailure::default();
+        delivery_failure.record(Status::QueueFull);
+
+        latch.close();
+        delivery_failure.record(Status::Closing);
+
+        assert_eq!(delivery_failure.status(), Some(Status::QueueFull));
+    }
 
     #[test]
     fn progress_and_terminal_share_the_tagged_ordinal_sequence() {

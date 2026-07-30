@@ -1,6 +1,8 @@
 import { Effect, Schema } from 'effect'
+import { spawn } from 'node:child_process'
 import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { DxfGeometrySummary, ImportedPiece } from '@shared/domain/dxf.js'
 import { Rect, RectWith } from '@shared/domain/geometry.js'
@@ -34,6 +36,66 @@ import { makeIrregularWorkerOutput } from '../../src/workers/algorithm/irregular
 const probe = probeNativeIrregularAddon()
 const describeIfAvailable =
   !probe.available && probe.reason === 'not-installed' ? describe.skip : describe
+const NATIVE_LIFECYCLE_PROBE_TIMEOUT_MS = 8_000
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
+const NATIVE_LIFECYCLE_PROBE_PATH = resolve(
+  REPO_ROOT,
+  'crates/irregular-nesting-native/scripts/worker-terminal-lifecycle-probe.mjs'
+)
+
+/** Runs a real Worker lifecycle fixture and bounds only test-harness hangs. */
+function runNativeLifecycleProbe(mode: 'terminal-barrier' | 'cleanup-proof'): Promise<string> {
+  return new Promise((resolveProbe, rejectProbe) => {
+    const child = spawn(process.execPath, [NATIVE_LIFECYCLE_PROBE_PATH, mode], {
+      cwd: REPO_ROOT,
+      stdio: ['ignore', 'pipe', 'pipe']
+    })
+    let stdout = ''
+    let stderr = ''
+    let completed = false
+    const deadline = setTimeout(() => {
+      if (completed) return
+      completed = true
+      child.kill('SIGKILL')
+      rejectProbe(
+        new Error(
+          `native Worker lifecycle probe ${mode} did not exit within ${NATIVE_LIFECYCLE_PROBE_TIMEOUT_MS}ms. ` +
+            `stdout: ${stdout}\nstderr: ${stderr}`
+        )
+      )
+    }, NATIVE_LIFECYCLE_PROBE_TIMEOUT_MS)
+
+    child.stdout.setEncoding('utf8')
+    child.stderr.setEncoding('utf8')
+    child.stdout.on('data', (chunk: string) => {
+      stdout += chunk
+    })
+    child.stderr.on('data', (chunk: string) => {
+      stderr += chunk
+    })
+    child.on('error', (error: Error) => {
+      if (completed) return
+      completed = true
+      clearTimeout(deadline)
+      rejectProbe(error)
+    })
+    child.on('close', (code: number | null, signal: NodeJS.Signals | null) => {
+      if (completed) return
+      completed = true
+      clearTimeout(deadline)
+      if (code === 0) {
+        resolveProbe(stdout)
+        return
+      }
+      rejectProbe(
+        new Error(
+          `native Worker lifecycle probe ${mode} exited with code ${code}, signal ${signal}. ` +
+            `stdout: ${stdout}\nstderr: ${stderr}`
+        )
+      )
+    })
+  })
+}
 
 function archiveEligibleSettings(overrides?: {
   readonly intrinsicSharedArchiveEnabled?: boolean
@@ -166,6 +228,25 @@ describeIfAvailable('computeIrregularNestingNative', () => {
       expect(probe.profiles).toContain('compact-short-side')
     }
   })
+
+  it(
+    'keeps the real-addon native promise pending until its Worker terminal callback returns',
+    async () => {
+      const output = await runNativeLifecycleProbe('terminal-barrier')
+      expect(output).toContain('terminal-barrier-ok')
+    },
+    NATIVE_LIFECYCLE_PROBE_TIMEOUT_MS + 2_000
+  )
+
+  it(
+    'proves cleanup releases the retained terminal wait in the real addon',
+    async () => {
+      const output = await runNativeLifecycleProbe('cleanup-proof')
+      expect(output).toContain('cleanup-proof-process-lifecycle=1/1')
+      expect(output).toContain('cleanup-proof-ok')
+    },
+    NATIVE_LIFECYCLE_PROBE_TIMEOUT_MS + 2_000
+  )
 
   it('places every piece of a small archive-eligible request through the real addon', async () => {
     const settings = archiveEligibleSettings()
