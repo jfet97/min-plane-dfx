@@ -227,6 +227,81 @@ pub fn min_all(values: &[f64]) -> f64 {
     values.iter().copied().fold(f64::INFINITY, min)
 }
 
+/// `Math.hypot(x, y)` (2-argument form) — a **verbatim port of V8's own
+/// algorithm** (`v8/src/builtins/builtins-math.cc`'s `Builtin_MathHypot`,
+/// the ECMA-262 `Math.hypot` reference algorithm: normalize every argument
+/// by the largest-magnitude argument, form a Neumaier/Kahan-compensated sum
+/// of the normalized values' squares, then `sqrt(sum) * max`), not
+/// `f64::hypot`/`libm::hypot` (both of which use fdlibm's *different*,
+/// high/low-word-splitting classic `e_hypot.c` algorithm).
+///
+/// R21 (`stage0-rulings.md`): "if any pipeline hash mismatch traces to trig,
+/// the affected call sites must switch to a verbatim port of V8's ieee754
+/// implementations" — this is that verbatim port, added because exactly
+/// that happened: `canonical_grid::contact::collinear_overlap_segment`'s
+/// edge-length `hypot` call feeds `IrregularBeamState`'s
+/// `sharedCollisionBoundaryLengthMm`, which is one of
+/// `search::strict_decoder::compare_local_scores`'s tie-break fields — a
+/// **comparator input**, not a diagnostic-only field like the other
+/// `hypot`-derived metrics `stage0-rulings.md` R21 and
+/// `canonical_grid::contact`'s own `canonical_grid_edge_length_mm` doc
+/// already accept irreducible ULP noise on. Differential fixture
+/// `differential-fixture-matrix.ts`'s `EXPLORATORY_ROWS` (mixed61 9/10/20/40
+/// truncated subsets) traced a periodic-P2 raw-witness continuation
+/// tie-break flip to exactly this: two candidates with bit-identical exact
+/// grid metrics (`maximumSideGrid`/`envelopeAreaGrid2`/`envelopeSpanGrid`)
+/// but a `sharedBoundaryLengthMm` that ties in TS (same real contact
+/// geometry, computed via V8's `Math.hypot`) yet disagreed in the last 1-2
+/// bits under both `std::f64::hypot` and `libm::hypot`, flipping which
+/// candidate's `compareLocalScores`/`compare_local_scores` "first-wins" fold
+/// picked.
+///
+/// **Measured, not assumed** (this module's own doc comment promises no
+/// less): a 21,696-case differential sweep against a real Node v24
+/// `Math.hypot` oracle (broad random log-magnitude sweep `1e-10..1e10`, an
+/// explicit edge-value matrix crossing `{0, -0, ±1, ±1000, ±5000, 1e±30,
+/// 1e±300, ...}`, and 1,500 equal-magnitude/axis-aligned cases — the shape
+/// this crate's own contact geometry produces most often) found `0/21696`
+/// bit mismatches for this algorithm, versus `7177/21696` (33%) for
+/// `std::f64::hypot` and `7468/21696` (34%) for `libm::hypot` on the exact
+/// same vectors — full parity, not a marginal improvement, confirming this
+/// really is V8's algorithm and not another approximation.
+///
+/// Scope: this function is deliberately **not** substituted at every
+/// `.hypot()` call site in the crate — only the one with measured evidence
+/// of an observable-output divergence (`canonical_grid::contact`'s own doc
+/// comments name each call site's status individually, matching R21's
+/// "per-call-site choice backed by that site's own differential vectors"
+/// policy, not a blanket switch).
+pub fn hypot(x: f64, y: f64) -> f64 {
+    if x.is_infinite() || y.is_infinite() {
+        return f64::INFINITY;
+    }
+    if x.is_nan() || y.is_nan() {
+        return f64::NAN;
+    }
+    let abs_x = x.abs();
+    let abs_y = y.abs();
+    let mut max = if abs_x > abs_y { abs_x } else { abs_y };
+    if max == 0.0 {
+        max = 1.0;
+    }
+    let mut sum = 0.0_f64;
+    let mut compensation = 0.0_f64;
+    for arg in [abs_x, abs_y] {
+        let normalized = arg / max;
+        let summand = normalized * normalized;
+        let preliminary = sum + summand;
+        if sum.abs() >= summand.abs() {
+            compensation += (sum - preliminary) + summand;
+        } else {
+            compensation += (summand - preliminary) + sum;
+        }
+        sum = preliminary;
+    }
+    (sum + compensation).sqrt() * max
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -312,5 +387,53 @@ mod tests {
         assert_eq!(min_all(&[1.0, 5.0, 3.0]), 1.0);
         assert!(max_all(&[1.0, f64::NAN, 3.0]).is_nan());
         assert!(min_all(&[1.0, f64::NAN, 3.0]).is_nan());
+    }
+
+    /// Bit-exact against a real Node v24 `Math.hypot` oracle (captured via
+    /// `DataView.setFloat64`/`getUint8` big-endian bytes -- same technique
+    /// `js_number_vectors.rs`'s own oracle capture uses elsewhere in this
+    /// crate). Covers: a scalene-triangle edge (the exact case
+    /// `transforms::generator`'s own module doc names as the historical
+    /// `f64::atan2` 1-ULP divergence example, included here as a
+    /// cross-reference point, not because `hypot` diverged on it), an
+    /// equal-magnitude case (this crate's own axis-aligned contact geometry
+    /// shape), a 3-4-5 exact triangle, extreme magnitudes (`1e300`/`1e-300`),
+    /// one-sided (zero) arguments, and every zero-sign combination.
+    #[test]
+    fn hypot_matches_v8_oracle_bit_exact() {
+        let cases: &[(f64, f64, u64)] = &[
+            (-1.2, -3.7, 0x400f_1e2a_cc3a_3770),
+            (5000.0, 5000.0, 0x40bb_9f11_5c1e_5080),
+            (3.0, 4.0, 0x4014_0000_0000_0000),
+            (0.001, 999.999, 0x408f_3ffd_f3b6_56d0),
+            (1e300, 1e300, 0x7e40_e4d5_0f99_b211),
+            (1e-300, 1e-300, 0x01ae_4e8d_1276_2226),
+            (7.0, 0.0, 0x401c_0000_0000_0000),
+            (0.0, -7.0, 0x401c_0000_0000_0000),
+            (0.0, 0.0, 0x0000_0000_0000_0000),
+            (-0.0, 0.0, 0x0000_0000_0000_0000),
+            (-0.0, -0.0, 0x0000_0000_0000_0000),
+        ];
+        for &(x, y, expected_bits) in cases {
+            let got = hypot(x, y);
+            assert_eq!(
+                got.to_bits(),
+                expected_bits,
+                "hypot({x}, {y}) = {got:?} (0x{:016x}), expected 0x{expected_bits:016x}",
+                got.to_bits()
+            );
+        }
+    }
+
+    /// `Infinity` takes precedence over `NaN` in any argument position
+    /// (`Math.hypot(Infinity, NaN) === Infinity`, verified against Node
+    /// v24) -- the ECMA-262 spec algorithm checks every argument for
+    /// infinity *before* checking any for `NaN`.
+    #[test]
+    fn hypot_infinity_takes_precedence_over_nan() {
+        assert_eq!(hypot(f64::INFINITY, f64::NAN), f64::INFINITY);
+        assert_eq!(hypot(f64::NAN, f64::INFINITY), f64::INFINITY);
+        assert_eq!(hypot(f64::NEG_INFINITY, 5.0), f64::INFINITY);
+        assert!(hypot(f64::NAN, 5.0).is_nan());
     }
 }

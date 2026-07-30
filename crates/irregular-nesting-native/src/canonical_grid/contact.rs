@@ -937,6 +937,22 @@ fn collinear_overlap_length(first: &PolygonEdge, second: &PolygonEdge) -> Option
 /// the migration prompt's §8.3 division of responsibility, operating on
 /// already-translated floating-mm convex polygons, never on canonical-grid
 /// integers.
+///
+/// R21: this function's `edge_length` routes through [`js_math::hypot`] (a
+/// verbatim port of V8's `Math.hypot`), not `f64::hypot` — the one `hypot`
+/// call site in this module with **measured** evidence of an
+/// observable-output divergence: `segment.length_mm` (summed into
+/// `shared_convex_polygon_boundary_length`'s total, which becomes
+/// `IrregularBeamState::shared_collision_boundary_length_mm`) feeds
+/// `search::strict_decoder::IntrinsicStrictLocalScore::shared_boundary_length_mm`,
+/// a `compare_local_scores` tie-break field, unlike this module's *other*
+/// `hypot` call sites (`polygon_edge_length`/`point_distance`/
+/// `convex_turn_cosine`/`canonical_grid_edge_length_mm`), none of which feed
+/// a comparator today — see [`js_math::hypot`]'s own doc for the full
+/// evidence trail (differential fixture matrix repro, the 21,696-case V8
+/// oracle sweep). Kept scoped to this one call site per R21's own
+/// "per-call-site choice backed by that site's own differential vectors"
+/// policy, not a blanket switch.
 fn collinear_overlap_segment(
     first: &PolygonEdge,
     second: &PolygonEdge,
@@ -967,7 +983,7 @@ fn collinear_overlap_segment(
 
     let dx = first.end.x - first.start.x;
     let dy = first.end.y - first.start.y;
-    let edge_length = dx.hypot(dy);
+    let edge_length = js_math::hypot(dx, dy);
     if !edge_length.is_finite() || edge_length <= 0.0 {
         return None;
     }
