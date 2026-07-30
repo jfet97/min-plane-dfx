@@ -61,27 +61,42 @@ function mixed61PieceRows(pieceCounts: ReadonlyArray<number>): FixtureRow[] {
 /** The acceptance-bar matrix (`differential-e2e-report.md`'s own "Reproduction" section). */
 const REQUIRED_ROWS: FixtureRow[] = [
   ...mixed61PieceRows([2, 4, 8]),
-  { label: 'triangle-20 sheet=2000x2700 profile=compact', args: ['--fixture', 'triangle-20', '--sheet', '2000x2700'] },
+  {
+    label: 'triangle-20 sheet=2000x2700 profile=compact',
+    args: ['--fixture', 'triangle-20', '--sheet', '2000x2700']
+  },
   {
     label: 'triangle-20 sheet=2000x2700 profile=short-side',
     args: ['--fixture', 'triangle-20', '--sheet', '2000x2700', '--profile', 'short-side']
   },
-  { label: 'shapes-17 sheet=2000x2700 profile=compact', args: ['--fixture', 'shapes-17', '--sheet', '2000x2700'] },
+  {
+    label: 'shapes-17 sheet=2000x2700 profile=compact',
+    args: ['--fixture', 'shapes-17', '--sheet', '2000x2700']
+  },
   {
     label: 'shapes-17 sheet=2000x2700 profile=short-side',
     args: ['--fixture', 'shapes-17', '--sheet', '2000x2700', '--profile', 'short-side']
   },
-  { label: 'mixed61 sheet=600x400 profile=compact', args: ['--fixture', 'mixed61', '--sheet', '600x400'] },
+  {
+    label: 'mixed61 sheet=600x400 profile=compact',
+    args: ['--fixture', 'mixed61', '--sheet', '600x400']
+  },
   {
     label: 'mixed61 sheet=600x400 profile=short-side',
     args: ['--fixture', 'mixed61', '--sheet', '600x400', '--profile', 'short-side']
   },
-  { label: 'mixed61 sheet=300x300 profile=compact', args: ['--fixture', 'mixed61', '--sheet', '300x300'] },
+  {
+    label: 'mixed61 sheet=300x300 profile=compact',
+    args: ['--fixture', 'mixed61', '--sheet', '300x300']
+  },
   {
     label: 'mixed61 sheet=300x300 profile=short-side',
     args: ['--fixture', 'mixed61', '--sheet', '300x300', '--profile', 'short-side']
   },
-  { label: 'mixed61 sheet=2000x2700 profile=compact', args: ['--fixture', 'mixed61', '--sheet', '2000x2700'] },
+  {
+    label: 'mixed61 sheet=2000x2700 profile=compact',
+    args: ['--fixture', 'mixed61', '--sheet', '2000x2700']
+  },
   {
     label: 'mixed61 sheet=2000x2700 profile=short-side',
     args: ['--fixture', 'mixed61', '--sheet', '2000x2700', '--profile', 'short-side']
@@ -128,7 +143,20 @@ function runGroup(groupLabel: string, rows: ReadonlyArray<FixtureRow>): RowResul
       console.error(
         result.output
           .split('\n')
-          .filter((line) => line.includes('FIRST DIVERGENCE') || line.includes('typescript:') || line.includes('rust      :') || line.includes('FAILED'))
+          .filter(
+            (line) =>
+              line.includes('FIRST DIVERGENCE') ||
+              line.includes('typescript:') ||
+              line.includes('rust      :') ||
+              line.includes('[run-differential] placedCollisionGeometries:') ||
+              line.includes('[run-differential] score:') ||
+              line.includes('[run-differential] unplacedPieceIds:') ||
+              line.includes('[run-differential] sortedPieceIds:') ||
+              line.includes('[run-differential] diagnostics:') ||
+              line.includes('[run-differential] portfolio:') ||
+              line.includes('[run-differential] runtime:') ||
+              line.includes('FAILED')
+          )
           .map((line) => `    ${line}`)
           .join('\n')
       )
