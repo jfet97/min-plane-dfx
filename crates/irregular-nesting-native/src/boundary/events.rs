@@ -5,7 +5,9 @@
 //! the first N-API delivery status failure for `boundary::job` to expose in its
 //! final envelope after it has attempted terminal delivery.
 
-use std::sync::{Arc, Condvar, Mutex, MutexGuard};
+use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
+use std::sync::{Arc, OnceLock};
+use std::thread::{self, Thread};
 
 use napi::bindgen_prelude::Unknown;
 use napi::threadsafe_function::{ThreadsafeFunction, ThreadsafeFunctionCallMode};
@@ -46,17 +48,15 @@ pub enum NativeIrregularEvent {
     },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum TerminalLatchOutcome {
-    Pending,
-    Acknowledged,
-    CallbackFailure(Status),
-    Closing,
-}
+const TERMINAL_PENDING: i32 = -1;
+const TERMINAL_ADMITTING: i32 = -2;
+const TERMINAL_WAITING: i32 = -3;
+const TERMINAL_CLOSING: i32 = -4;
 
 struct TerminalLatchState {
-    outcome: Mutex<TerminalLatchOutcome>,
-    changed: Condvar,
+    outcome: AtomicI32,
+    cleanup_requested: AtomicBool,
+    waiter: OnceLock<Thread>,
 }
 
 #[derive(Clone)]
@@ -72,8 +72,9 @@ impl TerminalLatch {
     pub fn new() -> Self {
         Self {
             state: Arc::new(TerminalLatchState {
-                outcome: Mutex::new(TerminalLatchOutcome::Pending),
-                changed: Condvar::new(),
+                outcome: AtomicI32::new(TERMINAL_PENDING),
+                cleanup_requested: AtomicBool::new(false),
+                waiter: OnceLock::new(),
             }),
         }
     }
@@ -82,66 +83,109 @@ impl TerminalLatch {
         &self,
         enqueue: impl FnOnce(TerminalAcknowledgement) -> Status,
     ) -> Status {
-        let mut outcome = self.lock_outcome();
-        if *outcome != TerminalLatchOutcome::Pending {
-            return status_for_terminal_outcome(*outcome);
+        match self.state.outcome.compare_exchange(
+            TERMINAL_PENDING,
+            TERMINAL_ADMITTING,
+            Ordering::SeqCst,
+            Ordering::SeqCst,
+        ) {
+            Ok(_) => {}
+            Err(outcome) => return status_for_terminal_outcome(outcome),
         }
 
+        debug_assert!(self.state.waiter.set(thread::current()).is_ok());
         let enqueue_status = enqueue(TerminalAcknowledgement {
             latch: self.clone(),
         });
         if enqueue_status != Status::Ok {
-            self.commit(
-                &mut outcome,
-                TerminalLatchOutcome::CallbackFailure(enqueue_status),
-            );
-            return enqueue_status;
+            self.commit_status(enqueue_status);
+            return status_for_terminal_outcome(self.state.outcome.load(Ordering::SeqCst));
         }
 
-        while *outcome == TerminalLatchOutcome::Pending {
-            outcome = self
-                .state
-                .changed
-                .wait(outcome)
-                .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let _ = self.state.outcome.compare_exchange(
+            TERMINAL_ADMITTING,
+            TERMINAL_WAITING,
+            Ordering::SeqCst,
+            Ordering::SeqCst,
+        );
+        self.commit_cleanup_if_requested();
+
+        loop {
+            let outcome = self.state.outcome.load(Ordering::SeqCst);
+            if is_terminal_outcome(outcome) {
+                return status_for_terminal_outcome(outcome);
+            }
+            thread::park();
+            self.commit_cleanup_if_requested();
         }
-        status_for_terminal_outcome(*outcome)
     }
 
     pub fn close_for_cleanup(&self) {
         increment_terminal_latch_close_requests_by_cleanup();
-        self.close();
+        self.state.cleanup_requested.store(true, Ordering::SeqCst);
+        self.commit_cleanup_if_requested();
+        self.unpark_waiter();
     }
 
+    #[cfg(test)]
     fn close(&self) {
-        let mut outcome = self.lock_outcome();
-        self.commit(&mut outcome, TerminalLatchOutcome::Closing);
+        self.state.cleanup_requested.store(true, Ordering::SeqCst);
+        self.commit_cleanup_if_requested();
+        self.unpark_waiter();
     }
 
     fn acknowledge(&self, status: Status) {
-        let outcome = if status == Status::Ok {
-            TerminalLatchOutcome::Acknowledged
-        } else {
-            TerminalLatchOutcome::CallbackFailure(status)
-        };
-        let mut current = self.lock_outcome();
-        self.commit(&mut current, outcome);
+        self.commit_status(status);
     }
 
-    fn lock_outcome(&self) -> MutexGuard<'_, TerminalLatchOutcome> {
-        self.state
-            .outcome
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
-    }
-
-    fn commit(&self, current: &mut TerminalLatchOutcome, next: TerminalLatchOutcome) -> bool {
-        if *current != TerminalLatchOutcome::Pending {
-            return false;
+    fn commit_status(&self, status: Status) {
+        let status_code = i32::from(status);
+        loop {
+            let current = self.state.outcome.load(Ordering::SeqCst);
+            if is_terminal_outcome(current) {
+                return;
+            }
+            if self
+                .state
+                .outcome
+                .compare_exchange(current, status_code, Ordering::SeqCst, Ordering::SeqCst)
+                .is_ok()
+            {
+                self.unpark_waiter();
+                return;
+            }
         }
-        *current = next;
-        self.state.changed.notify_all();
-        true
+    }
+
+    fn commit_cleanup_if_requested(&self) {
+        if !self.state.cleanup_requested.load(Ordering::SeqCst) {
+            return;
+        }
+        loop {
+            let current = self.state.outcome.load(Ordering::SeqCst);
+            if is_terminal_outcome(current) || current == TERMINAL_ADMITTING {
+                return;
+            }
+            if self
+                .state
+                .outcome
+                .compare_exchange(
+                    current,
+                    TERMINAL_CLOSING,
+                    Ordering::SeqCst,
+                    Ordering::SeqCst,
+                )
+                .is_ok()
+            {
+                return;
+            }
+        }
+    }
+
+    fn unpark_waiter(&self) {
+        if let Some(waiter) = self.state.waiter.get() {
+            waiter.unpark();
+        }
     }
 }
 
@@ -157,12 +201,15 @@ impl TerminalAcknowledgement {
     }
 }
 
-fn status_for_terminal_outcome(outcome: TerminalLatchOutcome) -> Status {
+fn is_terminal_outcome(outcome: i32) -> bool {
+    outcome == TERMINAL_CLOSING || outcome >= 0
+}
+
+fn status_for_terminal_outcome(outcome: i32) -> Status {
     match outcome {
-        TerminalLatchOutcome::Pending => unreachable!("terminal latch outcome must be committed"),
-        TerminalLatchOutcome::Acknowledged => Status::Ok,
-        TerminalLatchOutcome::CallbackFailure(status) => status,
-        TerminalLatchOutcome::Closing => Status::Closing,
+        TERMINAL_CLOSING => Status::Closing,
+        outcome if outcome >= 0 => Status::from(outcome),
+        _ => unreachable!("terminal latch outcome must be committed"),
     }
 }
 
@@ -301,9 +348,53 @@ impl IrregularComputeEventSink for BoundaryEventSink<'_> {
 mod tests {
     use std::sync::{mpsc, Arc, Mutex};
     use std::thread;
+    use std::time::Duration;
 
     use super::*;
     use crate::result::IrregularPortfolioPhase;
+
+    #[test]
+    fn cleanup_close_does_not_block_during_terminal_enqueue_admission() {
+        let latch = TerminalLatch::new();
+        let waiter_latch = latch.clone();
+        let (enqueue_entered_sender, enqueue_entered_receiver) = mpsc::channel();
+        let (release_enqueue_sender, release_enqueue_receiver) = mpsc::channel();
+        let (close_returned_sender, close_returned_receiver) = mpsc::channel();
+
+        let waiter = thread::spawn(move || {
+            waiter_latch.enqueue_terminal_and_wait(|_acknowledgement| {
+                enqueue_entered_sender
+                    .send(())
+                    .expect("enqueue entered notification");
+                release_enqueue_receiver
+                    .recv()
+                    .expect("enqueue release notification");
+                Status::Ok
+            })
+        });
+
+        enqueue_entered_receiver
+            .recv()
+            .expect("terminal enqueue entered");
+        let cleanup_latch = latch.clone();
+        let cleanup = thread::spawn(move || {
+            cleanup_latch.close_for_cleanup();
+            close_returned_sender
+                .send(())
+                .expect("cleanup close returned notification");
+        });
+
+        let close_returned = close_returned_receiver.recv_timeout(Duration::from_millis(100));
+        release_enqueue_sender
+            .send(())
+            .expect("release terminal enqueue");
+        cleanup.join().expect("cleanup thread completes");
+        assert_eq!(
+            waiter.join().expect("waiter thread completes"),
+            Status::Closing
+        );
+        assert_eq!(close_returned, Ok(()));
+    }
 
     #[test]
     fn accepted_terminal_with_retained_acknowledgement_unblocks_as_closing_on_cleanup() {
