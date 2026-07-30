@@ -93,7 +93,8 @@ impl TerminalLatch {
             Err(outcome) => return status_for_terminal_outcome(outcome),
         }
 
-        debug_assert!(self.state.waiter.set(thread::current()).is_ok());
+        let waiter_registration = self.state.waiter.set(thread::current());
+        debug_assert!(waiter_registration.is_ok());
         let enqueue_status = enqueue(TerminalAcknowledgement {
             latch: self.clone(),
         });
