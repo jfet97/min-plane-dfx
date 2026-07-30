@@ -52,6 +52,7 @@ const TERMINAL_PENDING: i32 = -1;
 const TERMINAL_ADMITTING: i32 = -2;
 const TERMINAL_WAITING: i32 = -3;
 const TERMINAL_CLOSING: i32 = -4;
+const TERMINAL_CLEANUP_ADMITTING: i32 = -5;
 
 struct TerminalLatchState {
     outcome: AtomicI32,
@@ -99,10 +100,16 @@ impl TerminalLatch {
             latch: self.clone(),
         });
         if enqueue_status != Status::Ok {
-            self.commit_status(enqueue_status);
+            self.commit_enqueue_failure(enqueue_status);
             return status_for_terminal_outcome(self.state.outcome.load(Ordering::SeqCst));
         }
 
+        let _ = self.state.outcome.compare_exchange(
+            TERMINAL_CLEANUP_ADMITTING,
+            TERMINAL_CLOSING,
+            Ordering::SeqCst,
+            Ordering::SeqCst,
+        );
         let _ = self.state.outcome.compare_exchange(
             TERMINAL_ADMITTING,
             TERMINAL_WAITING,
@@ -139,11 +146,30 @@ impl TerminalLatch {
         self.commit_status(status);
     }
 
-    fn commit_status(&self, status: Status) {
+    fn commit_enqueue_failure(&self, status: Status) {
         let status_code = i32::from(status);
         loop {
             let current = self.state.outcome.load(Ordering::SeqCst);
             if is_terminal_outcome(current) {
+                return;
+            }
+            if self
+                .state
+                .outcome
+                .compare_exchange(current, status_code, Ordering::SeqCst, Ordering::SeqCst)
+                .is_ok()
+            {
+                self.unpark_waiter();
+                return;
+            }
+        }
+    }
+
+    fn commit_status(&self, status: Status) {
+        let status_code = i32::from(status);
+        loop {
+            let current = self.state.outcome.load(Ordering::SeqCst);
+            if is_terminal_outcome(current) || current == TERMINAL_CLEANUP_ADMITTING {
                 return;
             }
             if self
@@ -164,18 +190,18 @@ impl TerminalLatch {
         }
         loop {
             let current = self.state.outcome.load(Ordering::SeqCst);
-            if is_terminal_outcome(current) || current == TERMINAL_ADMITTING {
+            if is_terminal_outcome(current) || current == TERMINAL_CLEANUP_ADMITTING {
                 return;
             }
+            let next = if current == TERMINAL_ADMITTING {
+                TERMINAL_CLEANUP_ADMITTING
+            } else {
+                TERMINAL_CLOSING
+            };
             if self
                 .state
                 .outcome
-                .compare_exchange(
-                    current,
-                    TERMINAL_CLOSING,
-                    Ordering::SeqCst,
-                    Ordering::SeqCst,
-                )
+                .compare_exchange(current, next, Ordering::SeqCst, Ordering::SeqCst)
                 .is_ok()
             {
                 return;
