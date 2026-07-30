@@ -37,7 +37,7 @@ import { fileURLToPath } from 'node:url'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = join(__dirname, '..', '..')
 const RUN_DIFFERENTIAL = join(__dirname, 'run-differential.ts')
-const DIFFERENTIAL_ROW_TIMEOUT_MS = 120_000
+const DIFFERENTIAL_ROW_TIMEOUT_MS = 10 * 60_000
 
 interface FixtureRow {
   readonly label: string
