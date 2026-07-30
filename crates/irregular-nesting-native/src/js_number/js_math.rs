@@ -267,12 +267,28 @@ pub fn min_all(values: &[f64]) -> f64 {
 /// same vectors — full parity, not a marginal improvement, confirming this
 /// really is V8's algorithm and not another approximation.
 ///
-/// Scope: this function is deliberately **not** substituted at every
-/// `.hypot()` call site in the crate — only the one with measured evidence
-/// of an observable-output divergence (`canonical_grid::contact`'s own doc
-/// comments name each call site's status individually, matching R21's
-/// "per-call-site choice backed by that site's own differential vectors"
-/// policy, not a blanket switch).
+/// Scope (updated by the N2 audit; supersedes this doc comment's original
+/// N1-era text, which read "deliberately not substituted at every `.hypot()`
+/// call site — only the one with measured evidence of an observable-output
+/// divergence"): every `x.hypot(y)`-style call site in this crate whose
+/// output can reach a semantic field — a score, a metric, a comparator
+/// tie-break, or a value serialized onto a result/trace DTO — is now routed
+/// through this function, not just the single comparator-flipping site N1
+/// found. `canonical_grid::contact::collinear_overlap_segment` (N1),
+/// `canonical_grid::contact`'s other structural-contact-signature call sites
+/// and `search::layout_scorer::polygon_perimeter` (N2's
+/// `free_material_sliver_metric` finding), and
+/// `transforms::generator`'s edge-length/max-radius call sites all name
+/// their own reachability chain in their own doc comments — this remains a
+/// **per-call-site, evidence-backed decision** (R21's original policy), it
+/// is just that the audited evidence set is now broader than "does this flip
+/// a comparator today". Call sites confirmed to have **no** reachable
+/// semantic field (pure Rust-only test assertions, or code with zero
+/// production callers) are deliberately left on `std::f64::hypot`/
+/// `libm::hypot`, each with its own doc comment explaining why — see
+/// `transforms::flattening`'s and `validation::sat`'s test-only `hypot`
+/// sites, and `validation::sat`'s module-level "Liveness note" for the
+/// zero-production-caller case.
 pub fn hypot(x: f64, y: f64) -> f64 {
     if x.is_infinite() || y.is_infinite() {
         return f64::INFINITY;

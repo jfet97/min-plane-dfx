@@ -37,7 +37,8 @@ use rayon::prelude::*;
 
 use crate::caches::{
     make_pairwise_nfp_cache_key, serialize_geometry_cache_key, GeometryCacheKey,
-    GeometryCacheStore, NfpConstructionAlgorithm, PairwiseNfpKeyInput, NFP_GEOMETRY_CACHE_NAMESPACE,
+    GeometryCacheStore, NfpConstructionAlgorithm, PairwiseNfpKeyInput,
+    NFP_GEOMETRY_CACHE_NAMESPACE,
 };
 use crate::domain::{
     IrregularGeometrySettings, IrregularPlacedPiece, IrregularPoint, IrregularPolygon,

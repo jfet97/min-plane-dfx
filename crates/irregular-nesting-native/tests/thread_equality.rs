@@ -85,7 +85,10 @@ fn normalize_timing_only_fields(value: &Value) -> Value {
             let mut normalized = serde_json::Map::with_capacity(fields.len());
             for (key, field_value) in fields {
                 if TIMING_ONLY_FIELD_NAMES.contains(&key.as_str()) {
-                    normalized.insert(key.clone(), Value::String(TIMING_PRESENT_MARKER.to_string()));
+                    normalized.insert(
+                        key.clone(),
+                        Value::String(TIMING_PRESENT_MARKER.to_string()),
+                    );
                 } else {
                     normalized.insert(key.clone(), normalize_timing_only_fields(field_value));
                 }

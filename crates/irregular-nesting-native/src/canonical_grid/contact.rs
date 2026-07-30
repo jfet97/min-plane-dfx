@@ -536,27 +536,28 @@ fn longest_canonical_grid_edge_length(edges: &[CanonicalGridEdge]) -> Option<f64
 
 /// TS source: `canonicalGridContact.ts:349-354` (`canonicalGridEdgeLengthMm`).
 ///
-/// R21: `Math.hypot` ported as `f64::hypot`, per
-/// `canonical-grid.md` §7's "`f64::hypot` is the direct equivalent"
-/// guidance. **Measured, not assumed** (this module's own doc comment
-/// promises no less): `tests/vectors/canonical-layout.json`'s 785 recorded
-/// vectors show `std::f64::hypot` and `libm::hypot` tie exactly here (10 of
-/// 367 checked hypot-cascaded `f64` fields diverge from the V8 oracle by a
-/// handful of ULPs either way — e.g. `5000.hypot(5000)` disagrees with
-/// V8's `Math.hypot(5000, 5000)` in the last bit under both backends).
-/// `std::f64::hypot` is kept (no measured advantage to switching, so no
-/// reason to add a `libm` call surface here) — this is the same
-/// irreducible cross-runtime `hypot` divergence `stage0-rulings.md` R21
-/// and `sat.rs`/`flattening.rs`/`transforms::generator` already document
-/// and accept; `tests/canonical_layout_vectors.rs` absorbs it with the
-/// same bounded-tolerance comparison `validation_vectors.rs`'s
-/// `assert_close` established, applied only to the raw hypot-derived
-/// length/ratio fields (never to the exact-BigInt contact/legality
-/// decisions, which this divergence cannot flip).
+/// N2 audit (supersedes the original R21 note this doc comment carried,
+/// which read `10 of 367 checked hypot-cascaded f64 fields diverge from the
+/// V8 oracle... std::f64::hypot is kept, no measured advantage to
+/// switching` — that conclusion was reached under R21's original
+/// comparator-only framing and is stale): `length_mm` here is not diagnostic
+/// -- it feeds `ratio_signature_key`'s rounded ratio key inside
+/// [`canonical_grid_structural_edge_descriptor`], which is concatenated into
+/// the structural-contact signature strings compared by
+/// [`cmp_js_code_units`] and counted into
+/// `CanonicalGridBoundaryContact::near_complete_structural_contact_count`/
+/// `normalized_units`, both of which are threaded onward to
+/// `search::strict_decoder`'s `compare_local_scores` tie-break chain and
+/// serialized onto `IrregularLayoutScore`/`IrregularBeamState`. A `hypot`
+/// call whose output can reach a signature string, a comparator, or a
+/// serialized metric is exactly the case R21 and [`js_math::hypot`]'s own
+/// doc comment call out — routed through [`js_math::hypot`] (the verbatim
+/// V8 port, 0/21696 oracle mismatches) accordingly, same as this module's
+/// [`collinear_overlap_segment`] precedent.
 fn canonical_grid_edge_length_mm(edge: &CanonicalGridEdge) -> Option<f64> {
     let dx = edge.end.x - edge.start.x;
     let dy = edge.end.y - edge.start.y;
-    let length_mm = dx.hypot(dy) / 1_000.0;
+    let length_mm = js_math::hypot(dx, dy) / 1_000.0;
     if length_mm.is_finite() && length_mm > 0.0 {
         Some(length_mm)
     } else {
@@ -565,6 +566,14 @@ fn canonical_grid_edge_length_mm(edge: &CanonicalGridEdge) -> Option<f64> {
 }
 
 /// TS source: `canonicalGridContact.ts:356-369` (`turnCosine`).
+///
+/// N2 audit: `previous_x.hypot(previous_y)`/`next_x.hypot(next_y)` route
+/// through [`js_math::hypot`], not `f64::hypot` -- the resulting `cosine` is
+/// rounded into `start_turn_key`/`end_turn_key` inside
+/// [`canonical_grid_structural_edge_descriptor`] and concatenated into the
+/// same structural-contact signature strings [`canonical_grid_edge_length_mm`]'s
+/// doc comment documents as comparator/serialized-metric-reaching (via
+/// `near_complete_structural_contact_count`/`normalized_units`).
 fn canonical_grid_turn_cosine(
     previous: CanonicalGridPoint,
     vertex: CanonicalGridPoint,
@@ -574,7 +583,7 @@ fn canonical_grid_turn_cosine(
     let previous_y = previous.y - vertex.y;
     let next_x = next.x - vertex.x;
     let next_y = next.y - vertex.y;
-    let denominator = previous_x.hypot(previous_y) * next_x.hypot(next_y);
+    let denominator = js_math::hypot(previous_x, previous_y) * js_math::hypot(next_x, next_y);
     if !denominator.is_finite() || denominator <= 0.0 {
         return None;
     }
@@ -875,8 +884,14 @@ fn longest_polygon_edge_length(points: &[IrregularPoint]) -> Option<f64> {
 }
 
 /// TS source: `convexPolygonContact.ts:269-272` (`polygonEdgeLength`).
+///
+/// N2 audit: routed through [`js_math::hypot`] — `edge_length` feeds
+/// `longest_polygon_edge_length` and [`convex_structural_edge_descriptor`],
+/// which builds the structural-contact signature strings; see
+/// [`collinear_overlap_segment`]'s doc comment for the full reachability
+/// chain to `compare_local_scores`/serialized result DTOs.
 fn polygon_edge_length(edge: &PolygonEdge) -> Option<f64> {
-    let edge_length = (edge.end.x - edge.start.x).hypot(edge.end.y - edge.start.y);
+    let edge_length = js_math::hypot(edge.end.x - edge.start.x, edge.end.y - edge.start.y);
     if edge_length.is_finite() && edge_length > 0.0 {
         Some(edge_length)
     } else {
@@ -885,8 +900,13 @@ fn polygon_edge_length(edge: &PolygonEdge) -> Option<f64> {
 }
 
 /// TS source: `convexPolygonContact.ts:219-222` (`pointDistance`).
+///
+/// N2 audit: routed through [`js_math::hypot`] — `distance` feeds
+/// [`convex_structural_edge_descriptor`]'s `previous_length_mm`/
+/// `next_length_mm`, part of the same signature-string chain
+/// [`polygon_edge_length`]'s doc comment documents.
 fn point_distance(first: IrregularPoint, second: IrregularPoint) -> Option<f64> {
-    let distance = (second.x - first.x).hypot(second.y - first.y);
+    let distance = js_math::hypot(second.x - first.x, second.y - first.y);
     if distance.is_finite() && distance > 0.0 {
         Some(distance)
     } else {
@@ -895,6 +915,12 @@ fn point_distance(first: IrregularPoint, second: IrregularPoint) -> Option<f64> 
 }
 
 /// TS source: `convexPolygonContact.ts:224-240` (`turnCosine`).
+///
+/// N2 audit: routed through [`js_math::hypot`] — `previous_length`/
+/// `next_length` feed `cosine`, rounded into
+/// [`convex_structural_edge_descriptor`]'s `start_turn_key`/`end_turn_key`,
+/// part of the same signature-string chain [`polygon_edge_length`]'s doc
+/// comment documents.
 fn convex_turn_cosine(
     previous: IrregularPoint,
     vertex: IrregularPoint,
@@ -904,8 +930,8 @@ fn convex_turn_cosine(
     let previous_y = previous.y - vertex.y;
     let next_x = next.x - vertex.x;
     let next_y = next.y - vertex.y;
-    let previous_length = previous_x.hypot(previous_y);
-    let next_length = next_x.hypot(next_y);
+    let previous_length = js_math::hypot(previous_x, previous_y);
+    let next_length = js_math::hypot(next_x, next_y);
     let denominator = previous_length * next_length;
     if !denominator.is_finite() || denominator <= 0.0 {
         return None;
@@ -938,21 +964,30 @@ fn collinear_overlap_length(first: &PolygonEdge, second: &PolygonEdge) -> Option
 /// already-translated floating-mm convex polygons, never on canonical-grid
 /// integers.
 ///
-/// R21: this function's `edge_length` routes through [`js_math::hypot`] (a
-/// verbatim port of V8's `Math.hypot`), not `f64::hypot` — the one `hypot`
-/// call site in this module with **measured** evidence of an
-/// observable-output divergence: `segment.length_mm` (summed into
+/// R21/N1: this function's `edge_length` routes through [`js_math::hypot`] (a
+/// verbatim port of V8's `Math.hypot`), not `f64::hypot` — this was the
+/// original call site with **measured** evidence of an observable
+/// comparator-flipping divergence: `segment.length_mm` (summed into
 /// `shared_convex_polygon_boundary_length`'s total, which becomes
 /// `IrregularBeamState::shared_collision_boundary_length_mm`) feeds
 /// `search::strict_decoder::IntrinsicStrictLocalScore::shared_boundary_length_mm`,
-/// a `compare_local_scores` tie-break field, unlike this module's *other*
-/// `hypot` call sites (`polygon_edge_length`/`point_distance`/
-/// `convex_turn_cosine`/`canonical_grid_edge_length_mm`), none of which feed
-/// a comparator today — see [`js_math::hypot`]'s own doc for the full
-/// evidence trail (differential fixture matrix repro, the 21,696-case V8
-/// oracle sweep). Kept scoped to this one call site per R21's own
-/// "per-call-site choice backed by that site's own differential vectors"
-/// policy, not a blanket switch.
+/// a `compare_local_scores` tie-break field — see [`js_math::hypot`]'s own
+/// doc for the full evidence trail (differential fixture matrix repro, the
+/// 21,696-case V8 oracle sweep).
+///
+/// N2 addendum: this module's *other* `hypot` call sites
+/// (`polygon_edge_length`/`point_distance`/`convex_turn_cosine`/
+/// `canonical_grid_edge_length_mm`/`canonical_grid_turn_cosine`) were
+/// re-audited under N2's broader "score/metric/comparator/serialized value"
+/// standard (not just "comparator today") and found to *also* reach
+/// semantic output — their structural-contact signature strings and
+/// `near_complete_structural_contact_count`/`normalized_units` metrics feed
+/// both `compare_local_scores` and serialized result DTOs — so they are now
+/// routed through [`js_math::hypot`] too (see each function's own doc
+/// comment). Every `.hypot(`-style call site in this module is therefore
+/// V8-exact today; the "per-call-site, not blanket" framing in R21's
+/// original text was about auditing each site on its own evidence, not
+/// about deliberately leaving proven-semantic sites on `f64::hypot`.
 fn collinear_overlap_segment(
     first: &PolygonEdge,
     second: &PolygonEdge,

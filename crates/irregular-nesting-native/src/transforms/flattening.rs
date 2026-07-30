@@ -426,6 +426,12 @@ pub mod arc {
             // Every interior sample should sit on the analytic circle of
             // radius 5 centered at (5, 0) (the unique circle through both
             // endpoints with a pi sweep for a chord of length 10).
+            //
+            // N2 audit: this `hypot` is a Rust-only test assertion (a
+            // geometric sanity check against a hand-derived analytic radius,
+            // not against any TS/V8 oracle value) with a 1e-9 tolerance many
+            // orders of magnitude looser than any hypot ULP noise -- kept on
+            // `std::f64::hypot`, no reachable semantic field.
             for point in &points[1..points.len() - 1] {
                 let distance_from_center = (point.x - 5.0).hypot(point.y - 0.0);
                 assert!(
@@ -742,6 +748,10 @@ pub mod ellipse {
             let e = ellipse_source(1.0, 1.0, radius, 0.0, 1.0, 0.0, std::f64::consts::PI * 2.0);
             let points = sample_points(&e, sag);
             assert!(points.len() > 4);
+            // N2 audit: same as the arc semicircle test above -- a
+            // Rust-only analytic sanity check (1e-6 tolerance), no TS/V8
+            // oracle or reachable semantic field involved; kept on
+            // `std::f64::hypot`.
             for point in &points {
                 let distance_from_center = (point.x - 1.0).hypot(point.y - 1.0);
                 assert!(

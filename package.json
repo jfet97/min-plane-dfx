@@ -33,6 +33,8 @@
     "gate:compact-nine-baselines": "tsx --tsconfig tsconfig.node.json scripts/irregular-compact-nine-baselines.ts",
     "gate:capacity": "tsx --tsconfig tsconfig.node.json scripts/irregular-capacity-gate.ts --strict --paired",
     "gate:capacity:production": "tsx --tsconfig tsconfig.node.json scripts/irregular-capacity-gate.ts --strict",
+    "build:native": "node crates/irregular-nesting-native/scripts/build-native.mjs --release",
+    "test:differential": "tsx --tsconfig tsconfig.node.json scripts/rust-parity/differential-fixture-matrix.ts --required-only",
     "postinstall": "pnpm native:electron"
   },
   "dependencies": {

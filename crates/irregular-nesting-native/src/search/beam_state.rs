@@ -1262,8 +1262,7 @@ fn canonical_ring_key(points: &[IrregularPoint], translate_x: f64, translate_y: 
     // function is this cluster's single hottest allocation site.
     let point_count_str = canonical_number(point_count as f64);
     let mut ring_key = String::with_capacity(
-        24 + point_count_str.len()
-            + point_keys.iter().map(|key| key.len() + 24).sum::<usize>(),
+        24 + point_count_str.len() + point_keys.iter().map(|key| key.len() + 24).sum::<usize>(),
     );
     write_canonical_token(&mut ring_key, "point-count");
     write_canonical_token(&mut ring_key, &point_count_str);

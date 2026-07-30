@@ -54,6 +54,7 @@ use crate::archive::shared::{
     SharedArchiveError, SharedArchivePhase,
 };
 use crate::archive::{periodic_family, reconstruction};
+use crate::boundary::parallel::with_job_pool;
 use crate::caches::GeometryCacheStore;
 use crate::capacity::mode::{
     run_intrinsic_capacity_mode, run_intrinsic_capacity_scheduler_cold_quantum,
@@ -67,7 +68,6 @@ use crate::capacity::preflight::{
     IntrinsicCapacityPreflightOutcome, IntrinsicCapacityProvenImpossibleReason,
 };
 use crate::capacity::search::{CapacitySearchError, IntrinsicCapacitySearchStatus};
-use crate::boundary::parallel::with_job_pool;
 use crate::domain::{
     CollisionGeometry, CollisionGeometryDiagnostic, ImportedPiece, IrregularNestingSettings,
     IrregularPreparedPiece, IrregularPriorityOrderKey, IrregularTransformCandidate, PieceId,
@@ -347,8 +347,7 @@ fn compute_prepared_piece(
     })?;
 
     let allow_rotation = request.options.allow_global_rotation && prepared.allow_rotation;
-    let allow_mirror =
-        request.options.allow_global_mirror.unwrap_or(true) && prepared.allow_mirror;
+    let allow_mirror = request.options.allow_global_mirror.unwrap_or(true) && prepared.allow_mirror;
     let transforms = generate_transforms(&GenerateTransformsInput {
         geometry: collision_geometry.clone(),
         allow_rotation,

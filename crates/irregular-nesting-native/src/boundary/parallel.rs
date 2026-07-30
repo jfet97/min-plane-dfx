@@ -298,10 +298,7 @@ mod tests {
                         })
                         .collect()
                 });
-                observed_ids
-                    .lock()
-                    .unwrap()
-                    .push((job_id, pool_addresses));
+                observed_ids.lock().unwrap().push((job_id, pool_addresses));
             }));
         }
         for handle in handles {
@@ -341,8 +338,7 @@ mod tests {
             let job_pool = JobPool::new(Some(2));
             {
                 let _guard = job_pool.install();
-                let ran_on_worker: bool =
-                    with_job_pool(|| rayon::current_thread_index().is_some());
+                let ran_on_worker: bool = with_job_pool(|| rayon::current_thread_index().is_some());
                 assert!(ran_on_worker);
             }
             // Guard dropped: the thread-local slot on *this* OS thread must

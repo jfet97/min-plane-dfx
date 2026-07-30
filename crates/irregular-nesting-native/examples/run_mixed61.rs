@@ -107,8 +107,9 @@ fn decode_prepared_piece(value: &Value) -> PreparedPiece {
 
 fn decode_request(root: &Value) -> (NestingRequest, IrregularNestingSettings) {
     let request_value = &root["request"];
-    let settings: IrregularNestingSettings = serde_json::from_value(request_value["settings"].clone())
-        .unwrap_or_else(|err| panic!("failed to decode IrregularNestingSettings: {err}"));
+    let settings: IrregularNestingSettings =
+        serde_json::from_value(request_value["settings"].clone())
+            .unwrap_or_else(|err| panic!("failed to decode IrregularNestingSettings: {err}"));
     let sheet: SheetSpec = serde_json::from_value(request_value["sheet"].clone())
         .unwrap_or_else(|err| panic!("failed to decode SheetSpec: {err}"));
     let pieces: Vec<PreparedPiece> = request_value["pieces"]
@@ -180,7 +181,8 @@ fn main() {
         "/tests/vectors/mixed61-2000x2700-compact-request.json"
     );
     let raw = fs::read_to_string(path).unwrap_or_else(|err| panic!("failed to read {path}: {err}"));
-    let root: Value = serde_json::from_str(&raw).unwrap_or_else(|err| panic!("failed to parse {path}: {err}"));
+    let root: Value =
+        serde_json::from_str(&raw).unwrap_or_else(|err| panic!("failed to parse {path}: {err}"));
     let (request, settings) = decode_request(&root);
 
     for run in 0..repeat {
@@ -221,4 +223,31 @@ fn main() {
             collision_identity_sha256.as_deref().unwrap_or("none"),
         );
     }
+
+    // Performance-contract P6 (memory): peak RSS for the pure-Rust,
+    // no-N-API-overhead path. `VmHWM` ("High Water Mark") in
+    // `/proc/self/status` is the kernel's own peak-resident-set-size
+    // counter for this whole process across every `--repeat` iteration
+    // above, in kB -- the same unit and the same whole-process-lifetime
+    // quantity `/usr/bin/time -v`'s "Maximum resident set size" and
+    // Node's `process.resourceUsage().maxRSS` (see
+    // `scripts/rust-parity/measure-peak-rss.ts`) report, so all three are
+    // directly comparable without unit conversion.
+    if let Some(vm_hwm_kb) = read_vm_hwm_kb() {
+        println!("[run_mixed61] vm_hwm_kb={vm_hwm_kb}");
+    } else {
+        println!("[run_mixed61] vm_hwm_kb=unavailable");
+    }
+}
+
+/// Reads `VmHWM` (peak resident set size, in kB) from `/proc/self/status`.
+/// Returns `None` if the file, the field, or its numeric value is
+/// unavailable (e.g. non-Linux hosts) -- this is a best-effort diagnostics
+/// read, never a reason to fail the benchmark run itself.
+fn read_vm_hwm_kb() -> Option<u64> {
+    let status = fs::read_to_string("/proc/self/status").ok()?;
+    status.lines().find_map(|line| {
+        let rest = line.strip_prefix("VmHWM:")?;
+        rest.trim().strip_suffix("kB")?.trim().parse::<u64>().ok()
+    })
 }

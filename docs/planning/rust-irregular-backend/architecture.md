@@ -1,6 +1,64 @@
 # Rust Irregular Backend — Architecture
 
-Status: **Stage 0 design document.** No production algorithm code exists yet.
+Status (updated 2026-07-30, superseding the "Stage 0 design document" label
+below that described this document's original 2026-07-28 state): **Stages
+0–5 complete against the migration prompt's own staging plan (§8 below).**
+Compact and Compact Short Side both run fully in Rust through the one coarse
+N-API call this document specifies (§4.1); Rust one-thread output matches
+TypeScript exactly on every maintained fixture, including the full Mixed-61
+acceptance-bar case at both profiles; deterministic Rayon parallelism is
+implemented and shipped at two sites (§8 Stage 4); packaging, CI wiring, and
+the final evidence/acceptance pass (§8 Stage 5) are complete. **The backend
+remains selectable, opt-in, and non-default** — `backend-selection-rollback.md`'s
+selector still defaults to `'typescript'` — because two of the preregistered
+performance-promotion thresholds (P2 "default-thread ≥2.5× TS", P3 "parallel
+efficiency") are not met on the current Rayon site coverage; see
+`evidence/performance-report.md` §7/§9 and `evidence/acceptance-checklist.md`
+§4.7 for the full, unsoftened verdict. This is a scope/promotion decision,
+not an unfinished-implementation caveat: every semantic and determinism
+requirement in the migration prompt's §25 Definition of Done is met (see the
+acceptance checklist). The original Stage-0 status paragraph is preserved
+immediately below, unedited, as the document's own historical record of what
+it claimed to be true when first written — the paragraphs *after* it (§1
+onward) describe the architecture as designed and, per the evidence
+directory linked in §0 below, as actually implemented; this document's body
+was not rewritten line-by-line to update every present-tense "does not yet
+exist" claim, so where §1–§9 below read as forward-looking design prose,
+cross-check the dated evidence in `evidence/` (indexed in §0) for what is
+actually true on disk today.
+
+## 0. Evidence index (added 2026-07-30)
+
+Every claim of "this is done" anywhere in this repository for the Rust
+irregular-nesting backend is backed by a dated, re-run-in-session evidence
+document under `docs/planning/rust-irregular-backend/evidence/`, not by this
+design document's own prose. Index, in the order migration prompt §22 lists
+the corresponding required artifacts:
+
+| Evidence document | Migration prompt §22 artifact | What it establishes |
+| --- | --- | --- |
+| `evidence/differential-e2e-report.md` | #10 (parity reports) | Full differential TS-vs-Rust comparison across the acceptance bar, the required/exploratory fixture matrices, and the two non-blocking findings (N1, N2) this session confirmed **both closed** — no known semantic divergence remains. |
+| `evidence/determinism-report.md` | #11 (1-thread vs multi-thread determinism) | Thread-count invariance (48/48 hash-exact on CI-tractable fixtures, 11/11 on the full Mixed-61 primary gate), repeated-process determinism (5×), and checkpoint-resume-vs-uninterrupted equivalence (336 + 8 vector cases). |
+| `evidence/performance-report.md` | #12 (before/after performance, with provenance) | The full P1–P7 promotion-threshold measurement batch, raw samples, machine/commit provenance, and the honest P2/P3-fail / opt-in-only promotion conclusion. |
+| `evidence/rust-mixed61-profile.md` | (supporting #12) | Hotspot profile of the 1-thread Mixed-61 case explaining where wall-clock time goes, gathered when sampling profilers were unavailable in this sandboxed environment. |
+| `evidence/memory-cache-report.md` | #13 (memory and cache telemetry) | Real Mixed-61-fixture cache telemetry via `getLastJobDiagnostics()` (98.23% NFP hit rate, exact TS-baseline match on misses/stores), peak RSS, and the job-local memory-bound argument. |
+| `evidence/freeze-hashes-f282f0a.txt` + `evidence/freeze-verification.md` | #14 (unchanged existing test/fixture hashes) | 1,120-file SHA-256 freeze baseline and this session's re-hash: 1,118/1,120 byte-identical, the remaining 2 both pre-approved additive diffs, every other diff in the frozen scope enumerated and justified. |
+| `evidence/acceptance-checklist.md` | #15 (final acceptance checklist) | Migration prompt §25 Definition of Done, walked item by item, graded met/met-with-note/not-met with evidence pointers; the final gate-suite run recorded in full. |
+
+The remaining nine design documents in this directory (`semantic-mapping.md`,
+`native-boundary.md`, `cache-concurrency-design.md`, `parallelism-inventory.md`,
+`checkpoint-compatibility.md`, `backend-selection-rollback.md`,
+`build-packaging.md`, `ci-matrix.md`, `parity-matrix.md`) correspond to
+migration prompt §22 artifacts #2–#9 and were each written once during Stage
+0 and never revised afterward (`evidence/acceptance-checklist.md` §6 records
+the exact commits and flags this as a documentation-maintenance gap, not a
+correctness gap — their content was independently spot-checked against real
+source during the final evidence pass and found accurate as design
+documents).
+
+---
+
+Status (original, 2026-07-28): **Stage 0 design document.** No production algorithm code exists yet.
 This document describes the target architecture for the Rust port of the
 Compact and Compact Short Side irregular-nesting backend and the staged plan
 to get there. It does not claim any stage beyond Stage 1 scaffolding is

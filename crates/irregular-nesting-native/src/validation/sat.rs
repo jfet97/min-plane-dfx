@@ -285,6 +285,12 @@ mod tests {
         let square_polygon = square(-5.0, 5.0);
         let diamond = vec![p(0.0, -3.0), p(3.0, 0.0), p(0.0, 3.0), p(-3.0, 0.0)];
         let result = measure_convex_sat_penetration(&square_polygon, &diamond).expect("overlap");
+        // N2 audit: Rust-only test-side consistency check (1e-9 tolerance),
+        // not compared against a TS/V8 oracle -- kept on `std::f64::hypot`.
+        // `measure_convex_sat_penetration` itself has zero production
+        // callers today (this module's own top-doc "Liveness note"), so no
+        // call site in this file can reach a production semantic field
+        // regardless.
         let translation_length = result.translation.x.hypot(result.translation.y);
         assert!((translation_length - result.depth).abs() < 1e-9);
     }

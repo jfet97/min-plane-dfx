@@ -273,7 +273,8 @@ mod tests {
         let prepared = decode_and_route(&json).expect("request decodes and routes");
         let mut sink = NullEventSink;
         let mut always_cancelled = || true;
-        let (envelope, _cache, _threads) = run_job(prepared, &mut sink, Some(&mut always_cancelled), None);
+        let (envelope, _cache, _threads) =
+            run_job(prepared, &mut sink, Some(&mut always_cancelled), None);
         let parsed: serde_json::Value = serde_json::from_str(&envelope).expect("envelope is JSON");
         assert_eq!(parsed["ok"], serde_json::json!(false));
         assert_eq!(
@@ -307,7 +308,8 @@ mod tests {
         json["options"]["irregularSettings"]["optimizer"]["intrinsicSharedArchiveEnabled"] =
             serde_json::json!(false);
         let mut sink = NullEventSink;
-        let (envelope, cache, _threads) = run_job_from_json(&json.to_string(), &mut sink, None, None);
+        let (envelope, cache, _threads) =
+            run_job_from_json(&json.to_string(), &mut sink, None, None);
         assert!(cache.is_none());
         let parsed: serde_json::Value = serde_json::from_str(&envelope).expect("envelope is JSON");
         assert_eq!(parsed["ok"], serde_json::json!(false));

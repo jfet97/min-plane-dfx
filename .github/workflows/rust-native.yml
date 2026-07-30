@@ -1,0 +1,200 @@
+name: Rust native
+
+# Per-PR tier for the crates/irregular-nesting-native Rust crate, per
+# docs/planning/rust-irregular-backend/ci-matrix.md. Covers: Rust format,
+# Rust lint (warnings as errors), Rust unit tests, native build, Node
+# addon-load smoke test, the required-rows differential subset (TS vs
+# Rust), and one-thread-vs-multi-thread determinism (thread-equality).
+#
+# `.github/workflows/capacity-quality.yml` is left untouched -- its two
+# existing jobs (`capacity-quality`, `layout-matrix`) remain the
+# TS-backend production-gate authority; this file only adds the Rust-side
+# per-PR tier alongside it.
+#
+# Expensive gates (`gate:mixed61-compact`, `gate:compact-nine-baselines`,
+# the full differential vector suite, the full 1/2/default/8-thread x
+# small/medium/Mixed-61 determinism grid, `gate:capacity`) are
+# deliberately NOT run per-PR here -- see the commented nightly-tier stub
+# at the bottom of this file (ci-matrix.md §3/§4, "nightly" cadence).
+#
+# Every job keeps the existing `pnpm install --frozen-lockfile
+# --ignore-scripts` convention unweakened; jobs that need a compiled
+# `.node` addon add one explicit, separate, non-lifecycle build step
+# after install (ci-matrix.md §7 / build-packaging.md §3).
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rust-native-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CRATE_MANIFEST: crates/irregular-nesting-native/Cargo.toml
+
+jobs:
+  rust-fmt:
+    name: Rust format
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates/irregular-nesting-native -> target
+      - run: cargo fmt --manifest-path "$CRATE_MANIFEST" -- --check
+
+  rust-clippy:
+    name: Rust lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates/irregular-nesting-native -> target
+      - run: cargo clippy --manifest-path "$CRATE_MANIFEST" --all-targets -- -D warnings
+
+  rust-test:
+    name: Rust unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates/irregular-nesting-native -> target
+      - run: cargo test --release --manifest-path "$CRATE_MANIFEST"
+
+  native-build-smoke:
+    name: Native build + addon-load smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.11.0
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates/irregular-nesting-native -> target
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      # Deliberate, explicit, non-lifecycle build step -- native
+      # compilation is never triggered by `pnpm install` itself
+      # (build-packaging.md §3).
+      - run: node crates/irregular-nesting-native/scripts/build-native.mjs --release
+      # Plain-Node addon-load smoke: exercises the same loader
+      # (`npm/index.cjs`) and `nativeCapability` N-API entry point every
+      # TS consumer resolves through (src/workers/irregular/native/loadNativeBackend.ts).
+      - name: Addon-load smoke (plain Node)
+        run: |
+          node -e "
+            const addon = require('./crates/irregular-nesting-native/npm/index.cjs');
+            const capability = addon.nativeCapability();
+            console.log('nativeCapability():', JSON.stringify(capability));
+            if (typeof capability.apiVersion !== 'number') {
+              throw new Error('bad capability shape: apiVersion is not a number');
+            }
+          "
+      # `pnpm test` runs vitest inside Electron's bundled (ELECTRON_RUN_AS_NODE)
+      # Node, a distinct ABI context from plain system Node
+      # (tests-gates-inventory.md §12's dual-runtime finding) -- prove the
+      # addon loads under both before any downstream job trusts it.
+      - name: Addon-load smoke (Electron-as-node)
+        run: |
+          ELECTRON_RUN_AS_NODE=1 pnpm exec electron -e "
+            const addon = require('./crates/irregular-nesting-native/npm/index.cjs');
+            const capability = addon.nativeCapability();
+            console.log('nativeCapability() under Electron-as-node:', JSON.stringify(capability));
+            if (typeof capability.apiVersion !== 'number') {
+              throw new Error('bad capability shape: apiVersion is not a number');
+            }
+          "
+
+  differential-required:
+    name: Differential tests (required rows)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.11.0
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates/irregular-nesting-native -> target
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      # Deliberate, explicit, non-lifecycle build step (same rationale as
+      # native-build-smoke above) -- required before `pnpm test:differential`
+      # can load the native backend at all.
+      - run: node crates/irregular-nesting-native/scripts/build-native.mjs --release
+      - run: pnpm test:differential
+
+  thread-equality:
+    name: Thread-count determinism (thread-equality)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates/irregular-nesting-native -> target
+      - run: cargo test --release --manifest-path "$CRATE_MANIFEST" --test thread_equality
+
+# ---------------------------------------------------------------------------
+# Nightly tier (stub, not implemented here) -- per ci-matrix.md §3/§4/§10.6.
+#
+# Expensive gates stay out of the per-PR tier above and instead belong to a
+# separate `schedule` + `workflow_dispatch`-triggered workflow (proposed:
+# `.github/workflows/nightly-native.yml`), covering:
+#
+#   - `pnpm gate:mixed61-compact` and `pnpm gate:compact-nine-baselines`
+#     forced onto the Rust backend once the `--irregular-backend` CLI flag
+#     (backend-selection-rollback.md §2.3) exists.
+#   - The full differential vector matrix:
+#     `pnpm exec tsx --tsconfig tsconfig.node.json
+#     scripts/rust-parity/differential-fixture-matrix.ts` with no
+#     `--required-only` filter (every REQUIRED_ROWS + EXPLORATORY_ROWS
+#     fixture, not just the per-PR subset `pnpm test:differential` runs).
+#   - The full determinism grid: 1, 2, default (unset), and 8
+#     `RAYON_NUM_THREADS`, crossed with small/medium/Mixed-61 cases, each
+#     repeated several times, comparing canonical hashes/ledgers/checkpoint
+#     bytes exactly (thread-equality above only proves 1 vs 2 threads on
+#     the small representative fixtures).
+#   - `pnpm gate:capacity` (the expensive cold-only paired comparison
+#     `gate:capacity:production` in `capacity-quality.yml` deliberately
+#     excludes).
+#
+# Per prompt §19.3/§20.3 ("do not run multiple performance measurements
+# concurrently on the same host"), a nightly workflow implementing the
+# above must not run any of these jobs concurrently with one another on
+# the same runner, and must never be treated as a substitute for the
+# performance-contract.md benchmark batches, which require a dedicated,
+# controlled machine this CI matrix cannot provide.
+# ---------------------------------------------------------------------------

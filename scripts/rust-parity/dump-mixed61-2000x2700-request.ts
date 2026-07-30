@@ -73,7 +73,7 @@ const request = new NestingRequest({
   })
 })
 
-function encodeImportedPiece(piece: (typeof request.sourcePieces)[number]) {
+function encodeImportedPiece(piece: NonNullable<typeof request.sourcePieces>[number]) {
   return {
     id: String(piece.id),
     sourceFileId: String(piece.sourceFileId),
@@ -102,7 +102,7 @@ function encodePreparedPiece(piece: (typeof request.pieces)[number]) {
     allowMirror: piece.allowMirror
   }
 }
-function encodeOptimizerSettings(optimizer: (typeof settings)['optimizer']) {
+function encodeOptimizerSettings(optimizer: NonNullable<typeof settings>['optimizer']) {
   return {
     orderWindow: optimizer.orderWindow,
     beamWidth: optimizer.beamWidth,
