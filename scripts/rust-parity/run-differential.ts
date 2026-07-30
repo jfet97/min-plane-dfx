@@ -21,26 +21,15 @@
  *
  * # What is *not* compared, and why (never a silent omission)
  *
- * - Elapsed/timing/byte-count fields: most production traces have no
- *   harness clock seam, so every wall-clock-derived field the two backends
- *   compute independently is expected to differ in value. The TypeScript
- *   Short Side pair-fold observer alone receives a frozen harness clock and
- *   constant RSS reading so its deterministic candidate cap, rather than
- *   shared-runner speed, governs differential execution.
- *   All five trace fields (`capacityTrace` / `intrinsicAnytimeSchedulerTrace` /
- *   `focusedCompleteReconstructionTrace` / `intrinsicShortSideObserverTrace` /
- *   `intrinsicShortSidePairFoldTrace`) are otherwise compared field-for-field
- *   (`nativeIrregularBackend.ts` now reconstructs every one of them from the
- *   native boundary's real, structured wire projection -- see that module's
- *   own "Trace fidelity" doc); every field named in
- *   `TIMING_ONLY_TRACE_FIELD_NAMES` below (`runtimeMs`/`elapsedMs`/
- *   `preflightRuntimeMs`/`completeArchiveRuntimeMs`/`prefixTerminalizationMs`/
- *   `coldSearchMs`/`topologyMeasurementMs`/`contactMeasurementMs`/
- *   `serializedTraceBytes`/`peakRssDeltaBytes`, wherever it occurs at any
- *   nesting depth in any of the five traces) is normalized to a presence-only
- *   marker before comparison (`normalizeTimingOnlyFields`): both backends
- *   must agree the field is present-or-absent, but its wall-clock-derived
- *   *value* is never compared.
+ * The shared production comparator projects the complete success or typed
+ * failure outcome. BigInt values remain exact decimal strings. Documented
+ * wall-clock fields, timing-derived `serializedTraceBytes`, and
+ * `peakRssDeltaBytes` are normalized to presence markers, so both backends must
+ * agree that each measurement exists while independent timing and process-memory
+ * values do not create semantic mismatches. Every
+ * other result field is compared exactly, including ordered placements and
+ * transforms, scores, archive and candidate contents, complete snapshots,
+ * traces, ledgers, checkpoints, hashes, and typed failure context.
  *
  * Usage:
  *   pnpm exec tsx --tsconfig tsconfig.node.json scripts/rust-parity/run-differential.ts \
@@ -49,11 +38,11 @@
  * `--pieces` (default `4`) truncates a named fixture's `pieces`/`sourcePieces`
  * to a fast, iterable subset; `--request-file` always runs the file's full,
  * untruncated request. Exit code 0 only if both backends actually ran to
- * completion and the compared projection matched exactly; nonzero otherwise
- * (including: native addon unavailable, either backend failed, or any real
- * divergence).
+ * completion and the compared outcomes matched exactly; nonzero otherwise
+ * (including native addon unavailability or any semantic divergence). Equal
+ * typed failures are a valid parity outcome.
  */
-import { Cause, Effect, Exit, Layer, Result, Schema } from 'effect'
+import { Effect, Layer, Schema } from 'effect'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -73,7 +62,6 @@ import { preparePieces } from '@shared/preparePieces.js'
 
 import {
   computeIrregularNesting,
-  type IrregularComputeErrorType,
   type IrregularComputeResult
 } from '../../src/workers/algorithm/irregular/computeIrregularNesting.js'
 import { CollisionGeometryBuilder } from '../../src/workers/irregular/collisionGeometryBuilder.js'
@@ -89,6 +77,12 @@ import {
   type NativeCapabilityProbe
 } from '../../src/workers/irregular/native/loadNativeBackend.js'
 import type { WorkerResponseFailureError } from '@shared/protocol/worker.js'
+import { toIrregularWorkerFailure } from '../../src/workers/irregular/irregularWorkerFailure.js'
+import {
+  compareIrregularDifferentialOutcomes,
+  projectIrregularDifferentialOutcome,
+  type IrregularDifferentialOutcome
+} from '../../src/workers/irregular/differential/irregularSemanticComparison.js'
 
 // ===========================================================================
 // CLI
@@ -392,7 +386,7 @@ async function loadRequest(args: Args): Promise<NestingRequest> {
 function runTypeScriptBackend(
   request: NestingRequest,
   geometrySettings: IrregularNestingSettings
-): Effect.Effect<IrregularComputeResult, IrregularComputeErrorType> {
+): Effect.Effect<IrregularComputeResult, WorkerResponseFailureError> {
   return computeIrregularNesting(request, {
     intrinsicShortSidePairFoldRuntimeControl: {
       now: () => 0,
@@ -410,7 +404,8 @@ function runTypeScriptBackend(
     Effect.provide(IrregularPlacementScorer.Layer),
     Effect.provide(IrregularLayoutScorer.Live),
     Effect.provide(GeometryKernel.Live),
-    Effect.provide(Layer.succeed(GeometrySettings, geometrySettings))
+    Effect.provide(Layer.succeed(GeometrySettings, geometrySettings)),
+    Effect.mapError(toIrregularWorkerFailure)
   )
 }
 
@@ -421,166 +416,17 @@ function runRustBackend(
   return computeIrregularNestingNative(request, geometrySettings)
 }
 
-type Outcome<A> =
-  | { readonly ran: true; readonly ok: true; readonly value: A }
-  | { readonly ran: true; readonly ok: false; readonly errorSummary: string }
-
-async function runToOutcome<A, E>(effect: Effect.Effect<A, E>): Promise<Outcome<A>> {
-  const exit = await Effect.runPromiseExit(effect)
-  if (Exit.isSuccess(exit)) {
-    return { ran: true, ok: true, value: exit.value }
-  }
-  const found = Cause.findFail(exit.cause)
-  if (Result.isSuccess(found)) {
-    return { ran: true, ok: false, errorSummary: describeError(found.success.error) }
-  }
-  return { ran: true, ok: false, errorSummary: `unexpected defect: ${Cause.pretty(exit.cause)}` }
-}
-
-function describeError(error: unknown): string {
-  if (typeof error === 'object' && error !== null && 'code' in error && 'message' in error) {
-    const withShape = error as { readonly code: unknown; readonly message: unknown }
-    return `${String(withShape.code)}: ${String(withShape.message)}`
-  }
-  return JSON.stringify(error)
-}
-
-// ===========================================================================
-// Semantic projection + first-divergence diff
-// ===========================================================================
-
-/**
- * Every wall-clock/wall-clock-derived field name across all five trace
- * types (`capacityTrace`/`intrinsicAnytimeSchedulerTrace`/
- * `focusedCompleteReconstructionTrace`/`intrinsicShortSideObserverTrace`/
- * `intrinsicShortSidePairFoldTrace`), compared presence-only regardless of
- * nesting depth (`normalizeTimingOnlyFields`) -- see module doc, "What is
- * *not* compared". Name-based (not path-based): every one of these field
- * names is a real, single-purpose measurement field in its own trace
- * interface (verified against `computeIrregularNesting.ts`/
- * `intrinsicCapacitySearch.ts`/`intrinsicShortSideObserver.ts`/
- * `intrinsicShortSidePairFoldObserver.ts`/`intrinsicShortSideContactStrip.ts`),
- * never reused for a differently-typed, semantically-real field elsewhere in
- * these traces.
- */
-const TIMING_ONLY_TRACE_FIELD_NAMES: ReadonlySet<string> = new Set([
-  'runtimeMs',
-  'elapsedMs',
-  'preflightRuntimeMs',
-  'completeArchiveRuntimeMs',
-  'prefixTerminalizationMs',
-  'coldSearchMs',
-  'topologyMeasurementMs',
-  'contactMeasurementMs',
-  'serializedTraceBytes',
-  'peakRssDeltaBytes'
-])
-
-const TIMING_PRESENT_MARKER = '<timing: present>'
-
-/**
- * Walks `value` recursively and replaces every object field whose key is in
- * [`TIMING_ONLY_TRACE_FIELD_NAMES`] with a fixed presence marker (leaving
- * `undefined` untouched, so an absent field stays absent through
- * `toComparable`'s `JSON.stringify` undefined-omission) -- applied to both
- * backends' projections identically before diffing, so `firstDivergence`
- * still catches a presence/absence mismatch but never a wall-clock value
- * mismatch.
- */
-function normalizeTimingOnlyFields(value: unknown): unknown {
-  if (Array.isArray(value)) {
-    return value.map(normalizeTimingOnlyFields)
-  }
-  if (isPlainObject(value)) {
-    const normalized: Record<string, unknown> = {}
-    for (const [key, fieldValue] of Object.entries(value)) {
-      if (TIMING_ONLY_TRACE_FIELD_NAMES.has(key)) {
-        normalized[key] = fieldValue === undefined ? undefined : TIMING_PRESENT_MARKER
-      } else {
-        normalized[key] = normalizeTimingOnlyFields(fieldValue)
-      }
-    }
-    return normalized
-  }
-  return value
-}
-
-/** See module doc for exactly what this excludes and why. */
-function projectForComparison(result: IrregularComputeResult): unknown {
-  return {
-    placedCollisionGeometries: result.placedCollisionGeometries,
-    score: result.score,
-    unplacedPieceIds: result.unplacedPieceIds,
-    diagnostics: result.diagnostics,
-    sortedPieceIds: result.sortedPieceIds,
-    beamWidth: result.beamWidth,
-    portfolio: result.portfolio,
-    stateSnapshots: result.stateSnapshots.map((snapshot) => ({
-      stepIndex: snapshot.stepIndex,
-      beamRank: snapshot.beamRank,
-      candidateCount: snapshot.candidateCount,
-      source: snapshot.source,
-      remainingPreparedPieces: snapshot.state.remainingPreparedPieces,
-      placedCollisionGeometries: snapshot.state.placedCollisionGeometries,
-      unplacedPieceIds: snapshot.state.unplacedPieceIds
-    })),
-    capacityTrace: result.capacityTrace,
-    intrinsicAnytimeSchedulerTrace: result.intrinsicAnytimeSchedulerTrace,
-    focusedCompleteReconstructionTrace: result.focusedCompleteReconstructionTrace,
-    intrinsicShortSideObserverTrace: result.intrinsicShortSideObserverTrace,
-    intrinsicShortSidePairFoldTrace: result.intrinsicShortSidePairFoldTrace
-  }
-}
-
-/**
- * Converts to a plain JSON-shaped value first (sidesteps class identity;
- * exact for finite numbers). `bigint` fields (`capacityTrace`'s
- * `placedDoubledMaterialAreaGrid2` and friends) are rendered as their
- * decimal-string `toString()` -- `JSON.stringify` itself throws on a raw
- * `bigint` (`TypeError: Do not know how to serialize a BigInt`), and a
- * decimal string is exact and order-preserving for equality comparison,
- * which is all `firstDivergence` needs.
- */
-function toComparable(value: unknown): unknown {
-  const json = JSON.stringify(value, (_key, fieldValue: unknown) =>
-    typeof fieldValue === 'bigint' ? fieldValue.toString() : fieldValue
-  )
-  return JSON.parse(json) as unknown
-}
-
-interface Divergence {
-  readonly path: string
-  readonly typescript: unknown
-  readonly rust: unknown
-}
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-function firstDivergence(path: string, a: unknown, b: unknown): Divergence | undefined {
-  if (Object.is(a, b)) return undefined
-  if (Array.isArray(a) && Array.isArray(b)) {
-    if (a.length !== b.length) {
-      return { path: `${path}.length`, typescript: a.length, rust: b.length }
-    }
-    for (let index = 0; index < a.length; index += 1) {
-      const found = firstDivergence(`${path}[${index}]`, a[index], b[index])
-      if (found !== undefined) return found
-    }
-    return undefined
-  }
-  if (isPlainObject(a) && isPlainObject(b)) {
-    const keys = [...new Set([...Object.keys(a), ...Object.keys(b)])].toSorted((x, y) =>
-      x.localeCompare(y)
+async function runToOutcome(
+  effect: Effect.Effect<IrregularComputeResult, WorkerResponseFailureError>
+): Promise<IrregularDifferentialOutcome> {
+  return Effect.runPromise(
+    effect.pipe(
+      Effect.match({
+        onFailure: (error) => ({ ok: false as const, error }),
+        onSuccess: (value) => ({ ok: true as const, value })
+      })
     )
-    for (const key of keys) {
-      const found = firstDivergence(path === '' ? key : `${path}.${key}`, a[key], b[key])
-      if (found !== undefined) return found
-    }
-    return undefined
-  }
-  return { path: path === '' ? '(root)' : path, typescript: a, rust: b }
+  )
 }
 
 // ===========================================================================
@@ -630,52 +476,25 @@ async function main(): Promise<void> {
   )
   const rustOutcome = await runToOutcome(runRustBackend(request, geometrySettings))
 
-  console.log(
-    `[run-differential] backend execution: typescript=${tsOutcome.ran ? 'ran' : 'did-not-run'} ` +
-      `rust=${rustOutcome.ran ? 'ran' : 'did-not-run'}`
-  )
+  console.log('[run-differential] backend execution: typescript=ran rust=ran')
 
-  if (!tsOutcome.ok || !rustOutcome.ok) {
-    if (!tsOutcome.ok)
-      console.error(`[run-differential] TypeScript backend failed: ${tsOutcome.errorSummary}`)
-    if (!rustOutcome.ok)
-      console.error(`[run-differential] Rust backend failed: ${rustOutcome.errorSummary}`)
-    fail('at least one backend did not produce a result; nothing to compare.')
-  }
-
-  const tsProjection = normalizeTimingOnlyFields(
-    toComparable(projectForComparison(tsOutcome.value))
-  )
-  const rustProjection = normalizeTimingOnlyFields(
-    toComparable(projectForComparison(rustOutcome.value))
-  )
-  const divergence = firstDivergence('', tsProjection, rustProjection)
-
+  const divergence = compareIrregularDifferentialOutcomes(tsOutcome, rustOutcome)
   if (divergence !== undefined) {
     console.error(`[run-differential] FIRST DIVERGENCE at path: ${divergence.path}`)
     console.error(`  typescript: ${JSON.stringify(divergence.typescript)}`)
     console.error(`  rust      : ${JSON.stringify(divergence.rust)}`)
-    if (isPlainObject(tsProjection) && isPlainObject(rustProjection)) {
-      for (const key of [
-        'placedCollisionGeometries',
-        'score',
-        'unplacedPieceIds',
-        'sortedPieceIds',
-        'diagnostics',
-        'portfolio'
-      ]) {
-        const sectionDivergence = firstDivergence(key, tsProjection[key], rustProjection[key])
-        console.error(
-          `[run-differential] ${key}: ${
-            sectionDivergence === undefined ? 'equal' : `diverges at ${sectionDivergence.path}`
-          }`
-        )
-      }
-    }
     console.error(
       `[run-differential] runtime: node=${process.version} platform=${process.platform} arch=${process.arch}`
     )
-    fail('the compared semantic projection diverged between backends.')
+    fail('the compared semantic outcome diverged between backends.')
+  }
+
+  if (!tsOutcome.ok) {
+    console.log(
+      '[run-differential] OK: TypeScript and Rust backends produced an identical typed failure envelope ' +
+        JSON.stringify(projectIrregularDifferentialOutcome(tsOutcome))
+    )
+    return
   }
 
   console.log(

@@ -4,7 +4,6 @@ import * as NodeWorkerRunner from '@effect/platform-node/NodeWorkerRunner'
 import { computeNesting } from './algorithm/computeNesting.js'
 import {
   computeIrregularNesting,
-  type IrregularComputeErrorType,
   type IrregularComputeResult,
   type IrregularStateSnapshot
 } from './algorithm/irregular/computeIrregularNesting.js'
@@ -22,13 +21,19 @@ import {
 } from './decisionTraceNdjson.js'
 import { IRREGULAR_WORKER_MODE } from '@shared/irregular/defaults.js'
 import { readIrregularBackendFromEnv } from '@shared/irregular/backendSelection.js'
-import { intrinsicSharedArchiveEligibility } from '@shared/irregular/executionMode.js'
 import { CollisionGeometryBuilder } from './irregular/collisionGeometryBuilder.js'
 import { GeometryKernel, GeometrySettings } from './irregular/geometryKernel.js'
 import { FreeMaterialServiceLive } from './irregular/freeMaterialService.js'
 import { NfpIfpServiceLive } from './irregular/nfpIfpService.js'
 import { TransformGeneratorLive } from './irregular/transformGenerator.js'
 import { computeIrregularNestingNative } from './irregular/native/nativeIrregularBackend.js'
+import { probeNativeIrregularAddon } from './irregular/native/loadNativeBackend.js'
+import {
+  computeIrregularNestingDifferential,
+  executeIrregularBackend,
+  type IrregularBackendExecutionDependencies
+} from './irregular/differential/irregularDifferential.js'
+import { toIrregularWorkerFailure } from './irregular/irregularWorkerFailure.js'
 import {
   NestingWorkerRpcs,
   WorkerFailureResponse,
@@ -122,10 +127,7 @@ function prepareDecisionTraceFile(
     if (historyPath === null) return null
     const path = yield* Path.Path
     const fs = yield* FileSystem.FileSystem
-    const decisionTracePath = path.join(
-      path.dirname(historyPath),
-      `${jobId}.decision-trace.ndjson`
-    )
+    const decisionTracePath = path.join(path.dirname(historyPath), `${jobId}.decision-trace.ndjson`)
     yield* fs.writeFileString(decisionTracePath, '', { flag: mode === 'append' ? 'a' : 'w' })
     return decisionTracePath
   })
@@ -308,9 +310,7 @@ function handleRunNesting(
       scope: 'winning_path',
       strategyRunIds,
       ...(historyPath ? { ndjsonPath: historyPath } : {}),
-      ...(decisionTracePath
-        ? { decisionTracePath, decisionTraceEventCount }
-        : {})
+      ...(decisionTracePath ? { decisionTracePath, decisionTraceEventCount } : {})
     }
     yield* send(
       new WorkerHistoryCompleteResponse({
@@ -361,10 +361,7 @@ function computeIrregularWorkerResult(
                   emitFrame(
                     makeIrregularHistoryFrame({
                       request,
-                      strategyRunId: irregularStrategyRunId(
-                        request,
-                        snapshot.source ?? 'beam'
-                      ),
+                      strategyRunId: irregularStrategyRunId(request, snapshot.source ?? 'beam'),
                       snapshot,
                       beamWidth,
                       createdAt: new Date().toISOString()
@@ -378,33 +375,38 @@ function computeIrregularWorkerResult(
         }
   const geometrySettings = request.options.irregularSettings ?? GeometrySettings.Make
 
-  // Backend selection (docs/planning/rust-irregular-backend/backend-selection-rollback.md):
-  // an out-of-band, non-persisted worker execution option read fresh from the process
-  // environment on every job -- never part of NestingOptions/NestingRequest, never
-  // conflated with workerMode. Per Stage 0 ruling R2, the native backend claims a job only
-  // when the request matches the archive-eligible Compact / Compact Short Side production
-  // shape; every other request always runs on TypeScript regardless of the configured
-  // preference. With MIN_PLANE_IRREGULAR_BACKEND unset (the compiled-in default,
-  // 'typescript'), `backend` is always `'typescript'`, so `computedEffect` always takes the
-  // exact `computeIrregularNesting` branch below -- byte-identical to this function's
-  // behavior before backend selection existed (proven by `pnpm test:focused`).
+  /**
+   * Backend selection is out-of-band and non-persisted. Rust and differential
+   * requests preflight native capability and archive eligibility, while the
+   * default TypeScript route remains unchanged and authoritative.
+   */
   const backend = readIrregularBackendFromEnv(irregularBackendProcessEnv())
-  const archiveEligible = intrinsicSharedArchiveEligibility(geometrySettings.optimizer).eligible
-
+  const dependencies: IrregularBackendExecutionDependencies = {
+    probeNative: probeNativeIrregularAddon,
+    runRust: computeIrregularNestingNative,
+    runTypeScript: (typescriptRequest, settings, typescriptOptions) =>
+      computeIrregularNesting(typescriptRequest, typescriptOptions).pipe(
+        Effect.provide(CollisionGeometryBuilder.Live),
+        Effect.provide(TransformGeneratorLive),
+        Effect.provide(NfpIfpServiceLive),
+        Effect.provide(FreeMaterialServiceLive),
+        Effect.provide(IrregularPlacementScorer.Layer),
+        Effect.provide(IrregularLayoutScorer.Live),
+        Effect.provide(GeometryKernel.Live),
+        Effect.provide(Layer.succeed(GeometrySettings, settings)),
+        Effect.mapError(toIrregularWorkerFailure)
+      )
+  }
+  const executionInput = {
+    request,
+    settings: geometrySettings,
+    ...(options === undefined ? {} : { options }),
+    dependencies
+  }
   const computedEffect: Effect.Effect<IrregularComputeResult, WorkerResponseFailureError> =
-    backend === 'rust' && archiveEligible
-      ? computeIrregularNestingNative(request, geometrySettings, options)
-      : computeIrregularNesting(request, options).pipe(
-          Effect.provide(CollisionGeometryBuilder.Live),
-          Effect.provide(TransformGeneratorLive),
-          Effect.provide(NfpIfpServiceLive),
-          Effect.provide(FreeMaterialServiceLive),
-          Effect.provide(IrregularPlacementScorer.Layer),
-          Effect.provide(IrregularLayoutScorer.Live),
-          Effect.provide(GeometryKernel.Live),
-          Effect.provide(Layer.succeed(GeometrySettings, geometrySettings)),
-          Effect.mapError(toIrregularWorkerFailure)
-        )
+    backend === 'differential'
+      ? computeIrregularNestingDifferential(executionInput)
+      : executeIrregularBackend({ ...executionInput, backend })
 
   return computedEffect.pipe(
     Effect.map((computed) => {
@@ -428,58 +430,6 @@ function irregularBackendProcessEnv(): Record<string, string | undefined> {
   return (
     (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {}
   )
-}
-
-function toIrregularWorkerFailure(error: IrregularComputeErrorType): WorkerResponseFailureError {
-  switch (error._tag) {
-    case 'IrregularComputeError':
-      return new WorkerResponseFailureError({
-        code: 'irregular_source_geometry_missing',
-        message: error.message,
-        context: {
-          preparedPieceId: error.preparedPieceId,
-          sourcePieceId: error.sourcePieceId
-        }
-      })
-    case 'IrregularGeometryInputError':
-      return new WorkerResponseFailureError({
-        code: 'irregular_geometry_invalid',
-        message: error.message,
-        context: { operation: error.operation }
-      })
-    case 'IrregularNestingNotImplementedError':
-      return new WorkerResponseFailureError({
-        code: 'not_implemented',
-        message: error.message,
-        context: { service: error.service, operation: error.operation }
-      })
-    case 'IrregularPlacementScoringError':
-    case 'IrregularLayoutScoringError':
-      return new WorkerResponseFailureError({
-        code: 'irregular_scoring_error',
-        message: error.message,
-        context: { operation: error.operation }
-      })
-    case 'IrregularPortfolioError':
-      return new WorkerResponseFailureError({
-        code:
-          error.category === 'geometry' ? 'irregular_geometry_invalid' : 'irregular_scoring_error',
-        message: error.message,
-        context: { operation: error.operation, category: error.category }
-      })
-    case 'IrregularNoValidResultError':
-      return new WorkerResponseFailureError({
-        code: 'irregular_no_valid_result',
-        message: error.message,
-        context: { operation: error.operation }
-      })
-    case 'IrregularNfpIfpControlAbortError':
-      return new WorkerResponseFailureError({
-        code: error.reason === 'cancelled' ? 'worker_cancelled' : 'worker_timeout',
-        message: error.message,
-        context: { reason: error.reason }
-      })
-  }
 }
 
 const NestingWorkerHandlers = NestingWorkerRpcs.toLayer(

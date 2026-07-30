@@ -985,21 +985,11 @@ not to reimplement them.
    more important case for a Rust implementer to understand correctly (§1.1),
    since a naive "grep for importers of `computeIrregularNesting.ts`'s
    imports" check would incorrectly flag these two as live.
-2. **Should the Rust port's differential-mode harness (migration prompt
-   §6/§17/§18.3) ever route a request through the dead legacy branch
-   (`archiveEnabled === false`)?** The migration prompt scopes Rust to
-   Compact and Compact Short Side only, and both shipped presets are always
-   archive-eligible (§1.1). If a future test or persisted-settings replay
-   ever constructs a non-archive-eligible `irregularSettings` object and
-   feeds it through the backend selector, the current recommendation (also
-   given by `worker-coordination.md`) is that the Rust backend should not
-   attempt to reproduce that branch — it falls outside "Compact and Compact
-   Short Side" as those profiles are defined by their settings factories,
-   and TypeScript remains available as the reference/fallback backend for
-   any request shape the Rust port does not claim to own. This document
-   does not resolve whether the differential harness should assert-reject
-   such a request or silently route it to TypeScript-only comparison; that
-   is a Stage 1 boundary-design decision, not a characterization fact.
+2. **Differential handling of the dead legacy branch is resolved.** Rust and
+   differential execution are restricted to archive-eligible Compact and
+   Compact Short Side jobs. An explicit ineligible Rust or differential request
+   fails before execution. TypeScript remains the explicit maintained selection
+   for the legacy non-archive branch.
 3. **Should `pnpm gate:capacity`/`pnpm gate:capacity:production` ever be run
    with the `--cohesion-*-shadow` flags as part of a *future* stricter
    gate?** Today they are not (§1.3, §14); if a maintainer later decides to

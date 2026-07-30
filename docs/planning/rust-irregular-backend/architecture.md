@@ -934,24 +934,17 @@ Design:
   hashed, canonical-affecting settings object; adding backend identity there
   would violate prompt §17's "would change result parity and saved-job
   semantics").
-- Resolution order (highest priority first), all resolved once per job before
-  any algorithm code runs: (1) an explicit per-request test/harness override
-  (used by differential mode and gate scripts), (2) a process-level
-  environment/config override for controlled rollout (e.g.
-  `IRREGULAR_BACKEND=rust`), (3) a compiled-in default. The compiled-in
-  default stays `'typescript'` until Stage 5 promotion criteria (prompt §19.3,
-  the preregistered `performance-contract.md` thresholds) are met and the
-  orchestrator explicitly flips it — this document does not itself authorize
-  that flip.
-- If `irregularBackend === 'rust'` and the native addon fails to load
-  (missing/incompatible binary), the resolved capability check happens
-  **before** the job starts; policy may fall back to TypeScript at that
-  point only (prompt §17: "an unavailable addon may fall back before
-  execution if policy permits"). Once a Rust job has actually started, no
-  silent fallback to TypeScript is permitted (prompt §17: "no silent fallback
-  after Rust has begun a job... cancellation and deadline must not trigger a
-  TypeScript retry... native semantic errors must not trigger an automatic
-  TypeScript retry").
+- Backend selection is resolved once per job from
+  `MIN_PLANE_IRREGULAR_BACKEND`, with a compiled-in TypeScript default. Tests
+  can call the injected execution module directly. The default stays
+  `'typescript'` until an explicit promotion decision gated by the
+  preregistered performance thresholds; this document does not authorize that
+  flip.
+- Explicit Rust and differential selections preflight archive eligibility and
+  native capability before either backend executes. A failed preflight returns
+  a typed failure and never substitutes TypeScript. Once Rust execution begins,
+  cancellation, deadline, semantic, panic, or callback failures propagate
+  without a TypeScript retry.
 - `native_capability()` (already implemented, §2.1) is the load-time probe
   this resolution step calls to decide "addon available."
 - Every gate/harness invocation prints which backend actually executed
@@ -1167,19 +1160,11 @@ made (prompt §19.1), never substituted with a new profiling framework.
    "port everything named in §5 regardless of production liveness" as a
    stricter reading of §5 than this document assumes, that changes Stage 2's
    scope and effort estimate.
-2. **The legacy non-archive branch's `NestingRequest` shape.** §4.1/§3.14
-   assume the coarse native call is only ever reached when
-   `isIntrinsicSharedArchiveEligible` would be `true` (i.e., the TypeScript
-   selector routes non-archive-eligible requests to the existing
-   `computeIrregularNesting` legacy path unconditionally, never to Rust).
-   `aux-modules-liveness.md` §15 open question 2 raises the same question
-   from the opposite direction (should differential mode ever probe the dead
-   branch). This document's default position: the Rust backend never claims
-   ownership of non-archive-eligible requests; the TypeScript selector (§6)
-   must route such a request to `'typescript'` regardless of the configured
-   backend preference. This needs an explicit orchestrator ruling before
-   Stage 1's selector wiring is finalized, since it changes what "backend
-   unavailable" means for that request shape.
+2. **The legacy non-archive branch's `NestingRequest` shape.** Resolved: Rust
+   and differential execution are restricted to archive-eligible Compact and
+   Compact Short Side jobs. An explicit ineligible Rust or differential request
+   fails before execution. TypeScript remains the explicit maintained selection
+   for legacy non-archive requests.
 3. **One profile-discriminated entry point vs. two separate entry points.**
    Prompt §7 offers both as "a reasonable shape." §8's Stage 1 plan sketches
    two (`run_compact_job`/`run_compact_short_side_job`) because Short Side's

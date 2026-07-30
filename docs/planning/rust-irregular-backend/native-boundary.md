@@ -1246,12 +1246,12 @@ future TypeScript regression that stops validating before calling Rust:
   legacy-path emulation, or silently ran the archive path anyway despite
   ineligible settings, would both be observable behavior changes forbidden
   by migration prompt §2. Rejecting cleanly, with a typed error, is the
-  only safe response. **Primary defense should be at the TypeScript backend
-  selector** (route ineligible requests to the TypeScript backend
-  unconditionally, regardless of the configured Rust/TypeScript preference
-  — see the backend-selection/rollback document and §18 open question 1
-  here); this native-boundary check is the required defense-in-depth layer,
-  per migration prompt §7, not a substitute for correct TS-side routing.
+  only safe response. **Primary defense is the TypeScript worker orchestration boundary.** It checks
+  archive eligibility before executing an explicitly selected Rust or
+  differential backend and fails an ineligible request before either backend
+  runs. Selecting TypeScript explicitly remains the supported path for legacy
+  non-archive requests. This native-boundary check is the required
+  defense-in-depth layer, not a substitute for correct worker-side routing.
 
 A revalidation failure at this stage maps through the same
 `IrregularNativeError`/`AppErrorCode` table as any other failure (§9); the
@@ -1262,15 +1262,12 @@ violations (closest semantic match to Seam B's own
 `IrregularGeometryInputError` usage for analogous checks,
 `effect-boundary.md` §2.3), and specifically `NotImplemented { service:
 "irregular-native", operation: "legacy-portfolio-unsupported" }` →
-`not_implemented` for the shared-archive-eligibility rejection above (this
-finally gives `not_implemented` a legitimate, intentional live purpose in
-the Rust backend — "an operation this backend does not implement" is
-exactly what the code was always documented to mean, even though no
-current TypeScript path constructs it that way). **Confirm both mapping
-choices with the orchestrator before Stage 2** (§18) — reasonable
-alternatives exist (e.g. `worker_protocol_error` for the eligibility
-rejection, on the theory that it is closer to "a malformed/unsupported
-request shape reaching the native boundary" than to "invalid geometry").
+`not_implemented` for the native defense-in-depth shared-archive-eligibility
+rejection above. The implemented boundary operation is
+`legacy-portfolio-unsupported`. Worker orchestration normally prevents this
+native path from being reached by preflighting eligibility first and returns
+`worker_protocol_error` for the explicit unavailable or ineligible backend
+request.
 
 ### 13.2 What is re-checked during execution, not at job creation
 
@@ -1470,11 +1467,11 @@ boundary document imposes on any future concurrency design:
 4. **`ThreadsafeFunction` call-order guarantee under the exact napi 3.12
    API surface chosen (§10.2).** Must be confirmed, not assumed, before
    relying on it for the FIFO-ordering claim streamed events require.
-5. **Mapping choice for the shared-archive-eligibility rejection (§13.1).**
-   `not_implemented` vs. `worker_protocol_error` vs. a different code for
-   "this backend does not implement the legacy non-archive-eligible
-   settings shape." Needs an explicit ruling before Stage 2 gates depend on
-   it.
+5. **Mapping for the shared-archive-eligibility rejection (§13.1).** Resolved:
+   worker orchestration returns `worker_protocol_error` before execution for an
+   explicit ineligible Rust or differential request. The native defense-in-depth
+   rejection uses `not_implemented` with operation
+   `legacy-portfolio-unsupported`.
 6. **Numeric context-value string rendering for `worker_protocol_error`
    (§9.1).** Confirm the decimal-string convention for
    `nativeApiVersion` is acceptable, or specify an alternative
@@ -1495,12 +1492,7 @@ boundary document imposes on any future concurrency design:
    in the boundary shape (rather than omitting it entirely) is the correct
    choice, or confirm an explicit decision to omit it for Stage 1/2 and
    revisit only if a future profile needs it.
-10. **Primary vs. defense-in-depth responsibility for the
-    shared-archive-eligibility guard (§13.1).** Confirm the backend
-    selector (TypeScript) is the primary enforcement point (never routing
-    an ineligible request to Rust at all) and that this document's native
-    check is explicitly secondary defense-in-depth, consistent with
-    migration prompt §7's "never assume malformed input cannot reach
-    native code" framing applied to a case where the "malformed" input is
-    actually a valid TypeScript request shape for a code path Rust simply
-    does not implement.
+10. **Shared-archive-eligibility guard responsibility (§13.1).** Resolved:
+    worker orchestration is the primary enforcement point and fails an explicit
+    ineligible Rust or differential request before execution. The native check
+    remains secondary defense-in-depth for direct or malformed boundary calls.

@@ -4,12 +4,10 @@ Stage 0 design document for `docs/prompts/fable5-rust-irregular-nesting-implemen
 §17 ("Backend selection, fallback, and rollback") and the related mandates in
 §7 (native capability query), §16 (error mapping table), and §18.1/18.3/18.6
 (test forcing, differential mode, "did a requested Rust run silently fall
-back"). This document is a **design for Stage 1+**; no production Rust exists
-yet in this checkout (confirmed: no `crates/` directory, no `napi`/`@napi-rs`
-dependency in `package.json`, no `Cargo.toml` anywhere under version control).
-Nothing described here is implemented; every claim about current TypeScript
-behavior is source-cited, and every claim about the Rust-era design is marked
-as design, not status.
+back"). This document began as the Stage 0 design and now records the implemented
+backend-selection, differential, and rollback contract. The native Rust backend
+exists in this checkout. Statements in this document describe current behavior
+unless a paragraph is explicitly marked as future rollout work.
 
 Primary sources read for this document: `docs/prompts/fable5-rust-irregular-nesting-implementation.md`
 §§2, 4, 7, 16, 17, 18; `docs/planning/rust-irregular-backend/characterization/worker-coordination.md`
@@ -39,11 +37,12 @@ against `worker-coordination.md`'s line citations); `src/main/ipc/handlers.ts`
   request, exact comparison), which is never the production default and never
   runs the two backends concurrently.
 - A missing/unloadable native binary must produce a clear capability result.
-- Fallback is explicit and observable; no silent fallback after Rust has
-  begun a job.
+- Fallback is explicit selection of the TypeScript backend. An explicit Rust
+  or differential request never silently substitutes TypeScript.
 - Cancellation, deadline, and native semantic errors must never trigger an
   automatic TypeScript retry.
-- An unavailable addon may fall back **before execution** if policy permits.
+- Native availability and archive eligibility are checked before Rust or
+  differential execution. Failure of either check fails the explicit request.
 - TypeScript remains usable for rollback after Rust promotion.
 - Backend identity, native version, thread count, cache policy, and cache
   telemetry live only in a non-semantic diagnostic channel, excluded from
@@ -81,137 +80,59 @@ backend selector reuses this exact mechanism rather than inventing a new one.
 
 ### 2.2 Concrete design
 
-New shared module: **`src/shared/irregular/backendSelection.ts`** (new file,
-pure, no Effect dependency — must be importable from both `src/main` and
-`src/workers` without pulling in Electron):
+Shared module **`src/shared/irregular/backendSelection.ts`** is pure and has no
+Effect dependency, so it is importable from worker code without pulling in
+Electron:
 
 ```ts
 export type IrregularBackend = 'typescript' | 'rust' | 'differential'
 
-export type IrregularBackendFallbackPolicy = 'strict' | 'fallback-before-execution'
-
 export const IRREGULAR_BACKEND_ENV_VAR = 'MIN_PLANE_IRREGULAR_BACKEND'
-export const IRREGULAR_BACKEND_FALLBACK_POLICY_ENV_VAR =
-  'MIN_PLANE_IRREGULAR_BACKEND_FALLBACK_POLICY'
-
 export const DEFAULT_IRREGULAR_BACKEND: IrregularBackend = 'typescript'
-export const DEFAULT_IRREGULAR_BACKEND_FALLBACK_POLICY: IrregularBackendFallbackPolicy = 'strict'
 
-/** Pure, total, no I/O. Throws on an unrecognized non-empty value — an
- * operator typo must not silently resolve to the default. */
+/** Pure and total for recognized values. An unrecognized non-empty value throws. */
 export function parseIrregularBackend(raw: string | undefined): IrregularBackend { ... }
-export function parseIrregularBackendFallbackPolicy(
-  raw: string | undefined
-): IrregularBackendFallbackPolicy { ... }
+export function readIrregularBackendFromEnv(
+  env: Readonly<Record<string, string | undefined>>
+): IrregularBackend { ... }
 ```
 
-`WorkerSupervisorOptions` (`WorkerSupervisor.ts:25-28`) gains two optional
-fields, mirroring `historyDirectory`:
+There is no fallback-policy type, fallback-policy environment variable, or
+fallback dispatcher. The worker inherits `MIN_PLANE_IRREGULAR_BACKEND` through
+the existing `...process.env` worker-thread environment. The selector is read
+once for the job by `computeIrregularWorkerResult`; nothing in
+`NestingRequest` or `NestingOptions` is touched.
 
-```ts
-export interface WorkerSupervisorOptions {
-  readonly workerPath: string
-  readonly historyDirectory: string
-  readonly defaultTimeoutMs: number
-  readonly irregularBackend?: IrregularBackend                    // new
-  readonly irregularBackendFallbackPolicy?: IrregularBackendFallbackPolicy // new
-}
-```
-
-`makeWorkerThread` (`WorkerSupervisor.ts:200-207`) is extended:
-
-```ts
-env: {
-  ...process.env,
-  MIN_PLANE_HISTORY_DIR: this.options.historyDirectory,
-  [IRREGULAR_BACKEND_ENV_VAR]: this.options.irregularBackend ?? DEFAULT_IRREGULAR_BACKEND,
-  [IRREGULAR_BACKEND_FALLBACK_POLICY_ENV_VAR]:
-    this.options.irregularBackendFallbackPolicy ?? DEFAULT_IRREGULAR_BACKEND_FALLBACK_POLICY
-}
-```
-
-`createSupervisor()` (`src/main/ipc/handlers.ts:137-146`) resolves
-`WorkerSupervisorOptions.irregularBackend` from `process.env[IRREGULAR_BACKEND_ENV_VAR]`
-at supervisor-construction time — **this is the one place production
-configuration lives**; nothing in `NestingRequest`/`NestingOptions` is
-touched. Test/CLI callers construct their own `WorkerSupervisor` (or the
-lower-level direct-call dispatch in §5) with an explicit
-`irregularBackend`/`irregularBackendFallbackPolicy`, bypassing `process.env`
-entirely — this is "test forcing" at the supervisor layer.
-
-**Resolution granularity is deliberately per-job, not per-app-session.**
-`makeWorkerThread` runs once per `WorkerSupervisor.runNesting` call
-(confirmed: `NodeWorker.layer(() => this.makeWorkerThread(requestId, request.jobId))`
-lazily invokes the factory once per job — `WorkerSupervisor.ts:122-125`,
-consistent with the class's own doc comment "every call gets its own worker
-instance", `:69-71`). If `createSupervisor()` re-reads `process.env` on every
-`runNesting()` call rather than only at construction (a small, explicitly
-recommended deviation from the existing `historyDirectory` precedent, which
-is fixed at construction time), an operator can flip the backend with no
-Electron app restart — this is the concrete rollback mechanism (§7).
+Tests can force selection by supplying the process-like environment read by the
+worker parser or by calling the injected backend execution module directly.
+The parity CLI bypasses environment selection and always requests both backends
+explicitly.
 
 ### 2.3 Inside the worker thread
 
-`nesting.worker.ts`'s `computeIrregularWorkerResult` (`:340-401`) is the sole
-call site of `computeIrregularNesting`. It is changed to call a new dispatch
-module instead of `computeIrregularNesting` directly:
+`nesting.worker.ts`'s `computeIrregularWorkerResult` is the irregular backend
+routing call site. It reads `IrregularBackend` from `process.env` once for the
+job through `readIrregularBackendFromEnv`, then delegates to
+`src/workers/irregular/differential/irregularDifferential.ts`.
 
-**`src/workers/algorithm/irregular/irregularBackendDispatch.ts`** (new file)
-is the single choke point that implements capability probing, the
-pre-execution fallback policy, differential execution, and backend-diagnostic
-emission. Its contract:
+`executeIrregularBackend` is the shared execution choke point. TypeScript
+selection executes TypeScript directly. Rust and differential selections first
+check archive eligibility and native capability. An explicit request fails
+before backend execution if either preflight check fails. Differential selection
+then runs TypeScript first with normal callbacks and Rust second without user
+callbacks. `computeIrregularNestingDifferential` is the dedicated differential
+wrapper used by the worker routing branch.
 
-```ts
-export interface IrregularBackendDispatchResult {
-  readonly result: Effect.Effect<IrregularComputeResult, IrregularComputeErrorType, ...>
-  // non-semantic; never serialized into NestingResult/history/checkpoints.
-  readonly diagnostics: IrregularBackendDiagnostics
-}
+The execution module returns the existing `IrregularComputeResult` success or
+`WorkerResponseFailureError` failure channel directly. It does not add backend
+identity, capability, or fallback diagnostics to `WorkerResponse`,
+`NestingResult`, or `NestingHistoryFrame`.
 
-export interface IrregularBackendDiagnostics {
-  readonly backendRequested: IrregularBackend
-  readonly backendExecuted: 'typescript' | 'rust'   // 'differential' resolves to whichever
-                                                       // produced the returned result (§4)
-  readonly fallbackApplied: boolean
-  readonly fallbackReason?: 'addon-unavailable' | 'addon-version-mismatch'
-  readonly nativeCapability?: NativeCapabilityProbe   // see §3
-}
-
-export function dispatchIrregularBackend(
-  input: PreparedIrregularComputeInput,        // the already-validated, already-prepared
-                                                 // input computeIrregularNesting takes today
-  options: ComputeIrregularNestingOptions | undefined,
-  backend: IrregularBackend,
-  fallbackPolicy: IrregularBackendFallbackPolicy
-): IrregularBackendDispatchResult
-```
-
-`computeIrregularWorkerResult` reads `IrregularBackend`/`IrregularBackendFallbackPolicy`
-from `process.env` **once**, at the top of the function, via
-`parseIrregularBackend(process.env[IRREGULAR_BACKEND_ENV_VAR])` — the same
-worker thread never re-reads the environment mid-job (a worker thread runs
-exactly one job today, per `worker-coordination.md`'s finding that
-`nesting.worker.ts`'s RPC handler forks one `handleRunNesting` per thread
-lifetime; §11 open question 1 covers what happens if this assumption is ever
-loosened). The resolved `IrregularBackendDiagnostics` is emitted only via the
-non-semantic channel (§6) — never added to `WorkerResponse`/`NestingResult`/
-`NestingHistoryFrame` (those schemas are contractual per
-`worker-coordination.md` §3 and `errors-protocol.md` §8; adding a field to
-them is an observable protocol change requiring an explicit ruling, not
-something this design authorizes).
-
-`gate:*` and baseline scripts (`scripts/irregular-compact-baseline.ts` and
-its callers, per `tests-gates-inventory.md` §1a/§2) call
-`computeIrregularNesting` directly, **not** through the worker thread. They
-must gain an additive `--irregular-backend <typescript|rust|differential>`
-CLI flag (default `typescript`, preserving every existing pinned value
-byte-for-byte with zero behavior change to the current invocations) that
-calls `dispatchIrregularBackend` instead of `computeIrregularNesting`
-directly, mirroring the existing kebab-case flag convention
-(`--expected-canonical-sha256`, `--maximum-elapsed-ms`, etc., confirmed at
-`gate:mixed61-compact`'s `package.json` script body). This is how gate
-scripts gain Rust forcing without touching a single existing assertion —
-per prompt §3, add new scripts/flags, never edit pinned expectations.
+Existing `gate:*` and baseline scripts remain unchanged. Differential parity
+is exercised by `scripts/rust-parity/run-differential.ts`, which directly
+preflights and runs the TypeScript and native implementations sequentially.
+This keeps backend forcing additive and does not modify pinned baseline values,
+tolerances, or production algorithm bounds.
 
 ## 3. Capability probe
 
@@ -250,41 +171,22 @@ never throws; every failure mode is captured into the `false` variant. See
 which load failures this must classify (missing platform optional-dependency,
 ABI mismatch, corrupt binary) and the actionable-error-message requirement.
 
-## 4. Pre-execution fallback policy
+## 4. Pre-execution backend policy
 
-Two named policies, both **explicit and observable**, resolved from
-`IRREGULAR_BACKEND_FALLBACK_POLICY_ENV_VAR` (§2.2):
+Backend choice is explicit. TypeScript is the maintained oracle, fallback, and
+rollback path, but selecting it is the fallback action. An explicitly requested
+Rust or differential run never silently substitutes TypeScript.
 
-- **`strict`** (default). `backend === 'rust'` and the capability probe
-  returns `available: false` ⇒ the job **fails**, mapped to the external
-  `worker_protocol_error` code (see §6.2 for the exact mapping — this reuses
-  the currently-declared-but-zero-producer code documented in
-  `errors-protocol.md` §1, whose only current constructor sites are none, and
-  whose intended purpose per the prompt's §16 table is exactly "malformed
-  native response or N-API protocol-version mismatch detected by the worker
-  boundary" — an unloadable addon is the concrete first real producer of this
-  code). This is the mandatory policy for every gate/CI job that requests
-  Rust (§7, §8) — a strict run must never silently substitute TypeScript.
-- **`fallback-before-execution`**. `backend === 'rust'` and the capability
-  probe returns `available: false` ⇒ `dispatchIrregularBackend` transparently
-  executes the TypeScript path instead, **but only because no native call has
-  been made yet** (the probe runs before any N-API boundary crossing) — this
-  is precisely the prompt's "an unavailable addon may fall back before
-  execution if policy permits." The fallback **must** be logged (§6.1) with
-  `fallbackApplied: true`, `fallbackReason: 'addon-unavailable' |
-  'addon-version-mismatch'`. This is the only fallback path anywhere in this
-  design; there is no analogous mid-job fallback.
-
-`backend === 'differential'` never triggers the fallback policy on a probe
-failure in the same way: if the native addon is unavailable, differential
-mode cannot compare anything, and it **fails** unconditionally regardless of
-fallback policy (a differential run's entire purpose is exercising Rust; a
-silent skip would defeat it). This is a deliberate asymmetry from `'rust'`
-and is called out explicitly so it is not mistaken for an inconsistency.
+Before either Rust-capable mode executes, the worker checks archive eligibility
+and probes the native addon. An unavailable or ineligible explicit request fails
+with `worker_protocol_error` and stable `requestedBackend` and `reason` context.
+Differential mode performs both checks before the TypeScript oracle run starts,
+so it cannot emit partial TypeScript callbacks and then discover that Rust could
+not execute.
 
 ### 4.1 No-retry rules (hard requirement, not configurable)
 
-Once `dispatchIrregularBackend` has made the first N-API call for a job
+Once `executeIrregularBackend` has made the first N-API call for a job
 (i.e., control has crossed into Rust), **no code path may retry the same job
 in TypeScript**, regardless of what the Rust side returns:
 
@@ -296,7 +198,7 @@ in TypeScript**, regardless of what the Rust side returns:
 - A contained Rust panic (mapped to `unknown_error` per prompt §16, "contained
   panic, internal invariant failure, or otherwise unclassified native
   defect") is a job failure, not a fallback trigger.
-- There is no code path anywhere in `dispatchIrregularBackend` (or any
+- There is no code path anywhere in `executeIrregularBackend` (or any
   caller) that catches a post-dispatch Rust failure and re-invokes the
   TypeScript algorithm for the same request. Any future change that adds
   such a path is, per prompt §17, only permissible if "current semantics and
@@ -316,44 +218,27 @@ restriction invented for this migration.
 ## 5. Differential mode wiring
 
 `backend === 'differential'` is a legal value for both the env-var path
-(`nesting.worker.ts`, real worker thread — allowed, but documented as never
-the compiled-in default and never selected by `createSupervisor()`'s own
-fallback logic) and the direct-call path (gate/test scripts). Semantics,
+(`nesting.worker.ts`, real worker thread, but never the compiled-in default)
+and the direct-call path used by tests and parity scripts. Semantics,
 identical in both:
 
-1. Run **TypeScript first**, to completion, with the deterministic clock seam
-   (per `checkpoint-encoding.md`'s injected-clock requirement, referenced
-   here for completeness — full design owned by that document) when the
-   caller supplies one, otherwise the real clock.
-2. Run **Rust second**, sequentially — never concurrently with the
-   TypeScript run — against the identical trusted input, using the same
-   clock-seam configuration.
-3. Compare the two `IrregularComputeResult` values (and, at the worker
-   boundary, the two derived `NestingResult`/`NestingHistoryFrame` shapes)
-   using a **parity projection function** that excludes, by construction, only
-   the fields the migration prompt and sibling design docs designate
-   non-semantic (elapsed/timestamp fields not covered by an injected clock,
-   backend diagnostics, cache telemetry — never excluded ad hoc because a
-   field happens to differ).
-4. On exact match: **the TypeScript result is what the job returns** —
-   TypeScript remains the externally-observable authority in differential
-   mode, consistent with "differential mode is not a production default."
-   Differential mode is a comparison instrument, not an alternate production
-   path.
-5. On mismatch: the job **fails**. The failure is not one of the 8
-   `IrregularComputeErrorType` tags (neither backend actually failed); it is
-   a new internal-only tag,
-   `IrregularBackendDifferentialMismatchError { operation, mismatchedFields:
-   readonly string[] }`, mapped to the external `worker_protocol_error` code
-   with `context: { operation: 'differential-compare', mismatchedFieldCount }`
-   (the mismatched field *names* may be large/sensitive geometry data and
-   should not be embedded verbatim in an external error context — only a
-   count and a pointer to the diagnostic-channel detail, per prompt §16's
-   "do not expose raw panic payloads... by default"). **This specific mapping
-   choice is flagged as an open question (§11.3)** — it is a reasonable,
-   internally-consistent extension of the existing table, not something the
-   prompt states explicitly, and the orchestrator should confirm it before
-   Stage 2 implementation relies on it.
+1. Preflight archive eligibility and native capability before either backend
+   executes. An explicitly requested unavailable or ineligible Rust or
+   differential run fails without a TypeScript fallback.
+2. Run **TypeScript first**, to completion, with every normal user callback.
+3. Run **Rust second**, sequentially, against the identical validated request.
+   The second run is silent: it receives no user progress, snapshot, or trace
+   callback.
+4. Compare both complete success or typed failure outcomes through
+   `src/workers/irregular/differential/irregularSemanticComparison.ts`. The
+   shared CLI/runtime projection includes every result field and preserves
+   BigInt as exact decimal strings. Documented wall-clock fields, the
+   timing-derived serialized trace size, and peak RSS measurements are normalized
+   to presence markers; no other semantic field is omitted.
+5. On exact match, return the original TypeScript success or failure. TypeScript
+   remains the externally observable authority and rollback path.
+6. On mismatch, fail with `irregular_differential_mismatch`. Context carries the
+   stable first mismatch path plus bounded TypeScript and Rust diagnostic values.
 
 Because differential mode always runs both backends sequentially in one
 process/thread, it inherits full N-API/Rayon-pool lifecycle risk twice per
@@ -362,52 +247,24 @@ for tests/CI/diagnostics, explicitly not for production traffic, and is why
 `createSupervisor()`'s own env resolution never produces `'differential'` as
 a default; only an explicit operator/CI override can select it.
 
-## 6. Observability: the non-semantic diagnostic channel
+## 6. Observability and error mapping
 
-Per prompt §17, backend identity/version/thread count/cache policy/cache
-telemetry belong **only** to a channel that is excluded from parity
-projections **by construction** — never added to and then subtracted from the
-result schema.
+Backend identity, native version, thread count, cache policy, and cache
+telemetry remain outside semantic result, history, snapshot, ledger, and
+checkpoint schemas. The differential parity CLI reports capability and backend
+execution to stdout and stderr. Production runtime differential mode exposes
+only the original TypeScript success or typed failure when parity holds, or the
+stable mismatch failure when parity does not hold.
 
-### 6.1 Concrete mechanism
+### 6.1 Error mapping additions to the existing table
 
-`IrregularBackendDiagnostics` (§2.3) is never placed on any Effect Schema
-type that crosses the RPC boundary. It is surfaced two ways, both outside the
-`WorkerRequest`/`WorkerResponse` schema union:
-
-1. **Structured stderr log line**, one per job, emitted by
-   `computeIrregularWorkerResult` after dispatch resolves (success or
-   failure) via `console.error(JSON.stringify({ channel:
-   'irregular-backend-diagnostics', jobId, ...diagnostics }))`. `WorkerSupervisor`
-   already pipes the worker thread's `stderr` to `process.stderr`
-   (`WorkerSupervisor.ts:216-219`, confirmed read) with a `[worker:stderr]`
-   prefix, so this line is already visible to whatever supervises the main
-   process (Electron console, packaged-app log file, or a CI job's captured
-   output) without any new plumbing. A fixed `channel` discriminant makes the
-   line greppable by test harnesses and CI (§7).
-2. **In-process return value** for the direct-call dispatch path used by
-   gate/test scripts (§2.3) — `dispatchIrregularBackend`'s
-   `IrregularBackendDispatchResult.diagnostics` is available synchronously to
-   any caller that invokes the dispatcher directly, with no log-scraping
-   needed. This is the primary mechanism new differential/parity tests
-   should use (§7); the stderr line exists for the real worker-thread path,
-   where no other return channel exists.
-
-Both forms carry exactly the same field set (`IrregularBackendDiagnostics`,
-§2.3) so a test can assert on either depending on which entry point it drives.
-
-### 6.2 Error mapping additions to the existing table
-
-`errors-protocol.md` §1.2/§3 documents the current 8-row external mapping
-table (source-verified against `nesting.worker.ts:403-453`) and confirms
-`worker_protocol_error` has zero current producers, reserved for exactly this
-migration. This design adds exactly two new internal-only tag → external-code
-rows, additive to (never replacing) the existing table:
+The runtime adds two backend-orchestration conditions to the external error
+mapping without changing existing algorithm failure mappings:
 
 | New internal condition | External `AppErrorCode` | Context fields |
 | --- | --- | --- |
-| `backend === 'rust'`, capability probe `available: false`, fallback policy `strict` | `worker_protocol_error` | `nativeApiVersion: 'unavailable'`, `requestedBackend: 'rust'`, `reason` (probe's `reason`) |
-| Differential-mode exact-comparison mismatch (§5) | `worker_protocol_error` | `operation: 'differential-compare'`, `mismatchedFieldCount` |
+| Explicit Rust or differential request is unavailable or archive-ineligible | `worker_protocol_error` | `requestedBackend`, `reason` |
+| Differential-mode exact-comparison mismatch (§5) | `irregular_differential_mismatch` | `path`, bounded `typescriptValue`, bounded `rustValue` |
 
 No existing row in the 8-row table changes. `not_implemented`,
 `irregular_source_geometry_missing`, etc. retain their exact current meaning
@@ -415,22 +272,17 @@ and construction sites; this design does not touch any of them.
 
 ## 7. Gates must fail on silent fallback
 
-Every gate/CI invocation that intends to run Rust (`--irregular-backend rust`
-on a gate script, or `MIN_PLANE_IRREGULAR_BACKEND=rust` +
-`MIN_PLANE_IRREGULAR_BACKEND_FALLBACK_POLICY=strict` for a worker-thread-based
-test) runs with `fallbackPolicy: 'strict'`, never
-`'fallback-before-execution'`. Under `'strict'`, a missing/unloadable addon
-already fails the job outright (§4) — there is no code path under which a
-strict, Rust-requested run can complete "successfully" while having actually
-executed TypeScript, because strict mode never reaches TypeScript execution
-on a probe failure. The only remaining thing a gate/test must additionally
-assert is that **`backendExecuted === backendRequested`** on the
-`IrregularBackendDiagnostics` payload for every passing run (§6) — this
-closes the residual case where a future refactor accidentally reintroduces a
-fallback path under `'strict'` without a corresponding job failure; the
-assertion is a second, independent tripwire, not the sole mechanism.
-`docs/planning/rust-irregular-backend/ci-matrix.md` specifies exactly which
-CI jobs run under which policy and assert this.
+Every gate or CI invocation that intends to run Rust selects `rust` or
+`differential` explicitly. There is no fallback-policy setting. The shared
+execution module preflights archive eligibility and native availability, and a
+failed preflight returns a typed job failure before either backend executes.
+After execution begins, native cancellation, deadline, semantic failure, panic,
+or callback failure propagates without a TypeScript retry.
+
+The differential CLI provides an additional gate: it reports whether each
+backend ran and exits nonzero unless both executions occurred and their complete
+projected outcomes compare equal. `docs/planning/rust-irregular-backend/ci-matrix.md`
+specifies the CI jobs that exercise this path.
 
 ## 8. Rollback runbook
 
@@ -455,8 +307,8 @@ never touches persisted state:
 3. No `NestingRequest`, `NestingOptions`, persisted project file, saved job,
    or history artifact needs any change — every persisted shape is already
    backend-agnostic by construction (§1).
-4. Verify rollback took effect by checking the diagnostic channel (§6.1) on
-   the next job: `backendExecuted: 'typescript'`.
+4. Verify rollback with a worker routing test or an explicit TypeScript run.
+   The selected TypeScript path does not probe or execute the native backend.
 5. The Rust addon package remains installed and loadable; rollback does not
    uninstall or unpackage it. A subsequent roll-forward is the same
    one-variable flip in reverse.
@@ -474,27 +326,25 @@ onward rather than being a special, unexercised production-only path.
 `IRREGULAR_WORKER_MODE = 'irregular-convex-v2'`, `src/shared/irregular/defaults.ts:14`)
 continues to select **rectangular vs. irregular algorithm shape** exactly as
 today (`nesting.worker.ts:240,348`, per `worker-coordination.md` §1) and is
-completely orthogonal to `IrregularBackend`. Rectangular nesting never reads
-`IRREGULAR_BACKEND_ENV_VAR` and is never routed through
-`dispatchIrregularBackend` — the dispatcher is imported and called only from
-the irregular branch of `computeIrregularWorkerResult`, exactly where
-`computeIrregularNesting` is called today. A `workerMode` value that selects
-the legacy non-archive/windowed-beam path (`worker-coordination.md` §1, "not
-exercised by Compact or Compact Short Side production traffic") is out of
-this migration's scope per the prompt's profile list; `dispatchIrregularBackend`
-is never invoked from that branch, and `backend === 'rust'`/`'differential'`
-requested for a non-archive-eligible request is out of scope for Stage 1/2 —
-see open question §11.5.
+completely orthogonal to `IrregularBackend`. Rectangular nesting remains on
+its existing TypeScript path and is never routed through irregular backend
+execution. The irregular branch delegates to `executeIrregularBackend`.
+
+Rust and differential selections are restricted to archive-eligible Compact
+and Compact Short Side jobs. If an irregular request is not archive-eligible,
+an explicit Rust or differential selection fails before either backend executes.
+TypeScript selection remains the explicit maintained path for legacy or
+non-archive irregular jobs.
 
 ## 10. Test-forcing surface summary
 
 | Surface | Mechanism | Bypasses worker thread? |
 | --- | --- | --- |
-| Real `WorkerSupervisor`/IPC path (closest to production) | `WorkerSupervisorOptions.irregularBackend`/`.irregularBackendFallbackPolicy` passed to a test-constructed `WorkerSupervisor`, or `process.env` set before `createSupervisor()` | No — exercises the real worker thread, RPC layer, and env propagation |
-| `nesting.worker.ts` unit-level | `MIN_PLANE_IRREGULAR_BACKEND`/`MIN_PLANE_IRREGULAR_BACKEND_FALLBACK_POLICY` set on the test process before spawning a worker thread directly (no `WorkerSupervisor`) | No |
-| Gate/baseline scripts | New `--irregular-backend`/`--irregular-backend-fallback-policy` CLI flags on `scripts/irregular-compact-baseline.ts` and callers (§2.3) | Yes — direct call into `dispatchIrregularBackend` |
-| New Vitest specs (additive, per prompt §18.1/§18.3) | Import `dispatchIrregularBackend` directly, same as gate scripts | Yes |
-| Native capability probe in isolation | `probeNativeIrregularAddon()` imported and called directly, no request/job involved | N/A |
+| Real `WorkerSupervisor`/IPC path (closest to production) | Set `MIN_PLANE_IRREGULAR_BACKEND` before the per-job worker thread is spawned | No; exercises the real worker thread, RPC layer, and inherited environment |
+| `nesting.worker.ts` routing test | Inspect or execute the worker routing branch with a forced environment value | No |
+| Differential unit specs | Call `executeIrregularBackend` or `computeIrregularNestingDifferential` with injected TypeScript, Rust, and capability dependencies | Yes |
+| Differential parity CLI | `scripts/rust-parity/run-differential.ts` always preflights and runs both backends directly | Yes |
+| Native capability probe in isolation | Call `probeNativeIrregularAddon()` directly, with no request or job involved | N/A |
 
 ## 11. Open questions for the orchestrator
 
@@ -519,33 +369,7 @@ see open question §11.5.
    the "how does a real rollout flip this for real users" UX/ops question to
    the orchestrator — it is a product decision, not something inferable
    from source.
-3. **`worker_protocol_error` mapping for the two new conditions (§6.2) is a
-   design choice, not a prompt-mandated fact.** The prompt's §16 table
-   assigns `worker_protocol_error` to "malformed native response or N-API
-   protocol-version mismatch detected by the worker boundary" — an
-   unavailable addon and a differential-mismatch are both plausibly this
-   category, but the prompt does not enumerate them explicitly. Confirm this
-   mapping, and confirm that a differential-mismatch belongs in the external
-   protocol at all (an alternative: differential mode is *only* ever driven
-   through the direct-call dispatch path in tests/CI, never through the real
-   worker-thread/RPC path in a shape that could reach an end user, in which
-   case no external `AppErrorCode` is needed for it at all, and this becomes
-   an internal-only `Error` a test harness catches directly).
-4. **Compiled default flip timing.** §2.2/§8 assume `DEFAULT_IRREGULAR_BACKEND
-   = 'typescript'` throughout Stage 1-4 and only flips to `'rust'` at an
-   explicit, separate promotion decision gated by
-   `performance-contract.md`'s thresholds. Confirm this is the intended
-   sequencing (i.e., this document's design must not be read as authorizing
-   the default flip itself).
-5. **Legacy non-archive `workerMode` interaction with `backend === 'rust'`.**
-   §9 scopes `dispatchIrregularBackend` to the archive-eligible (Compact /
-   Compact Short Side) branch only, per the prompt's two-profile scope. If a
-   test or operator requests `backend: 'rust'` for a request that resolves
-   to the legacy non-archive path (reachable only via pre-existing
-   `irregularSettings`, per `worker-coordination.md` §1 / `errors-protocol.md`
-   §1.1), confirm the intended behavior: (a) `'rust'` is silently ignored and
-   TypeScript always runs for that branch (since Rust never implements it,
-   per the prompt's scope), or (b) requesting `'rust'` for a non-archive
-   request should itself be a hard, observable error under `strict` policy
-   (consistent with §7's "no silent fallback" spirit, applied to "no silent
-   backend that never had a chance to run Rust at all").
+3. **Compiled default flip timing.** `DEFAULT_IRREGULAR_BACKEND` remains
+   `'typescript'`. Any future default change requires an explicit, separate
+   promotion decision gated by `performance-contract.md`; this document does
+   not authorize that flip.

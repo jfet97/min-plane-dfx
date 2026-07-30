@@ -34,19 +34,18 @@
 //! `napi::bindgen_prelude::ToNapiValue for Result<T>`'s blanket impl into a
 //! plain JS `Error` **value returned normally** from the call (via
 //! `napi_create_error`) -- not thrown (`napi_throw`), not a rejected
-//! `Promise`. Relying on that as "the routing error the TS side maps to its
-//! own TS-backend execution" would be a surprising, upgrade-fragile contract
-//! (`instanceof Error` on a supposedly-`Promise`-typed return value). This
+//! `Promise`. Relying on that for typed boundary-error handling would be a
+//! surprising, upgrade-fragile contract (`instanceof Error` on a
+//! supposedly-`Promise`-typed return value). This
 //! module instead gives `runIrregularJob` one uniform contract: it always
 //! returns a real `Promise<string>` that always **resolves** with the same
 //! `{"ok":true,"result":...}` / `{"ok":false,"error":{"category",...}}`
 //! envelope, whether the failure is a malformed request, a failed
 //! revalidation, archive-ineligible routing, an algorithm failure, or a
-//! contained panic. The TypeScript integration layer distinguishes "route
-//! this request to the TypeScript backend" from "this backend ran the
-//! request and it failed" the same way for every one of those cases:
-//! inspect `envelope.error.category`/`operation` (`"not_implemented"` /
-//! `"legacy-portfolio-unsupported"` for the routing case specifically).
+//! contained panic. Worker orchestration preflights archive eligibility before
+//! native execution. The `"not_implemented"` /
+//! `"legacy-portfolio-unsupported"` envelope remains defense-in-depth for
+//! direct boundary calls that bypass worker preflight.
 
 use crate::caches::GeometryCacheStore;
 use crate::result::coordinator::{compute_irregular_nesting, ComputeIrregularNestingOptions};

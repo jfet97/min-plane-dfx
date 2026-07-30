@@ -724,7 +724,7 @@ Owning doc: `characterization/trace-history.md`. TS files: `decisionTrace.ts`, `
 ### (c) Planned differential tests
 
 - **"selected-layout reveal sequence"** — the `'shared-archive-selected-layout-reveal'` → `'shared-archive-final-selected'` title sequence and frame count, byte-identical TS vs. Rust for the live-path production golden fixtures.
-- **"decision-trace event order"** — for the legacy non-archive branch only (the only branch where this is live); note this branch is out of Compact/Compact Short Side scope per the prompt's profile definitions, so this differential test is lower priority and may be satisfied by keeping TypeScript authoritative for any non-archive-eligible settings shape (cross-reference `aux-modules-liveness.md`'s open question on this exact point, S19).
+- **"decision-trace event order"** for the legacy non-archive branch is a TypeScript-only characterization concern. It is outside Rust and differential scope. Explicit ineligible Rust or differential requests fail before execution.
 
 ### (d) Planned concurrency determinism tests
 
@@ -794,6 +794,6 @@ None of these gaps blocks Stage 0. They define exactly where the Rust migration'
 ## 25. Open questions
 
 1. Whether `gate:compact-nine-baselines`'s subprocess-per-case architecture must be reproduced exactly by the Rust differential harness, or whether in-process invocation can be proven behaviorally equivalent — needs a targeted differential check before Stage 5 packaging locks in the harness shape (§24 item 7).
-2. Whether the differential-mode harness (prompt §6/§17/§18.3) should ever attempt to reproduce the confirmed-dead legacy non-archive-eligible branch (S18/S19's decision-trace-live branch, `aux-modules-liveness.md`'s open question 2) — current recommendation is that TypeScript remains the reference/fallback backend for any request shape outside Compact/Compact Short Side as defined by the shipped preset factories, and the Rust port does not need to claim that branch.
+2. Differential handling of non-archive requests is resolved: Rust and differential execution are restricted to archive-eligible Compact and Compact Short Side jobs. An explicit ineligible Rust or differential request fails before execution. TypeScript remains the explicit maintained selection for request shapes outside that scope.
 3. Whether `canonicalGridPointOnSegment` (`canonicalGridMath.ts:173-186`, S8) — confirmed to have zero production callers anywhere in `src/` — should be ported as faithfully-unreachable code or explicitly ruled droppable; needs an orchestrator ruling before Stage 2 per prompt §2's "prove completely unobservable" bar.
 4. Whether new TS characterization tests recommended throughout this document (S2's error-mapping table, S9's `sortPiecesForNesting`/`irregularScoreGrid` boundary tests, S12's BigInt-exact comparator fixtures, S17's `intrinsicShortSideAxes` direct test, S18's modern-multi-frame `expandSharedArchiveSelectedLayoutReveal` case) should be authored as a dedicated pre-Stage-2 TS-test-hardening pass, or written directly as part of each Stage-2 Rust differential test's TS oracle setup — an implementation-sequencing decision, not a semantics question, but worth an explicit ruling so the two are not duplicated or skipped.

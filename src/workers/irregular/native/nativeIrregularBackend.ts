@@ -199,7 +199,7 @@ function mapNativeErrorToWorkerFailure(error: NativeBoundaryErrorJson): WorkerRe
   })
 }
 
-/** §6.2 row 1: `backend === 'rust'`, capability probe unavailable, policy `strict`. */
+/** Maps an unavailable native capability for an explicit Rust request. */
 function addonUnavailableFailure(
   probe: Extract<NativeCapabilityProbe, { available: false }>
 ): WorkerResponseFailureError {

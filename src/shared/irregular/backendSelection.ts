@@ -8,12 +8,11 @@
  * `src/main` and `src/workers` without pulling in Electron (§2.2).
  *
  * Backend selection is independent of `workerMode` (rectangle vs. irregular
- * algorithm shape) and, per Stage 0 ruling R2, the Rust backend claims a job
- * only when the request matches the archive-eligible Compact / Compact Short
- * Side production shape -- everything else always runs on TypeScript
- * regardless of the configured backend preference. That routing decision
- * lives at the one real call site (`nesting.worker.ts`'s
- * `computeIrregularWorkerResult`), not in this module.
+ * algorithm shape). Rust and differential may execute only archive-eligible
+ * Compact or Compact Short Side jobs. An explicit Rust or differential request
+ * that is unavailable or ineligible fails; TypeScript runs only when it is the
+ * selected backend. The routing decision lives in the worker's irregular
+ * backend execution module, not in this pure parser.
  */
 
 /** Which irregular-nesting implementation a job should run on. */

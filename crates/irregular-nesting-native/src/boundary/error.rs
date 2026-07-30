@@ -115,12 +115,14 @@ impl BoundaryError {
         )
     }
 
-    /// §13.1's "load-bearing scope check": the request's optimizer settings
-    /// are not `intrinsic_shared_archive_eligible`, i.e. this request would
-    /// take TypeScript's legacy windowed-beam/GA path, which this crate does
-    /// not port (`result::mod`'s own top doc). The TS integration layer must
-    /// treat this exactly like an unavailable/version-mismatched addon: fall
-    /// back to the TS backend, never surface it as an algorithm failure.
+    /**
+     * Section 13.1's load-bearing scope check: the request's optimizer settings
+     * are not `intrinsic_shared_archive_eligible`, so this request would take
+     * TypeScript's legacy windowed-beam/GA path, which this crate does not port.
+     * Worker orchestration preflights this condition and fails an explicit Rust
+     * or differential request before execution. This error remains
+     * defense-in-depth for direct boundary calls.
+     */
     pub fn archive_ineligible_routing(reason: &str) -> Self {
         BoundaryError::new(
             "not_implemented",

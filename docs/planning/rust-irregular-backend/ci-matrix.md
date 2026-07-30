@@ -99,7 +99,7 @@ rather than one large workflow with per-job `if:` cadence gates:
 | --- | --- | --- |
 | `.github/workflows/ts-checks.yml` (new) | Per-PR + push to `main` | `ts-typecheck`, `ts-lint`, `existing-full-suite` (closes gap 1, §2) |
 | `.github/workflows/rust-checks.yml` (new) | Per-PR + push to `main` | `rust-fmt`, `rust-clippy`, `native` matrix (build + `cargo test` + addon-load smoke), `differential-tests` (subset), `determinism-tests` (subset) |
-| `.github/workflows/production-gates.yml` (new) | Per-PR + push to `main`, plus the Rust-backend rows once Stage 2+ lands | `mixed61-compact-gate`, `focused-correctness-gate` (closes gap 2, §2); TS-backend jobs land immediately, Rust-backend sibling jobs land only once `dispatchIrregularBackend` (`backend-selection-rollback.md` §2.3) exists |
+| `.github/workflows/production-gates.yml` (new) | Per-PR + push to `main`, plus the Rust-backend rows once Stage 2+ lands | `mixed61-compact-gate`, `focused-correctness-gate` (closes gap 2, §2); TypeScript and Rust sibling jobs use the implemented worker routing and differential parity harness |
 | `.github/workflows/nightly-native.yml` (new) | `schedule` (nightly) + `workflow_dispatch` | Full determinism matrix (prompt §18.4's full 1/2/default/8-thread × small/medium/Mixed-61 grid), full differential vector suite, capacity paired gate (`gate:capacity`, the expensive cold-only comparison `production-gates.yml` deliberately excludes per `irregular-production-gates.md`'s own PR/manual split) |
 | `.github/workflows/release-packaging.yml` (new) | Tag push matching a release pattern (e.g. `v*`) + `workflow_dispatch` | `package-artifact-inspection`, `packaged-app-smoke` per platform |
 
@@ -197,33 +197,22 @@ Steps per matrix entry:
 
 ### 5.2 `differential-tests` — exact TS vs Rust comparison
 
-Design for Stage 2+; the concrete vector fixtures and comparison harness do
-not exist yet (`scripts/rust-parity/` and `crates/irregular-nesting-native/tests/vectors/`
-are not present in this checkout — `stage0-rulings.md` R14 creates them
-additively once Stage 2 needs them). Once they land, the per-PR job runs a
-fixed small subset (fast, representative fixtures — e.g. Triangle-20 at
-`300x300`); the nightly job runs the full vector matrix (every maintained
-fixture named in prompt §18.3).
+The concrete differential harness is
+`scripts/rust-parity/run-differential.ts`. It preflights archive eligibility and
+native availability, runs TypeScript and Rust sequentially, compares the shared
+complete semantic projection, and exits nonzero on missing capability or any
+mismatch. Per-PR jobs run a fixed small representative subset; nightly jobs may
+run the full maintained matrix.
 
-Forcing mechanism, exactly as specified in `backend-selection-rollback.md`
-§2.2/§4/§7: set `MIN_PLANE_IRREGULAR_BACKEND=differential` and
-`MIN_PLANE_IRREGULAR_BACKEND_FALLBACK_POLICY=strict` (never
-`fallback-before-execution` — §7 of that document: "Every gate/CI invocation
-that intends to run Rust ... runs with `fallbackPolicy: 'strict'`"), then
-run either:
+Runtime orchestration is covered by focused Vitest specs that call
+`executeIrregularBackend` and `computeIrregularNestingDifferential` with
+injected backend dependencies. Worker routing coverage verifies that
+`MIN_PLANE_IRREGULAR_BACKEND=differential` reaches the dedicated production
+orchestration. There is no fallback-policy environment variable or dispatcher
+diagnostic contract.
 
-- the direct-dispatch path: new Vitest specs importing `dispatchIrregularBackend`
-  directly (per `backend-selection-rollback.md` §10's test-forcing table,
-  "New Vitest specs" row) — e.g. `pnpm test:focused tests/unit/irregularBackendDifferential.*.test.ts`;
-- or the gate-script path: `pnpm corpus:sheet-invariance --case mixed-61
-  --sheets 2000x2700 --irregular-backend differential --strict` once the
-  additive `--irregular-backend` CLI flag (`backend-selection-rollback.md`
-  §2.3) exists on `scripts/irregular-sheet-invariance.ts` and its siblings.
-
-Every assertion in this job also checks `backendExecuted === backendRequested`
-on the returned `IrregularBackendDiagnostics` (§7 below) — a differential run
-that silently only exercised TypeScript must fail the job, not report a false
-pass.
+The focused orchestration tests assert exact backend invocation counts and
+order. The real parity CLI exits nonzero unless both backend runs complete.
 
 ### 5.3 `determinism-tests` — one-thread vs multi-thread
 
@@ -445,44 +434,23 @@ TS-backend counterpart.
 
 ## 9. Failing hard when a Rust-requested run silently executed TypeScript
 
-This is the concrete CI expression of `backend-selection-rollback.md` §4/§7
-("Any harness that requested Rust and got a silent TypeScript fallback must
-fail, not pass quietly"). Two independent layers, matching that document's
-own "second, independent tripwire" framing — neither alone is trusted as the
-sole mechanism:
+This is the concrete CI expression of the fail-closed runtime policy:
 
-1. **Fallback policy, not job assertions, is the primary mechanism.** Every
-   job in this matrix that requests Rust (`differential-tests`,
-   `determinism-tests`, the `-rust`-suffixed production-gate jobs) sets
-   `MIN_PLANE_IRREGULAR_BACKEND_FALLBACK_POLICY=strict` — **never**
-   `fallback-before-execution`. Under `strict`, `backend-selection-rollback.md`
-   §4 establishes that an unavailable/unloadable addon makes the job **fail
-   outright**; there is no code path under which a strict, Rust-requested CI
-   job can exit `0` while having silently run TypeScript, because `strict`
-   mode never reaches TypeScript execution on a probe failure in the first
-   place.
-2. **Explicit diagnostics assertion, as the second tripwire.** Every such job
-   additionally asserts `backendExecuted === backendRequested` on the
-   returned `IrregularBackendDiagnostics` (`backend-selection-rollback.md`
-   §2.3/§6), guarding against a future refactor that reintroduces a fallback
-   path under `strict` without a corresponding job failure. Concretely:
-   - Direct-dispatch tests (Vitest specs, gate-script CLI paths) assert this
-     in-process on the returned diagnostics object — no log-scraping needed
-     (`backend-selection-rollback.md` §6.1, "In-process return value").
-   - Real worker-thread-path jobs assert it against the structured stderr
-     line `WorkerSupervisor` already pipes to `process.stderr` with a
-     `[worker:stderr]` prefix (`WorkerSupervisor.ts:216-219`,
-     `backend-selection-rollback.md` §6.1): capture the job's output and run
-     something equivalent to
-     `grep -q '"channel":"irregular-backend-diagnostics"' job.log && grep -q
-     '"backendExecuted":"rust"' job.log || (echo "requested rust but did not
-     execute rust" && exit 1)`.
-3. **Differential-mode mismatch is a job failure by construction**, not a
-   variant of fallback: `backend-selection-rollback.md` §5 step 5 defines a
-   TS/Rust output mismatch under `differential` as its own internal-only
-   error tag mapped to `worker_protocol_error`, which already fails the job;
-   no additional CI-side handling is needed beyond not swallowing a non-zero
-   exit code.
+1. Every job that intends to run Rust selects `rust` or `differential`
+   explicitly. The shared execution module checks archive eligibility and native
+   availability before execution. Failure of either check returns a typed job
+   failure; it never invokes TypeScript as a substitute.
+2. Runtime-focused tests inject counting TypeScript and Rust dependencies and
+   assert exact invocation order. They also assert zero backend invocations on a
+   failed preflight and zero Rust user callbacks during the differential second
+   run.
+3. The differential parity CLI prints `typescript=ran rust=ran` only after both
+   executions complete. It exits nonzero before execution when native capability
+   or archive eligibility is absent, and exits nonzero with the first mismatch
+   path when complete projected outcomes diverge.
+4. A production differential mismatch is a job failure by construction through
+   `irregular_differential_mismatch`; CI must not swallow the nonzero exit or
+   typed failure.
 
 Any workflow step piping a gate/test command's output through a filter that
 could mask a non-zero exit code (e.g. `| tee log.txt` without `set -o

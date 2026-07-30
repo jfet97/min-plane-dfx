@@ -19,12 +19,12 @@ them.
   verified 2026-07-29) and the decision-trace event stream where proven
   dead for production defaults (`trace-history.md`), are NOT ported. The
   migration prompt's §5 file list is a reading map, not a scope override;
-  proven liveness wins. The TS backend remains the only backend for any request
+  proven liveness wins. The TypeScript backend remains the explicit supported selection for any request
   outside the archive-eligible Compact / Compact Short Side path.
 - **R2 — Backend routing rule.** The Rust backend claims a job only when the
   validated request matches the archive-eligible Compact / Compact Short Side
-  production shape (`isIntrinsicSharedArchiveEligible` semantics). Everything
-  else routes to TypeScript regardless of configured backend preference.
+  production shape (`isIntrinsicSharedArchiveEligible` semantics). An explicit Rust or differential request fails before execution when this
+  eligibility check fails. TypeScript runs only when it is the selected backend.
 - **R3 — Faithful port of reachable-but-odd code.** `canonicalGridPointOnSegment`
   (no production callers) IS ported (trivial cost, keeps unit-test parity
   possible). `identityAtQuarterTurn`'s dead `undefined` guard, the
