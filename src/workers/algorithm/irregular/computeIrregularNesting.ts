@@ -120,6 +120,7 @@ export interface ComputeIrregularNestingOptions {
   readonly emitDecisionTrace?: EmitIrregularDecisionTrace
   readonly emitPortfolioProgress?: (progress: IrregularPortfolioProgress) => Effect.Effect<void>
   readonly isCancelled?: () => boolean
+  readonly registerNativeCancellation?: (cancel: () => void) => void
   /** standalone benchmark hook; measurements never enter normal app output. */
   readonly onPortfolioPhase?: (measurement: IrregularPortfolioPhaseMeasurement) => void
   /** standalone benchmark hook; metrics never enter normal app output. */

@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { Cause, Exit, Schema } from 'effect'
-import { RunNestingPayload, WorkerRequest, WorkerResponse } from '@shared/protocol/worker.js'
+import {
+  CancelNestingAcknowledgement,
+  CancelNestingPayload,
+  RunNestingPayload,
+  WorkerRequest,
+  WorkerResponse
+} from '@shared/protocol/worker.js'
 import { NestingHistoryEvent } from '@shared/protocol/ipc.js'
 import { NestingHistorySummary } from '@shared/domain/nesting.js'
 
@@ -102,6 +108,38 @@ describe('WorkerRequest', () => {
       throw new Error(Cause.pretty(encoded.cause))
     }
     expect(Exit.isSuccess(encoded)).toBe(true)
+  })
+
+  it('accepts typed cancellation controls and acknowledgements', () => {
+    const payload = validate(CancelNestingPayload, {
+      requestId: 'r-1',
+      jobId: 'job-1',
+      reason: 'cancelled'
+    })
+    const accepted = validate(CancelNestingAcknowledgement, {
+      requestId: 'r-1',
+      jobId: 'job-1',
+      accepted: true,
+      activeReason: 'cancelled'
+    })
+    const stale = validate(CancelNestingAcknowledgement, {
+      requestId: 'stale-r',
+      jobId: 'job-1',
+      accepted: false
+    })
+
+    expect(Exit.isSuccess(payload)).toBe(true)
+    expect(Exit.isSuccess(accepted)).toBe(true)
+    expect(Exit.isSuccess(stale)).toBe(true)
+  })
+
+  it('rejects cancellation controls with an unsupported reason', () => {
+    const result = validate(CancelNestingPayload, {
+      requestId: 'r-1',
+      jobId: 'job-1',
+      reason: 'aborted'
+    })
+    expect(Exit.isFailure(result)).toBe(true)
   })
 
   it('rejects a request with unknown type', () => {

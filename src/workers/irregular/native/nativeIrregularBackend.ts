@@ -121,6 +121,7 @@ export interface NativeIrregularBackendOptions {
   readonly emitStateSnapshot?: ComputeIrregularNestingOptions['emitStateSnapshot']
   readonly emitPortfolioProgress?: ComputeIrregularNestingOptions['emitPortfolioProgress']
   readonly isCancelled?: ComputeIrregularNestingOptions['isCancelled']
+  readonly registerNativeCancellation?: ComputeIrregularNestingOptions['registerNativeCancellation']
 }
 
 // ===========================================================================
@@ -883,7 +884,7 @@ export function computeIrregularNestingNativeWithTransportForTests(
       }
     }
     const isCancelled = options?.isCancelled
-    if (isCancelled !== undefined) {
+    if (isCancelled !== undefined && options?.registerNativeCancellation === undefined) {
       cancelPollTimer = setInterval(() => {
         if (isCancelled()) {
           transport.cancel(request.jobId)
@@ -894,13 +895,17 @@ export function computeIrregularNestingNativeWithTransportForTests(
 
     const transportOutcome = yield* Effect.promise(async () => {
       try {
+        const runPromise = transport.run(
+          requestJson,
+          dispatcher.onEvent,
+          options?.emitStateSnapshot !== undefined
+        )
+        options?.registerNativeCancellation?.(() => {
+          transport.cancel(request.jobId)
+        })
         return {
           ok: true as const,
-          envelopeJson: await transport.run(
-            requestJson,
-            dispatcher.onEvent,
-            options?.emitStateSnapshot !== undefined
-          )
+          envelopeJson: await runPromise
         }
       } catch (cause) {
         return { ok: false as const, cause }

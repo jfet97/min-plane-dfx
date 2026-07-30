@@ -173,11 +173,35 @@ export class RunNestingPayload extends Schema.Class<RunNestingPayload>('RunNesti
   request: NestingRequest
 }) {}
 
+export const WorkerCancellationReason = ['cancelled', 'timeout'] as const
+export type WorkerCancellationReason = (typeof WorkerCancellationReason)[number]
+
+export class CancelNestingPayload extends Schema.Class<CancelNestingPayload>(
+  'CancelNestingPayload'
+)({
+  requestId: Schema.String,
+  jobId: JobId,
+  reason: Schema.Literals([...WorkerCancellationReason])
+}) {}
+
+export class CancelNestingAcknowledgement extends Schema.Class<CancelNestingAcknowledgement>(
+  'CancelNestingAcknowledgement'
+)({
+  requestId: Schema.String,
+  jobId: JobId,
+  accepted: Schema.Boolean,
+  activeReason: Schema.optional(Schema.Literals([...WorkerCancellationReason]))
+}) {}
+
 export const NestingWorkerRpcs = RpcGroup.make(
   Rpc.make('RunNesting', {
     payload: RunNestingPayload,
     success: WorkerResponse,
     stream: true
+  }),
+  Rpc.make('CancelNesting', {
+    payload: CancelNestingPayload,
+    success: CancelNestingAcknowledgement
   })
 )
 

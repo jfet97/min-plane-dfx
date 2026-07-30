@@ -785,53 +785,16 @@ N-API or calls into JavaScript, per prompt §7/§14.2.
 
 ### 4.3 Cancellation and deadline contract
 
-This is the one place characterization overturned a naive reading of the
-migration prompt, and the architecture must follow the *proven* production
-mechanism, not the prompt's more elaborate-sounding cooperative-checkpoint
-framing. `worker-coordination.md` §10 (confirmed by `errors-protocol.md` row 6):
+The initial characterization found a whole-worker disposal path, but Section 7 now replaces it with cooperative-first production cancellation while preserving the same external result contract: cancellation never returns a partial layout.
 
-- **Production cancellation and timeout today are a whole-process kill.**
-  `WorkerSupervisor.cancelJob`/its `setTimeout` handler both call
-  `teardownWorker`, which disposes the `ManagedRuntime` wrapping the RPC
-  client — this terminates the entire Node `worker_thread` mid-computation,
-  with no cooperative signal sent into the algorithm first. `nesting.worker.ts`
-  never sets `ComputeIrregularNestingOptions.isCancelled`, so the *internal*
-  `IrregularNfpIfpControlAbortError`/`control` checkpoint mechanism that
-  `computeIrregularNesting.ts` and its callees implement is **inert in
-  production** — real today only inside test harnesses and gate scripts that
-  construct their own `control`.
-- The one exception: `intrinsicStrictDecoder.ts`'s own internal wall-clock
-  deadline (`reason: 'deadline'`, line 481) fires from its own timer, not from
-  an externally-supplied `control`, and *is* live and reaches the top
-  (`errors-protocol.md` row 6).
+- `WorkerSupervisor` retains the scoped RPC session while `RunNesting` is active. The Effect worker pool has one worker and two concurrent request permits so `CancelNesting` can execute beside the long-lived result stream.
+- Renderer cancellation and the supervisor timeout send `CancelNesting` with the immutable `requestId`, public `jobId`, and either `cancelled` or `timeout`. The first accepted reason wins. Stale or mismatched controls are rejected without mutating another run.
+- The worker-local active-run controller drives `ComputeIrregularNestingOptions.isCancelled` for TypeScript execution and a deferred one-shot native cancellation callback for Rust execution. Cancellation requested before native registration is replayed once when registration completes.
+- The worker closes and joins queued history and decision-trace consumers before returning `worker_cancelled` or `worker_timeout`. The supervisor keeps draining those events, suppresses any later success, and settles only from the typed terminal failure.
+- A bounded grace watchdog disposes the worker only when cooperative termination or control delivery does not complete. Disposal remains a safety fallback, not the normal cancellation mechanism.
+- `intrinsicStrictDecoder.ts` retains its independent internal wall-clock deadline. Portfolio-owned deadlines, deterministic evaluation caps, and archive budgets remain distinct from supervisor cancellation.
 
-Architecture consequence: the Rust N-API job's cancellation contract must
-match **today's actual production mechanism** — an externally triggered hard
-abort of the whole native job process/thread, no partial result, no
-in-band checkpoint-driven interruption from the worker's perspective — while
-still internally implementing `intrinsicStrictDecoder`'s own live wall-clock
-deadline exactly as today (a job-local timer, not an externally supplied
-signal). The cooperative `isCancelled`/`control` plumbing that other
-subsystems (`preflightIntrinsicCompleteCapacity`, `runIntrinsicCapacityMode`,
-`runIntrinsicSharedArchivePortfolio`, `runIntrinsicReconstructionPortfolio`)
-already implement in TS stays ported **for test/differential-harness parity
-only** (so Rust unit/gate tests that pass their own control object behave
-identically to the TS equivalents), not because production wires it today.
-Whether a future, explicitly-flagged change should *newly* wire real
-cooperative cancellation into the production worker path is out of this
-document's scope — prompt §2's "absolute preservation" framing would treat
-that as a new capability, not a port, and it is recorded as an open question
-(§9.4) rather than decided here.
-
-An async native job handle (prompt §7: "optional explicit cancellation
-handle if an async-thread-safe mechanism is required") is therefore **not
-required for semantic parity** at Stage 2 — a single synchronous (from
-N-API's perspective, `napi::bindgen_prelude::AsyncTask`-wrapped so it does not
-block the Node event loop) call that runs to completion or is killed
-externally by the existing `WorkerSupervisor` mechanism reproduces today's
-contract exactly. If a future stage adds real in-band cancellation as an
-explicitly-flagged new capability, it must not change any accepted output,
-partial-result rule, or error classification for the unmodified path.
+The native semantic request DTO remains unchanged. Cancellation registration is an internal execution option, and the current native transport cancellation identity is registered synchronously before its run promise is returned. Section 8 replaces the public `jobId` identity with an opaque per-invocation token so overlapping native invocations with the same job ID remain independent. Neither Section 7 nor Section 8 may change accepted outputs, partial-result rules, or typed error classification.
 
 ### 4.4 Panic containment and error mapping
 

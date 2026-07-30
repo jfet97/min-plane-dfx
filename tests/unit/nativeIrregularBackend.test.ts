@@ -539,6 +539,33 @@ async function expectNativeProtocolFailure(
 }
 
 describe('native irregular event dispatcher', () => {
+  it('registers deferred native cancellation only after the native run is registered', async () => {
+    let nativeRunRegistered = false
+    let nativeCancellationCount = 0
+    const transport: NativeIrregularJobTransport = {
+      run: (_requestJson, onEvent) => {
+        nativeRunRegistered = true
+        onEvent(nativeEvent('terminal', 0))
+        return Promise.resolve(nativeFailureEnvelope())
+      },
+      cancel: () => {
+        expect(nativeRunRegistered).toBe(true)
+        nativeCancellationCount += 1
+        return true
+      }
+    }
+
+    const error = await Effect.runPromise(
+      nativeTestEffect(transport, {
+        isCancelled: () => true,
+        registerNativeCancellation: (cancel) => cancel()
+      }).pipe(Effect.flip)
+    )
+
+    expect(error.code).toBe('worker_cancelled')
+    expect(nativeCancellationCount).toBe(1)
+  })
+
   it('serializes delayed progress and snapshot callbacks before exposing the envelope', async () => {
     let releaseProgress: (() => void) | undefined
     let snapshotsDelivered = 0

@@ -49,7 +49,10 @@ function nativeOptions(
     ...(options.emitPortfolioProgress === undefined
       ? {}
       : { emitPortfolioProgress: options.emitPortfolioProgress }),
-    ...(options.isCancelled === undefined ? {} : { isCancelled: options.isCancelled })
+    ...(options.isCancelled === undefined ? {} : { isCancelled: options.isCancelled }),
+    ...(options.registerNativeCancellation === undefined
+      ? {}
+      : { registerNativeCancellation: options.registerNativeCancellation })
   }
   return Object.keys(adapted).length === 0 ? undefined : adapted
 }
@@ -57,7 +60,14 @@ function nativeOptions(
 function silentNativeOptions(
   options: ComputeIrregularNestingOptions | undefined
 ): NativeIrregularBackendOptions | undefined {
-  return options?.isCancelled === undefined ? undefined : { isCancelled: options.isCancelled }
+  if (options === undefined) return undefined
+  const adapted: NativeIrregularBackendOptions = {
+    ...(options.isCancelled === undefined ? {} : { isCancelled: options.isCancelled }),
+    ...(options.registerNativeCancellation === undefined
+      ? {}
+      : { registerNativeCancellation: options.registerNativeCancellation })
+  }
+  return Object.keys(adapted).length === 0 ? undefined : adapted
 }
 
 function nativeUnavailableFailure(
