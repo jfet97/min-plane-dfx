@@ -1,0 +1,18 @@
+{
+  "name": "irregular-nesting-native",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Native (napi-rs) irregular-nesting backend for the Compact / Compact Short Side archive-eligible profiles (docs/planning/rust-irregular-backend). Not published to any registry -- consumed in-repo only, via pnpm workspace linking (crates/*) and, on the TS integration side, direct relative resolution of this package's own npm/index.cjs from src/workers/irregular/native/loadNativeBackend.ts.",
+  "main": "npm/index.cjs",
+  "files": [
+    "npm/index.cjs"
+  ],
+  "scripts": {
+    "build": "node scripts/build-native.mjs",
+    "build:release": "node scripts/build-native.mjs --profile release",
+    "smoke": "node scripts/smoke-run.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -5,6 +5,7 @@ import { computeNesting } from './algorithm/computeNesting.js'
 import {
   computeIrregularNesting,
   type IrregularComputeErrorType,
+  type IrregularComputeResult,
   type IrregularStateSnapshot
 } from './algorithm/irregular/computeIrregularNesting.js'
 import {
@@ -20,11 +21,14 @@ import {
   serializeIrregularDecisionTraceBatch
 } from './decisionTraceNdjson.js'
 import { IRREGULAR_WORKER_MODE } from '@shared/irregular/defaults.js'
+import { readIrregularBackendFromEnv } from '@shared/irregular/backendSelection.js'
+import { intrinsicSharedArchiveEligibility } from '@shared/irregular/executionMode.js'
 import { CollisionGeometryBuilder } from './irregular/collisionGeometryBuilder.js'
 import { GeometryKernel, GeometrySettings } from './irregular/geometryKernel.js'
 import { FreeMaterialServiceLive } from './irregular/freeMaterialService.js'
 import { NfpIfpServiceLive } from './irregular/nfpIfpService.js'
 import { TransformGeneratorLive } from './irregular/transformGenerator.js'
+import { computeIrregularNestingNative } from './irregular/native/nativeIrregularBackend.js'
 import {
   NestingWorkerRpcs,
   WorkerFailureResponse,
@@ -374,7 +378,35 @@ function computeIrregularWorkerResult(
         }
   const geometrySettings = request.options.irregularSettings ?? GeometrySettings.Make
 
-  return computeIrregularNesting(request, options).pipe(
+  // Backend selection (docs/planning/rust-irregular-backend/backend-selection-rollback.md):
+  // an out-of-band, non-persisted worker execution option read fresh from the process
+  // environment on every job -- never part of NestingOptions/NestingRequest, never
+  // conflated with workerMode. Per Stage 0 ruling R2, the native backend claims a job only
+  // when the request matches the archive-eligible Compact / Compact Short Side production
+  // shape; every other request always runs on TypeScript regardless of the configured
+  // preference. With MIN_PLANE_IRREGULAR_BACKEND unset (the compiled-in default,
+  // 'typescript'), `backend` is always `'typescript'`, so `computedEffect` always takes the
+  // exact `computeIrregularNesting` branch below -- byte-identical to this function's
+  // behavior before backend selection existed (proven by `pnpm test:focused`).
+  const backend = readIrregularBackendFromEnv(irregularBackendProcessEnv())
+  const archiveEligible = intrinsicSharedArchiveEligibility(geometrySettings.optimizer).eligible
+
+  const computedEffect: Effect.Effect<IrregularComputeResult, WorkerResponseFailureError> =
+    backend === 'rust' && archiveEligible
+      ? computeIrregularNestingNative(request, geometrySettings, options)
+      : computeIrregularNesting(request, options).pipe(
+          Effect.provide(CollisionGeometryBuilder.Live),
+          Effect.provide(TransformGeneratorLive),
+          Effect.provide(NfpIfpServiceLive),
+          Effect.provide(FreeMaterialServiceLive),
+          Effect.provide(IrregularPlacementScorer.Layer),
+          Effect.provide(IrregularLayoutScorer.Live),
+          Effect.provide(GeometryKernel.Live),
+          Effect.provide(Layer.succeed(GeometrySettings, geometrySettings)),
+          Effect.mapError(toIrregularWorkerFailure)
+        )
+
+  return computedEffect.pipe(
     Effect.map((computed) => {
       const endedAt = new Date().toISOString()
       const output = makeIrregularWorkerOutput({
@@ -387,16 +419,14 @@ function computeIrregularWorkerResult(
         }
       })
       return output.result
-    }),
-    Effect.provide(CollisionGeometryBuilder.Live),
-    Effect.provide(TransformGeneratorLive),
-    Effect.provide(NfpIfpServiceLive),
-    Effect.provide(FreeMaterialServiceLive),
-    Effect.provide(IrregularPlacementScorer.Layer),
-    Effect.provide(IrregularLayoutScorer.Live),
-    Effect.provide(GeometryKernel.Live),
-    Effect.provide(Layer.succeed(GeometrySettings, geometrySettings)),
-    Effect.mapError(toIrregularWorkerFailure)
+    })
+  )
+}
+
+/** Same `globalThis`-cast access pattern as `HISTORY_DIR_ENV` above, read fresh per job. */
+function irregularBackendProcessEnv(): Record<string, string | undefined> {
+  return (
+    (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {}
   )
 }
 

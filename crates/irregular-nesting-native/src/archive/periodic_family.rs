@@ -1811,9 +1811,9 @@ fn select_intrinsic_periodic_continuations(
     };
     for continuation in witness_continuations {
         let family_key = continuation.family_key.clone();
-        let mut current = per_family.get(&family_key).cloned().unwrap_or_default();
-        current.push(continuation);
-        per_family.set(family_key, current);
+        per_family
+            .get_or_insert_with(&family_key, Vec::new)
+            .push(continuation);
     }
 
     // TS: `preferredByFuture` (`PORTFOLIO:865-877`). Reference identity in

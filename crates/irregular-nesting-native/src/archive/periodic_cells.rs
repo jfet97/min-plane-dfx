@@ -89,6 +89,7 @@
 
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use num_bigint::BigInt;
 use serde::{Deserialize, Serialize};
@@ -282,10 +283,25 @@ pub struct IntrinsicPeriodicBasisProvenance {
 }
 
 /// TS: `CELLS:110-114` `IntrinsicPeriodicBaseMember`.
+///
+/// `piece` is `Arc`-wrapped (not TS-mandated -- TS objects are reference-
+/// counted implicitly by the JS engine, so passing `piece` around never
+/// deep-copies there): production families place `derive_cells` inside a
+/// P2 pair/candidate-point double loop that can visit thousands of
+/// candidate points for real, non-trivial fixture geometry (each candidate
+/// constructs two `IntrinsicPeriodicBaseMember`s, and every constructed
+/// `IntrinsicPeriodicCell` is cloned again during `periodic_cell_front`'s
+/// dedup/rank/cap pass), and `IrregularPreparedPiece` carries the full
+/// source geometry plus every transform candidate. By-value cloning at that
+/// call volume measured as an 18-24s wall-clock blowup for a single 7-piece
+/// differential case (`docs/planning/rust-irregular-backend/evidence/differential-e2e-report.md`),
+/// entirely inside `Vec::clone`/struct-literal copies of otherwise-identical
+/// piece data -- never in TS, which only ever copies a reference. `Arc`
+/// restores that same "cheap reference, not a deep copy" semantics.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IntrinsicPeriodicBaseMember {
-    pub piece: IrregularPreparedPiece,
+    pub piece: Arc<IrregularPreparedPiece>,
     pub geometry: TransformedCollisionGeometry,
     pub point: IrregularPoint,
 }
@@ -628,6 +644,13 @@ impl<T> OrderedMap<T> {
         self.index.get(key).map(|&index| &self.values[index])
     }
 
+    fn get_mut(&mut self, key: &str) -> Option<&mut T> {
+        match self.index.get(key) {
+            Some(&index) => Some(&mut self.values[index]),
+            None => None,
+        }
+    }
+
     fn set(&mut self, key: String, value: T) {
         if let Some(&index) = self.index.get(&key) {
             self.values[index] = value;
@@ -642,6 +665,19 @@ impl<T> OrderedMap<T> {
         if !self.index.contains_key(&key) {
             self.set(key, value);
         }
+    }
+
+    /// Amortized O(1) per call (a single `HashMap` lookup plus, on miss, one
+    /// insert) -- unlike `get(key).cloned().unwrap_or_default()` followed by
+    /// a `set()`, which deep-clones the *entire* existing value on every
+    /// call and turns a tight accumulation loop quadratic. See
+    /// `periodic_cell_front`'s own doc for the real-fixture measurement this
+    /// method exists to fix.
+    fn get_or_insert_with(&mut self, key: &str, make: impl FnOnce() -> T) -> &mut T {
+        if !self.index.contains_key(key) {
+            self.set(key.to_string(), make());
+        }
+        self.get_mut(key).expect("just inserted")
     }
 
     fn len(&self) -> usize {
@@ -1233,6 +1269,17 @@ fn enumerate_intrinsic_periodic_family(
             ));
         }
     };
+    // Hoisted once per family (not per candidate) -- see `IntrinsicPeriodicBaseMember`'s
+    // own doc for why: the P1/P2 loops below construct many thousands of
+    // `IntrinsicPeriodicBaseMember`s from these same two underlying pieces
+    // for real production geometry, and an `Arc` clone here is O(1) instead
+    // of a deep `IrregularPreparedPiece` clone.
+    let representative_arc: Arc<IrregularPreparedPiece> = Arc::new(representative.clone());
+    let second_member_arc: Arc<IrregularPreparedPiece> = family
+        .members
+        .get(1)
+        .map(|member| Arc::new(member.clone()))
+        .unwrap_or_else(|| Arc::clone(&representative_arc));
 
     let mut transformed_by_canonical_key = OrderedMap::<TransformedRepresentative>::new();
     let mut runtime_coverage_complete = true;
@@ -1303,7 +1350,7 @@ fn enumerate_intrinsic_periodic_family(
             IntrinsicPeriodicRole::P1,
             &family.key,
             &[IntrinsicPeriodicBaseMember {
-                piece: representative.clone(),
+                piece: Arc::clone(&representative_arc),
                 geometry: representative_transform.geometry.clone(),
                 point,
             }],
@@ -1366,18 +1413,17 @@ fn enumerate_intrinsic_periodic_family(
                     let _ = &candidate;
                     continue;
                 }
-                let second_member_piece = family.members.get(1).unwrap_or(&representative);
                 let derivation = derive_cells(
                     IntrinsicPeriodicRole::P2,
                     &family.key,
                     &[
                         IntrinsicPeriodicBaseMember {
-                            piece: representative.clone(),
+                            piece: Arc::clone(&representative_arc),
                             geometry: first.clone(),
                             point: first_point,
                         },
                         IntrinsicPeriodicBaseMember {
-                            piece: second_member_piece.clone(),
+                            piece: Arc::clone(&second_member_arc),
                             geometry: second.clone(),
                             point,
                         },
@@ -1610,12 +1656,9 @@ fn periodic_cell_front(
             .map(|provenance| provenance.source_kind.as_str())
             .unwrap_or("legacy")
             .to_string();
-        let mut group = by_source_kind
-            .get(&source_kind)
-            .cloned()
-            .unwrap_or_default();
-        group.push(cell);
-        by_source_kind.set(source_kind, group);
+        by_source_kind
+            .get_or_insert_with(&source_kind, Vec::new)
+            .push(cell);
     }
     let mut retained: Vec<(String, IntrinsicPeriodicCell)> = Vec::new();
     let mut coverage_complete = true;
@@ -2694,7 +2737,7 @@ fn derive_axis_basis_candidates(
         Some(value) => value,
         None => return Vec::new(),
     };
-    let mut axis_candidates = boundary_line_intersections(&oriented, false, &BigInt::from(0));
+    let mut axis_candidates = boundary_line_intersections(&oriented, true, &BigInt::from(0));
     axis_candidates.retain(|point| {
         compare_rational(&point.x, &rational(BigInt::from(0))) == Ordering::Greater
     });
@@ -2751,10 +2794,10 @@ fn derive_axis_basis_candidates(
             .collect();
         constrained.extend(boundary_line_intersections(
             &shifted,
-            true,
+            false,
             &BigInt::from(0),
         ));
-        constrained.extend(boundary_line_intersections(&shifted, true, &axis.x));
+        constrained.extend(boundary_line_intersections(&shifted, false, &axis.x));
         constrained.retain(|point| {
             compare_rational(&point.y, &rational(BigInt::from(0))) == Ordering::Greater
                 && compare_rational(&point.x, &rational(BigInt::from(0))) != Ordering::Less

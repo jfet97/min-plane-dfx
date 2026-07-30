@@ -371,6 +371,62 @@ fn history_mode_off_suppresses_state_snapshots_but_not_progress() {
     assert!(!sink.phases.into_inner().unwrap().is_empty());
 }
 
+/// TS: `computeIrregularNesting.ts:1194-1201` -- when the Short Side profile
+/// is requested but nothing ever settles into `selected.placedCollisionGeometries`
+/// (here: preflight proves a single piece bigger than the sheet itself can
+/// never fit, so capacity mode settles with zero placed pieces), the
+/// directional-reference `production*` terms
+/// (`intrinsicShortSideObserver.ts`'s `directionalReference`, ported as
+/// `short_side::observer::directional_reference`) are all `None` for an
+/// empty `placedCollisionGeometries` slice -- so the pair-fold construction
+/// never runs at all and the coordinator must fail closed with the typed
+/// `IrregularNoValidResultError { operation: "intrinsicShortSide" }`, never
+/// silently falling back to an incomplete/degraded "success". This exact
+/// no-production-geometry branch of the Short Side handoff is not otherwise
+/// exercised by `full_job_vectors_match_ts_oracle` (every generated Short
+/// Side case there settles with a nonempty, `'accepted'` pair fold).
+#[test]
+fn short_side_profile_with_zero_placed_pieces_fails_closed_with_no_valid_result() {
+    let mut settings = compact_settings();
+    settings.optimizer.intrinsic_objective_profile_id = IntrinsicObjectiveProfileId::ShortSide;
+
+    let tiny_sheet = SheetSpec {
+        width: 40.0,
+        height: 40.0,
+        label: "tiny-sheet".to_string(),
+    };
+    let request = NestingRequest {
+        sheet: tiny_sheet,
+        padding: 0.0,
+        // A single piece far larger than the sheet in every dimension: no
+        // prepared transform can ever fit it, so the preflight itself proves
+        // impossibility (`singleton-transform-set-does-not-fit`) and capacity
+        // mode settles with the piece unplaced -- zero placed pieces.
+        pieces: vec![square_prepared_piece("too-big", 500.0)],
+        source_pieces: vec![square_source_piece("too-big", 0.0, 0.0, 500.0)],
+        options: default_options(),
+    };
+
+    let mut options = ComputeIrregularNestingOptions::default();
+    let mut geometry_cache = GeometryCacheStore::new();
+    let mut free_material_cache = FreeMaterialCache::new();
+
+    let result = compute_irregular_nesting(
+        &request,
+        &settings,
+        &mut options,
+        &mut geometry_cache,
+        &mut free_material_cache,
+    );
+
+    match result {
+        Err(IrregularComputeErrorType::NoValidResult(error)) => {
+            assert_eq!(error.operation, "intrinsicShortSide");
+        }
+        other => panic!("expected a typed NoValidResult error, got {other:?}"),
+    }
+}
+
 // ===========================================================================
 // Full-job TS-oracle differential suite.
 // ===========================================================================

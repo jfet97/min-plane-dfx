@@ -1,11 +1,12 @@
 //! Native irregular-nesting backend for the Compact and Compact Short Side
 //! profiles, exposed to Node/Electron through `napi-rs`.
 //!
-//! Stage 1 scaffolding only (see
-//! `docs/prompts/fable5-rust-irregular-nesting-implementation.md`, section 6):
-//! this crate currently proves the N-API load path and the panic-containment
-//! boundary. No algorithm code lives here yet; every domain module below is an
-//! empty stub reserved for later stages.
+//! `lib.rs` stays thin per `docs/planning/rust-irregular-backend/architecture.md`
+//! §4.1: the real job surface (`runIrregularJob`/`cancelIrregularJob`/
+//! `getLastJobDiagnostics`) lives in [`boundary::job`] and is re-exported here
+//! for discoverability only. See `boundary::mod`'s own doc for the full N-API
+//! boundary module map (request/result DTOs, error mapping, event streaming,
+//! diagnostics sidecar, and the plain N-API-free `boundary::run_job`).
 
 pub mod archive;
 pub mod boundary;
@@ -25,9 +26,17 @@ pub mod trace;
 pub mod transforms;
 pub mod validation;
 
-use boundary::{contain_panics, NativeError};
 use napi_derive::napi;
-use serde::Serialize;
+
+// Re-exported for discoverability -- see `boundary::mod`'s own doc,
+// "Submodules: the real N-API boundary": every `#[napi]` export the real job
+// surface needs is declared directly in `boundary::job` (napi-derive
+// registration is item-based, not module-position-based), so this crate root
+// only needs a `pub use` of the three names, plus the pre-existing
+// `contain_panics`/`NativeError` panic-containment primitives every entry
+// point (including `boundary::job`'s) is built on.
+pub use boundary::job::{cancel_irregular_job, get_last_job_diagnostics, run_irregular_job};
+pub use boundary::{contain_panics, NativeError};
 
 /// Native backend capability and version descriptor returned to the TypeScript
 /// worker boundary.
@@ -56,68 +65,6 @@ pub fn native_capability() -> Capability {
     }
 }
 
-/// Coarse-grained irregular nesting job entry point.
-///
-/// This is a Stage 1 placeholder that proves the N-API load path and the
-/// panic-containment boundary only. It always returns a structured
-/// `{"ok":false,"error":{...}}` JSON payload; the typed request/response DTO
-/// layer described in the migration prompt (section 7) arrives in a later
-/// stage. `request_json` is intentionally unused until that layer exists.
-#[napi]
-pub fn run_irregular_job(request_json: String) -> napi::Result<String> {
-    let _ = request_json;
-    let outcome: Result<String, NativeError> =
-        contain_panics("run_irregular_job", not_implemented_response);
-    let json = match outcome {
-        Ok(json) => json,
-        // A panic inside the (currently trivial) placeholder body is not expected, but
-        // the boundary contract requires every entry point to route panics through
-        // `contain_panics` and report them with the stable `unknown` category rather
-        // than letting them unwind across N-API.
-        Err(err) => error_response(&err),
-    };
-    Ok(json)
-}
-
-#[derive(Serialize)]
-struct JobFailureEnvelope<'a> {
-    ok: bool,
-    error: JobFailure<'a>,
-}
-
-#[derive(Serialize)]
-struct JobFailure<'a> {
-    category: &'a str,
-    operation: &'a str,
-    message: &'a str,
-}
-
-fn not_implemented_response() -> Result<String, NativeError> {
-    Ok(encode_failure(
-        "not_implemented",
-        "run_irregular_job",
-        "native backend not yet implemented",
-    ))
-}
-
-fn error_response(err: &NativeError) -> String {
-    encode_failure(&err.category, &err.operation, &err.message)
-}
-
-fn encode_failure(category: &str, operation: &str, message: &str) -> String {
-    let envelope = JobFailureEnvelope {
-        ok: false,
-        error: JobFailure {
-            category,
-            operation,
-            message,
-        },
-    };
-    // `JobFailureEnvelope`/`JobFailure` field order is declaration order, which serde_json
-    // preserves, so this always matches the documented placeholder response byte-for-byte.
-    serde_json::to_string(&envelope).expect("JobFailureEnvelope always serializes")
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -132,11 +79,17 @@ mod tests {
     }
 
     #[test]
-    fn run_irregular_job_returns_structured_not_implemented_error() {
-        let result = run_irregular_job("{}".to_string()).expect("placeholder never returns Err");
-        assert_eq!(
-            result,
-            r#"{"ok":false,"error":{"category":"not_implemented","operation":"run_irregular_job","message":"native backend not yet implemented"}}"#
-        );
+    fn cancel_irregular_job_on_an_unknown_job_id_is_a_harmless_no_op() {
+        assert!(!cancel_irregular_job("no-such-job".to_string()));
+    }
+
+    #[test]
+    fn get_last_job_diagnostics_is_null_before_any_job_has_run_in_this_process() {
+        // Only safe to assert loosely: other tests in this binary may have
+        // already run a real job and populated the sidecar (it is one
+        // process-global slot, per `boundary::diagnostics`'s own doc). This
+        // just proves the export returns valid JSON either way.
+        let json = get_last_job_diagnostics();
+        let _: serde_json::Value = serde_json::from_str(&json).expect("valid JSON");
     }
 }

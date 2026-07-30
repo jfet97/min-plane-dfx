@@ -138,7 +138,14 @@ describe('trusted geometry carrier boundary', () => {
       .filter(
         (filePath) =>
           workerRoots.some((root) => filePath.startsWith(`${root}/`)) &&
-          !filePath.endsWith('/services.ts')
+          !filePath.endsWith('/services.ts') &&
+          // `src/workers/irregular/native/` is a genuine untrusted external-process
+          // boundary (the irregular-nesting-native N-API addon's JSON wire output),
+          // the same conceptual boundary `services.ts` already carries a matching
+          // exclusion for (decoding untrusted cache-serialized geometry) -- see
+          // `docs/planning/rust-irregular-backend/backend-selection-rollback.md` and
+          // `nativeIrregularBackend.ts`'s own module doc.
+          !filePath.includes('/workers/irregular/native/')
       )
     expect(schemaReferenceViolations(program, trustedWorkerFiles)).toEqual([])
   })

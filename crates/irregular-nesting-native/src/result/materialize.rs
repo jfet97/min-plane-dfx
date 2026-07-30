@@ -12,10 +12,13 @@
 //! `preserveSharedArchiveExactMetrics`), `:1868-1904`
 //! (`resolvePortfolioPlacementTransform`/`isQuarterTurnEquivalent`/
 //! `normalizeRotationDegrees`). `materializeIntrinsicCapacityResult`
-//! (`:1254-1321`) and `materializeProductionResult`/`reconstructPlacedGeometry`
-//! (legacy non-archive path) are **not** ported here -- the former needs the
-//! not-yet-ported `capacity::mode` orchestration (see `result::mod`'s top
-//! doc), the latter is the legacy branch out of this migration's scope.
+//! (`:1254-1321`) is ported as `result::coordinator::materialize_capacity_result`
+//! instead of living in this file (it needs the `capacity::mode`
+//! orchestration `coordinator` already owns calling directly -- see that
+//! module's own top doc, "Resolved: `capacity::mode`'s top-level
+//! orchestration"). `materializeProductionResult`/`reconstructPlacedGeometry`
+//! (the legacy non-archive path) are **not** ported anywhere -- out of this
+//! migration's scope per `result::mod`'s top doc.
 
 use std::sync::Arc;
 

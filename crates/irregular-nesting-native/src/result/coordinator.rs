@@ -62,7 +62,7 @@ use crate::capacity::mode::{
 use crate::capacity::prefixes::IntrinsicCapacityPrefixSource;
 use crate::capacity::preflight::{
     preflight_intrinsic_complete_capacity, IntrinsicCapacityError, IntrinsicCapacityPreflightError,
-    IntrinsicCapacityPreflightOutcome,
+    IntrinsicCapacityPreflightOutcome, IntrinsicCapacityProvenImpossibleReason,
 };
 use crate::capacity::search::{CapacitySearchError, IntrinsicCapacitySearchStatus};
 use crate::domain::{
@@ -1426,12 +1426,26 @@ fn intrinsic_capacity_diagnostics(
         } => {
             diagnostics.push(CollisionGeometryDiagnostic {
                 code: "capacity_preflight_proven_impossible".to_string(),
-                message: format!(
-                    "reason {:?}; minimum-doubled-collision-area-grid2 {}; sheet-doubled-area-grid2 {}",
-                    reason,
-                    measurements.minimum_doubled_collision_area_sum_grid2,
-                    measurements.sheet_doubled_area_grid2
-                ),
+                // TS: `intrinsicCapacityDiagnostics`'s joined-string literal
+                // (`computeIrregularNesting.ts:1331-1341`) -- three
+                // semicolon-joined segments, plus a fourth `piece {pieceId}`
+                // segment appended only for the singleton-transform-set
+                // reason (never for the minimum-collision-area reason).
+                message: {
+                    let mut message = format!(
+                        "reason {}; minimum-doubled-collision-area-grid2 {}; sheet-doubled-area-grid2 {}",
+                        reason.as_str(),
+                        measurements.minimum_doubled_collision_area_sum_grid2,
+                        measurements.sheet_doubled_area_grid2
+                    );
+                    if let IntrinsicCapacityProvenImpossibleReason::SingletonTransformSetDoesNotFit {
+                        piece_id,
+                    } = reason
+                    {
+                        message.push_str(&format!("; piece {}", piece_id.0));
+                    }
+                    message
+                },
                 piece_id: None,
             });
         }
@@ -1454,8 +1468,8 @@ fn intrinsic_capacity_diagnostics(
     diagnostics.push(CollisionGeometryDiagnostic {
         code: "capacity_subset_settled".to_string(),
         message: format!(
-            "settlement {:?}; placed {}; unplaced {}; origin {}; evaluations {}/{}; pruned-count {}; pruned-material {}; prefixes {}/{}; hash {}",
-            trace.cold_search.settlement,
+            "settlement {}; placed {}; unplaced {}; origin {}; evaluations {}/{}; pruned-count {}; pruned-material {}; prefixes {}/{}; hash {}",
+            trace.cold_search.settlement.as_str(),
             trace.selected.objective.placed_count,
             trace.selected.unplaced_count,
             capacity_endpoint_origin_str(trace.selected.objective.origin),

@@ -4,6 +4,30 @@
 //! TS counterpart: the external `AppErrorCode` protocol in
 //! `src/shared/protocol/errors.ts`, which every `NativeError` here is eventually
 //! mapped into by the worker boundary (see the migration prompt, section 16).
+//!
+//! # Submodules: the real N-API boundary
+//!
+//! Per `docs/planning/rust-irregular-backend/native-boundary.md` (design) and
+//! `architecture.md` §4.1 (`lib.rs` stays thin, `boundary::run_job` owns
+//! execution):
+//! - [`request`] -- trusted request DTO decode + §13.1 revalidation.
+//! - [`result`] -- result DTO projection (§8), undefined-omission-exact.
+//! - [`error`] -- the `AppErrorCode` mapping table (§9).
+//! - [`events`] -- `ThreadsafeFunction`-backed portfolio-progress/state-
+//!   snapshot event forwarding (§10-§11).
+//! - [`diagnostics`] -- the non-semantic diagnostics sidecar (§14).
+//! - [`run_job`] -- the plain, N-API-free job execution function
+//!   (architecture.md §4.1).
+//! - [`job`] -- `AsyncTask`/`ThreadsafeFunction` glue and the cooperative-
+//!   cancellation job registry (§6); the actual `#[napi]` exports.
+
+pub mod diagnostics;
+pub mod error;
+pub mod events;
+pub mod job;
+pub mod request;
+pub mod result;
+pub mod run_job;
 
 use std::fmt;
 use std::panic::{self, UnwindSafe};

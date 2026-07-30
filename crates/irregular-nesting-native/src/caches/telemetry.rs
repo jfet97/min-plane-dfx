@@ -30,10 +30,18 @@
 
 use std::collections::BTreeMap;
 
+use serde::Serialize;
+
 /// One namespace's counters. `namespace` is a stable string identifier
 /// matching the TS namespace constants verbatim (e.g. "pairwise-nfp-relative-v3")
 /// so evidence can be cross-referenced against the TS baseline by name.
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+///
+/// `Serialize` (added for `boundary::diagnostics`'s opt-in
+/// `getLastJobDiagnostics` sidecar, `architecture.md` §4.5): purely a
+/// diagnostic-channel convenience, not a parity/canonical encoding -- see
+/// this module's top doc, "not a byte-parity target."
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CacheNamespaceTelemetry {
     /// Every `get` call, hit or miss (TS: `getCalls`).
     pub lookups: u64,
@@ -108,7 +116,8 @@ pub struct CacheNamespaceTelemetry {
 /// order for human review — this ordering is diagnostic convenience, not a
 /// parity requirement (contrast with prompt §9's ordering rules, which
 /// govern canonical/semantic output, not this sidecar).
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CacheTelemetrySnapshot {
     pub namespaces: BTreeMap<String, CacheNamespaceTelemetry>,
     /// Number of distinct `GeometryCacheStore`-equivalent instances

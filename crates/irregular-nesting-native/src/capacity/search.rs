@@ -183,6 +183,21 @@ pub enum IntrinsicCapacitySettlement {
     Paused,
 }
 
+impl IntrinsicCapacitySettlement {
+    /// TS: the literal union member each variant represents
+    /// (`intrinsicCapacitySearch.ts:63`). Any TS-facing string (diagnostic
+    /// messages, boundary JSON, ...) must use this, not `{:?}` -- `Debug`'s
+    /// PascalCase variant name (`EvaluationCap`) diverges from TS's
+    /// kebab-case string (`evaluation-cap`).
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Exhausted => "exhausted",
+            Self::EvaluationCap => "evaluation-cap",
+            Self::Paused => "paused",
+        }
+    }
+}
+
 /// TS: `intrinsicCapacitySearch.ts:65-71` `IntrinsicAnytimeProducerRole`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum IntrinsicAnytimeProducerRole {

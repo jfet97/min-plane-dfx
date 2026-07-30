@@ -121,6 +121,22 @@ pub enum IntrinsicCapacityProvenImpossibleReason {
     MinimumCollisionAreaExceedsSheetArea,
 }
 
+impl IntrinsicCapacityProvenImpossibleReason {
+    /// TS: the literal `reason` string each variant carries
+    /// (`intrinsicCapacityPreflight.ts:43,49`). Callers that interpolate this
+    /// into a diagnostic message (or any other TS-facing string) must use
+    /// this, not `{:?}` -- `Debug`'s PascalCase variant name is a Rust-only
+    /// spelling and diverges from every TS string this type represents.
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::SingletonTransformSetDoesNotFit { .. } => "singleton-transform-set-does-not-fit",
+            Self::MinimumCollisionAreaExceedsSheetArea => {
+                "minimum-collision-area-exceeds-sheet-area"
+            }
+        }
+    }
+}
+
 /// TS: `intrinsicCapacityPreflight.ts:40-55` `IntrinsicCapacityPreflightOutcome`.
 #[derive(Clone, Debug, PartialEq)]
 pub enum IntrinsicCapacityPreflightOutcome {

@@ -9,7 +9,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 napi = { version = "3", default-features = false, features = ["napi8", "dyn-symbols"] }
 napi-derive = "3"
-serde = { version = "1", features = ["derive"] }
+serde = { version = "1", features = ["derive", "rc"] }
 # `float_roundtrip`: without it, serde_json's default float parser is not
 # correctly-rounded for extreme-magnitude decimal literals (verified: it
 # parses `"5e+293"` one ULP away from the true nearest `f64`). The R14

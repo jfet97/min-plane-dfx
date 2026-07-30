@@ -94,6 +94,8 @@ importers:
         specifier: ^2.1.10
         version: 2.2.12(typescript@5.9.3)
 
+  crates/irregular-nesting-native: {}
+
 packages:
 
   7zip-bin@5.2.0:
