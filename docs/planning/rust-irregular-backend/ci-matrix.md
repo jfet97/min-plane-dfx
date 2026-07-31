@@ -4,7 +4,7 @@
 
 ## Current verification update
 
-The workflow retains `pnpm install --frozen-lockfile --ignore-scripts` and uses explicit native build steps. It includes Rust format, strict Clippy, release Rust tests, required real-addon integration, Node/V8 hypot corpus verification, required and strict full differential modes, thread equality, and four packaged native-load targets.
+The workflow retains `pnpm install --frozen-lockfile --ignore-scripts` and uses explicit native build steps. It includes Rust format, strict Clippy, release Rust tests, required real-addon integration, Node/V8 hypot corpus verification, the scheduled/manual native quality-acceptance promotion gate, required and strict full differential modes, thread equality, and four packaged native-load targets.
 
 The packaged target matrix is Linux x64 on `ubuntu-24.04`, Windows x64 on `windows-latest`, macOS arm64 on `macos-15`, and macOS x64 on `macos-15-intel`. The package workflow explicitly runs `pnpm native:electron`, the native package contract suite, and the safe staging wrapper before Electron-builder. The wrapper restores the workspace link after packaging even when the build fails.
 
@@ -184,6 +184,16 @@ native availability, runs TypeScript and Rust sequentially, compares the shared
 complete semantic projection, and exits nonzero on missing capability or any
 mismatch. Per-PR jobs run a fixed small representative subset; nightly jobs may
 run the full maintained matrix.
+
+The separate promotion harness is
+`scripts/rust-parity/run-quality-acceptance.ts`, exposed as
+`pnpm gate:quality-acceptance`. Its scheduled/manual `quality-acceptance` job
+builds the release addon explicitly, preflights the complete fixture/profile
+policy, and accepts exact or independently quality-accepted results. A
+Short Side result must directly equal the caller-owned directional-construction
+witness captured before final materialization. Compact fallback geometry,
+canonical-equivalent translated or rotated fallback geometry, and backend trace
+labels cannot substitute for that witness.
 
 Runtime orchestration is covered by focused Vitest specs that call
 `executeIrregularBackend` and `computeIrregularNestingDifferential` with
@@ -406,12 +416,10 @@ binding only for whoever runs the actual `performance-contract.md` benchmark
 batches on the dedicated machine, outside this CI matrix entirely.
 
 Rust-backend production-gate jobs (`mixed61-compact-gate-rust`, etc., §4's
-last data row) are additive siblings of the TS-backend jobs, not
-replacements, for as long as TypeScript remains the production default
-(`stage0-rulings.md` and `backend-selection-rollback.md` §2.2's
-`DEFAULT_IRREGULAR_BACKEND = 'typescript'`) — both must stay green
-simultaneously; a Rust-backend gate job never supersedes or skips its
-TS-backend counterpart.
+last data row) are additive siblings of the TypeScript authority jobs, not
+replacements. The follow-up automatic-routing policy does not weaken or skip
+TypeScript hashes, identities, thresholds, or gates; both backend lanes must
+stay green simultaneously.
 
 ## 9. Failing hard when a Rust-requested run silently executed TypeScript
 

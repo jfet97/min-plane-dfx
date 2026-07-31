@@ -8,7 +8,9 @@
 
 The preregistered controlled Linux host remains the authority for P1 through P7. The current macOS verification host does not replace the controlled comparative performance record.
 
-P1, P4, P6, and P7 remain passed. P2 and P3 remain failed. P5 remains unevaluated. Rust must remain opt-in through `MIN_PLANE_IRREGULAR_BACKEND=rust`; TypeScript remains the default backend.
+P1, P4, P6, and P7 remain passed. P2 and P3 remain failed. P5 remains unevaluated. This is the historical PR27 performance verdict and is not rewritten or treated as a pass.
+
+The follow-up policy in `../quality-acceptance.md` explicitly supersedes PR27's opt-in product-routing consequence: archive-eligible profiles that pass the complete quality matrix and native capability preflight route automatically to Rust. The original P1 through P7 thresholds and verdicts remain binding measurements and must be reported honestly. Explicit `MIN_PLANE_IRREGULAR_BACKEND=typescript` remains the rollback.
 
 Current macOS correctness runs completed Mixed-61 Compact in 30826 ms and Short Side in 31300 ms. The Compact production gate passed at `32061.670542` ms with area `391605.85017399996` and zero cavities. These are gate-completion observations, not new P1 through P7 comparative samples.
 

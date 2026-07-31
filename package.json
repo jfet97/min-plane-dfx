@@ -37,6 +37,7 @@
     "gate:capacity:production": "tsx --tsconfig tsconfig.node.json scripts/irregular-capacity-gate.ts --strict",
     "build:native": "node crates/irregular-nesting-native/scripts/build-native.mjs --release",
     "test:differential": "tsx --tsconfig tsconfig.node.json scripts/rust-parity/differential-fixture-matrix.ts --required-only",
+    "gate:quality-acceptance": "tsx --tsconfig tsconfig.node.json scripts/rust-parity/run-quality-acceptance.ts",
     "postinstall": "pnpm native:electron"
   },
   "dependencies": {

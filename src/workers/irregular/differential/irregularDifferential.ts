@@ -71,7 +71,7 @@ function silentNativeOptions(
 }
 
 function nativeUnavailableFailure(
-  requestedBackend: 'rust' | 'differential',
+  requestedBackend: 'auto' | 'rust' | 'differential',
   probe: Extract<NativeCapabilityProbe, { available: false }>
 ): WorkerResponseFailureError {
   return new WorkerResponseFailureError({
@@ -91,6 +91,32 @@ function nativeIneligibleFailure(
       `The explicitly requested ${requestedBackend} irregular backend is ineligible for this request ` +
       `(reason: ${reason}). Rust supports only archive-eligible Compact and Compact Short Side jobs.`,
     context: { requestedBackend, reason }
+  })
+}
+
+function requiredNativeProfile(settings: IrregularNestingSettings): string {
+  return settings.optimizer.intrinsicObjectiveProfileId === 'short-side'
+    ? 'compact-short-side'
+    : 'compact'
+}
+
+function nativeProfileMismatchFailure(
+  requestedBackend: 'auto' | 'rust' | 'differential',
+  requiredProfile: string,
+  advertisedProfiles: ReadonlyArray<string>
+): WorkerResponseFailureError {
+  return new WorkerResponseFailureError({
+    code: 'worker_protocol_error',
+    message:
+      `irregular-nesting-native capability does not advertise required profile ` +
+      `'${requiredProfile}' (requested ${requestedBackend}; advertised ` +
+      `${advertisedProfiles.length === 0 ? '(none)' : advertisedProfiles.join(', ')}).`,
+    context: {
+      requestedBackend,
+      reason: 'profile-mismatch',
+      requiredProfile,
+      advertisedProfiles: [...advertisedProfiles]
+    }
   })
 }
 
@@ -124,10 +150,12 @@ function captureOutcome(
 }
 
 /**
- * Executes the selected irregular backend. TypeScript remains the authority:
- * differential mode observes its callbacks, runs Rust silently second, compares
- * complete semantic outcomes, and returns the original TypeScript outcome only
- * when both projections are equal.
+ * Executes the selected irregular backend. Auto uses TypeScript for
+ * archive-ineligible jobs and otherwise requires a matching native profile
+ * before dispatching Rust. TypeScript remains the authority in differential
+ * mode: it observes callbacks, runs Rust silently second, compares complete
+ * semantic outcomes, and returns the original TypeScript outcome only when
+ * both projections are equal.
  */
 export function executeIrregularBackend(
   input: IrregularBackendExecutionInput
@@ -139,6 +167,9 @@ export function executeIrregularBackend(
 
   const eligibility = intrinsicSharedArchiveEligibility(settings.optimizer)
   if (!eligibility.eligible) {
+    if (backend === 'auto') {
+      return dependencies.runTypeScript(request, settings, options)
+    }
     return Effect.fail(nativeIneligibleFailure(backend, eligibility.reason))
   }
 
@@ -147,7 +178,12 @@ export function executeIrregularBackend(
     return Effect.fail(nativeUnavailableFailure(backend, probe))
   }
 
-  if (backend === 'rust') {
+  const requiredProfile = requiredNativeProfile(settings)
+  if (!probe.profiles.includes(requiredProfile)) {
+    return Effect.fail(nativeProfileMismatchFailure(backend, requiredProfile, probe.profiles))
+  }
+
+  if (backend === 'auto' || backend === 'rust') {
     return dependencies.runRust(request, settings, nativeOptions(options))
   }
 

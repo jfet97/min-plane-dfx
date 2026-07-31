@@ -62,6 +62,7 @@ import { preparePieces } from '@shared/preparePieces.js'
 
 import {
   computeIrregularNesting,
+  type ComputeIrregularNestingOptions,
   type IrregularComputeResult
 } from '../../src/workers/algorithm/irregular/computeIrregularNesting.js'
 import { CollisionGeometryBuilder } from '../../src/workers/irregular/collisionGeometryBuilder.js'
@@ -88,7 +89,7 @@ import {
 // CLI
 // ===========================================================================
 
-interface Args {
+export interface DifferentialArgs {
   readonly fixture: string
   readonly pieces: number | 'all'
   readonly requestFile: string | undefined
@@ -100,7 +101,7 @@ interface Args {
   readonly profile: 'compact' | 'short-side' | undefined
 }
 
-function parseArgs(argv: ReadonlyArray<string>): Args {
+export function parseDifferentialArgs(argv: ReadonlyArray<string>): DifferentialArgs {
   let fixture = 'mixed61'
   let pieces: number | 'all' = 4
   let requestFile: string | undefined
@@ -332,7 +333,7 @@ function mixed61RequestAtSheet(raw: FixtureJson, sheet: SheetSpec): NestingReque
   })
 }
 
-async function loadRequest(args: Args): Promise<NestingRequest> {
+export async function loadDifferentialRequest(args: DifferentialArgs): Promise<NestingRequest> {
   if (args.requestFile !== undefined) {
     if (!existsSync(args.requestFile))
       throw new Error(`Request file not found: ${args.requestFile}`)
@@ -383,12 +384,14 @@ async function loadRequest(args: Args): Promise<NestingRequest> {
 // Running both backends
 // ===========================================================================
 
-function runTypeScriptBackend(
+export function runTypeScriptBackend(
   request: NestingRequest,
-  geometrySettings: IrregularNestingSettings
+  geometrySettings: IrregularNestingSettings,
+  options?: ComputeIrregularNestingOptions
 ): Effect.Effect<IrregularComputeResult, WorkerResponseFailureError> {
   return computeIrregularNesting(request, {
-    intrinsicShortSidePairFoldRuntimeControl: {
+    ...options,
+    intrinsicShortSidePairFoldRuntimeControl: options?.intrinsicShortSidePairFoldRuntimeControl ?? {
       now: () => 0,
       currentRssBytes: () => 0
     }
@@ -409,14 +412,14 @@ function runTypeScriptBackend(
   )
 }
 
-function runRustBackend(
+export function runRustBackend(
   request: NestingRequest,
   geometrySettings: IrregularNestingSettings
 ): Effect.Effect<IrregularComputeResult, WorkerResponseFailureError> {
   return computeIrregularNestingNative(request, geometrySettings)
 }
 
-async function runToOutcome(
+export async function runToOutcome(
   effect: Effect.Effect<IrregularComputeResult, WorkerResponseFailureError>
 ): Promise<IrregularDifferentialOutcome> {
   return Effect.runPromise(
@@ -439,8 +442,8 @@ function fail(message: string): never {
 }
 
 async function main(): Promise<void> {
-  const args = parseArgs(process.argv.slice(2))
-  const request = await loadRequest(args)
+  const args = parseDifferentialArgs(process.argv.slice(2))
+  const request = await loadDifferentialRequest(args)
   const geometrySettings = request.options.irregularSettings ?? GeometrySettings.Make
   const eligibility = intrinsicSharedArchiveEligibility(geometrySettings.optimizer)
 
@@ -504,6 +507,8 @@ async function main(): Promise<void> {
   )
 }
 
-main().catch((error: unknown) => {
-  fail(error instanceof Error ? (error.stack ?? error.message) : String(error))
-})
+if (process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((error: unknown) => {
+    fail(error instanceof Error ? (error.stack ?? error.message) : String(error))
+  })
+}

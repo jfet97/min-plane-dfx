@@ -180,6 +180,31 @@ jobs:
       - run: node crates/irregular-nesting-native/scripts/build-native.mjs --release
       - run: pnpm test:differential
 
+  quality-acceptance:
+    name: Native quality acceptance promotion gate
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.11.1
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates/irregular-nesting-native -> target
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      # Deliberate, explicit, non-lifecycle build step. The gate must execute
+      # the real native addon and never substitute TypeScript for Rust.
+      - run: node crates/irregular-nesting-native/scripts/build-native.mjs --release
+      - run: pnpm gate:quality-acceptance
+
   differential-full:
     name: Differential tests (full strict matrix)
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'

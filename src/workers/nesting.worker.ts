@@ -2,6 +2,7 @@ import * as NodeFileSystem from '@effect/platform-node/NodeFileSystem'
 import * as NodePath from '@effect/platform-node/NodePath'
 import * as NodeWorkerRunner from '@effect/platform-node/NodeWorkerRunner'
 import { computeNesting } from './algorithm/computeNesting.js'
+import { dispatchNestingComputation } from './nestingDispatch.js'
 import {
   computeIrregularNesting,
   type IrregularComputeResult,
@@ -250,36 +251,37 @@ function handleRunNesting(
             }
           })
     const computation: Effect.Effect<NestingResult, WorkerResponseFailureError> =
-      payload.options.workerMode === IRREGULAR_WORKER_MODE
-        ? computeIrregularWorkerResult(
-            payload,
-            historyMode === 'off'
-              ? undefined
-              : (frame) => {
-                  Queue.offerUnsafe(frameQueue, frame)
-                },
-            (progress) =>
-              send(
-                WorkerProgressResponse.forPortfolioProgress({
-                  requestId,
-                  jobId,
-                  progress
-                })
-              ),
-            decisionTracePath === null
-              ? undefined
-              : (event) => {
-                  decisionTraceBatcher?.add(event)
-                },
-            controller
-          )
-        : Effect.sync(() =>
-            computeNesting(payload, {
-              emitFrame: (frame) => {
+      dispatchNestingComputation({
+        request: payload,
+        emitFrame: (frame) => {
+          Queue.offerUnsafe(frameQueue, frame)
+        },
+        irregularEmitFrame:
+          historyMode === 'off'
+            ? undefined
+            : (frame) => {
                 Queue.offerUnsafe(frameQueue, frame)
-              }
+              },
+        emitPortfolioProgress: (progress) =>
+          send(
+            WorkerProgressResponse.forPortfolioProgress({
+              requestId,
+              jobId,
+              progress
             })
-          )
+          ),
+        emitDecisionTrace:
+          decisionTracePath === null
+            ? undefined
+            : (event) => {
+                decisionTraceBatcher?.add(event)
+              },
+        controller,
+        dependencies: {
+          computeNesting,
+          computeIrregular: computeIrregularWorkerResult
+        }
+      })
     const completion = yield* computation.pipe(
       Effect.match({
         onFailure: (error) => ({ type: 'failure' as const, error }),
@@ -400,9 +402,10 @@ function computeIrregularWorkerResult(
   const geometrySettings = request.options.irregularSettings ?? GeometrySettings.Make
 
   /**
-   * Backend selection is out-of-band and non-persisted. Rust and differential
-   * requests preflight native capability and archive eligibility, while the
-   * default TypeScript route remains unchanged and authoritative.
+   * Backend selection is out-of-band and non-persisted. Auto uses TypeScript
+   * for archive-ineligible jobs and preflights native capability and the
+   * required objective profile before Rust dispatch. Explicit Rust and
+   * differential requests remain fail-closed.
    */
   const backend = readIrregularBackendFromEnv(irregularBackendProcessEnv())
   const dependencies: IrregularBackendExecutionDependencies = {

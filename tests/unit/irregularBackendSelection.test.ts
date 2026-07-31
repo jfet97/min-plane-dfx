@@ -7,23 +7,25 @@ import {
 } from '@shared/irregular/backendSelection.js'
 
 describe('parseIrregularBackend', () => {
-  it('resolves undefined to the compiled-in default', () => {
-    expect(parseIrregularBackend(undefined)).toBe('typescript')
+  it('resolves undefined to the compiled-in auto default', () => {
+    expect(parseIrregularBackend(undefined)).toBe('auto')
     expect(parseIrregularBackend(undefined)).toBe(DEFAULT_IRREGULAR_BACKEND)
   })
 
-  it('resolves an empty string to the compiled-in default', () => {
+  it('resolves an empty string to the compiled-in auto default', () => {
+    expect(parseIrregularBackend('')).toBe('auto')
     expect(parseIrregularBackend('')).toBe(DEFAULT_IRREGULAR_BACKEND)
   })
 
   it('accepts every documented backend value', () => {
+    expect(parseIrregularBackend('auto')).toBe('auto')
     expect(parseIrregularBackend('typescript')).toBe('typescript')
     expect(parseIrregularBackend('rust')).toBe('rust')
     expect(parseIrregularBackend('differential')).toBe('differential')
   })
 
-  it('throws on an unrecognized value instead of silently defaulting', () => {
-    expect(() => parseIrregularBackend('rustt')).toThrow(/typescript.*rust.*differential/)
+  it('throws on an unrecognized nonempty value instead of silently defaulting', () => {
+    expect(() => parseIrregularBackend('rustt')).toThrow(/auto.*typescript.*rust.*differential/)
     expect(() => parseIrregularBackend('Rust')).toThrow()
     expect(() => parseIrregularBackend(' rust')).toThrow()
   })
