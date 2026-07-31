@@ -1,3 +1,9 @@
+/*
+Copyright: Angus Johnson 2010-2025
+License: https://www.boost.org/LICENSE_1_0.txt
+Complete license text: ../../LICENSES/clipper2-ts-BSL-1.0.txt
+*/
+
 //! Vendor-translated port of `clipper2-ts@2.0.1-18`'s `src/Engine.ts` boolean-clip
 //! engine, plus the small `src/Clipper.ts` wrapper surface this task is assigned
 //! (`booleanOp`, `booleanOpWithPolyTree`, `polyTreeToPaths64`) — per ruling R10
@@ -727,7 +733,7 @@ impl Clipper64 {
         while let Some(p) = prev {
             let node = &self.active_pool[p];
             let is_open_p = self.is_open(node);
-            if !(is_open_p || !Self::is_hot_edge(node)) {
+            if !is_open_p && Self::is_hot_edge(node) {
                 break;
             }
             prev = node.prev_in_ael;
@@ -3419,9 +3425,8 @@ impl Clipper64 {
     fn swap_front_back_sides(&mut self, outrec: usize) {
         // while this proc. is needed for open paths it's almost never needed for
         // closed paths
-        let front = self.outrec_list[outrec].front_edge;
-        self.outrec_list[outrec].front_edge = self.outrec_list[outrec].back_edge;
-        self.outrec_list[outrec].back_edge = front;
+        let outrec_entry = &mut self.outrec_list[outrec];
+        std::mem::swap(&mut outrec_entry.front_edge, &mut outrec_entry.back_edge);
         let pts = self.outrec_list[outrec]
             .pts
             .expect("swapFrontBackSides requires pts");
@@ -3529,9 +3534,8 @@ impl Clipper64 {
         let or2 = self.active_pool[ae2].outrec; // an assigned outrec
         if or1 == or2 {
             let or1 = or1.expect("swapOutrecs precondition: at least one edge has an outrec");
-            let ae = self.outrec_list[or1].front_edge;
-            self.outrec_list[or1].front_edge = self.outrec_list[or1].back_edge;
-            self.outrec_list[or1].back_edge = ae;
+            let outrec = &mut self.outrec_list[or1];
+            std::mem::swap(&mut outrec.front_edge, &mut outrec.back_edge);
             return;
         }
 
@@ -3980,8 +3984,8 @@ impl Clipper64 {
             self.out_pts[prev_op].next = new_op2;
         }
 
-        if !(abs_double_area2 > BigInt::from(2)) // area > 1
-            || (!(abs_double_area2 > abs_double_area1)
+        if abs_double_area2 <= BigInt::from(2) // area <= 1
+            || (abs_double_area2 <= abs_double_area1
                 && ((double_area2 > zero) != (double_area1 > zero)))
         {
             return;

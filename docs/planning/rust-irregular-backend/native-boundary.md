@@ -1,53 +1,16 @@
-# Native N-API Boundary: Design for `crates/irregular-nesting-native`
+# Native N-API Boundary
 
-Stage 0 design document for the Rust irregular-nesting port (Compact /
-Compact Short Side). This document specifies the versioned N-API contract
-per the migration prompt (`docs/prompts/fable5-rust-irregular-nesting-implementation.md`,
-sections 7, 15, 16 — read in full; sections 2, 8, 9, 13, 14 read for the
-absolute-semantic-preservation ground rules this contract must not violate).
+**Status:** implemented current contract at `0fa19255e4c01bf5e7c113ed6779a6dc4eac2e7c`, with uncommitted changes.
 
-This is a **design for Stage 1+**. No production Rust exists yet in this
-checkout. Every claim about current TypeScript behavior below is cited to
-source or to a characterization document in
-`docs/planning/rust-irregular-backend/characterization/`; every claim about
-the Rust side is a proposal, not a status report.
+## Current verification update
 
-Orchestrator decisions this document incorporates as given:
+The native boundary is API version 3 and uses one coarse, profile-discriminated job path. The stable TypeScript loader resolves `irregular-nesting-native` by package name only. Explicit Rust and differential requests fail closed when the addon is unavailable or ineligible; TypeScript remains the default backend.
 
-- napi `3.12.0` / `napi-derive` `3.6.1` / `napi-build` `2.4.0` are verified
-  working on the build machine, including `ThreadsafeFunction` calls
-  originating from background (non-JS) threads. JS-visible names are
-  camelCased by the napi-rs macros from idiomatic Rust `snake_case`; this
-  document writes Rust identifiers in `snake_case` throughout and does not
-  hand-annotate `js_name` unless the camelCase auto-conversion would not
-  produce the name TypeScript needs to consume.
-- The Clipper2 strategy is a from-scratch Rust vendor-translation of the
-  used subset of `clipper2-ts@2.0.1-18` (`Core`/`Engine`/`Clipper`/`Offset`;
-  boolean ops `Union`/`Difference`/`Intersection`/`Xor` with `EvenOdd`/
-  `NonZero`, `PolyTree64` output, `Miter`/`Polygon` offset), pinned by
-  differential vectors — not a binding to a different-version C++ Clipper2.
-  This document treats the Clipper2 backend as fully internal to Rust; no
-  Clipper2 type crosses the N-API boundary in either direction.
-- The crate lives in the pnpm workspace at `crates/irregular-nesting-native`.
-- Durable evidence lives in the repository, never only in `/tmp`.
+API 3 uses an opaque invocation token outside semantic request JSON for cancellation. One ordered event channel carries progress, snapshots, and terminal; terminal acknowledgement precedes settlement. Differential and thread comparisons normalize timing/RSS values by presence only and compare score fields exactly.
 
-Files read in full or in the relevant part for this document beyond the
-characterization corpus: `src/shared/protocol/worker.ts` (188 lines, full),
-`src/workers/nesting.worker.ts` (492 lines, full),
-`src/workers/algorithm/irregular/computeIrregularNesting.ts` (relevant
-parts: `ComputeIrregularNestingOptions`, `IrregularComputeResult`,
-`IrregularComputeErrorType`, lines 1-460), `src/shared/protocol/errors.ts`
-(full), `src/shared/domain/nesting.ts` (relevant part: `SheetSpec`,
-`NestingOptions`, `PreparedPiece`, `NestingRequest` field declarations),
-`src/shared/domain/geometry.ts` (`Rect`/`RectWith`), `src/shared/domain/dxf.ts`
-(`ImportedPiece`, `DxfGeometrySummary`, segment/ellipse-source shapes),
-`src/shared/irregular/domain.ts` (relevant classes: `CollisionGeometryDiagnostic`,
-`CollisionGeometry`, `TransformedCollisionGeometry`, `IrregularPreparedPiece`,
-`IrregularPlacement`, `IrregularPlacedPiece`, `IrregularLayoutScoreSummary`,
-`IrregularPortfolioProgress`, `IrregularPortfolioResult`, `IrregularHistoryFrame`).
+The release Rust suite passed 590 library tests plus all integration and documentation tests; thread equality passed 6/6; required differential passed 16/16; strict full required passed 16/16; exploratory passed 8/8. Rust remains opt-in because controlled performance P2/P3 fail and P5 is unevaluated.
 
----
-
+## Historical design detail
 ## 1. Purpose and non-goals
 
 This document specifies:

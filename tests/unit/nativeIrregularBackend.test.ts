@@ -24,23 +24,20 @@ import {
 import { makeIrregularWorkerOutput } from '../../src/workers/algorithm/irregular/irregularWorkerOutput.js'
 
 /**
- * These tests exercise the real `irregular-nesting-native` addon (no
- * mocking of the N-API boundary), matching this repo's convention of
- * driving real production entry points rather than stand-ins (see
- * `scripts/rust-parity/dump-coordinator.ts`'s own doc). The addon is a
- * gitignored build artifact (`crates/irregular-nesting-native/npm/*.node`,
- * produced by `node crates/irregular-nesting-native/scripts/build-native.mjs`)
- * -- unlike `better-sqlite3`, nothing in this repo's `pnpm test`/`test:focused`
- * scripts currently rebuilds it automatically (deliberately out of this
- * task's scope; see `nativeIrregularBackend.ts`'s own module doc), so every
- * test below skips itself (not fails) when the addon has not been built for
- * the current machine, keeping `pnpm test:focused` green regardless of build
- * state -- exactly what the default (`MIN_PLANE_IRREGULAR_BACKEND` unset)
- * production path requires: it never even attempts to load the addon.
+ * These tests exercise the real `irregular-nesting-native` addon without
+ * mocking the N-API boundary. The addon is a gitignored build artifact under
+ * `crates/irregular-nesting-native/npm`, built explicitly by
+ * `node crates/irregular-nesting-native/scripts/build-native.mjs`. Local
+ * focused suites skip an absent optional addon. Native CI sets
+ * `MIN_PLANE_REQUIRE_NATIVE_ADDON=1`, which runs this suite and fails it when
+ * the expected addon is missing or cannot load.
  */
 const probe = probeNativeIrregularAddon()
+const nativeAddonRequiredForTests = process.env.MIN_PLANE_REQUIRE_NATIVE_ADDON === '1'
 const describeIfAvailable =
-  !probe.available && probe.reason === 'not-installed' ? describe.skip : describe
+  !probe.available && probe.reason === 'not-installed' && !nativeAddonRequiredForTests
+    ? describe.skip
+    : describe
 const NATIVE_LIFECYCLE_PROBE_TIMEOUT_MS = 8_000
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const NATIVE_LIFECYCLE_PROBE_PATH = resolve(
@@ -273,36 +270,43 @@ describeIfAvailable('computeIrregularNestingNative', () => {
     NATIVE_LIFECYCLE_PROBE_TIMEOUT_MS + 2_000
   )
 
-  it('places every piece of a small archive-eligible request through the real addon', async () => {
+  it('emits real addon progress then snapshots then terminal in one contiguous channel', async () => {
     const settings = archiveEligibleSettings()
     const req = request(
       [prepared('piece-1'), prepared('piece-2')],
       [source('piece-1'), source('piece-2')]
     )
+    const addon = loadNativeIrregularAddon()
+    const events: Array<{
+      readonly kind: 'portfolio-progress' | 'state-snapshot' | 'terminal'
+      readonly ordinal: number
+    }> = []
 
-    const progressEvents: Array<{ readonly phase: string }> = []
-    const snapshotOrdinals: number[] = []
-    let nextOrdinal = 0
+    const envelope = JSON.parse(
+      await addon.runIrregularJob(
+        encodeNativeRequestJson(req, settings),
+        `native-event-order-${randomUUID()}`,
+        (json) => {
+          const event = JSON.parse(json) as {
+            readonly kind: 'portfolio-progress' | 'state-snapshot' | 'terminal'
+            readonly ordinal: number
+          }
+          events.push(event)
+        },
+        true
+      )
+    ) as { readonly ok: boolean }
 
-    const result = await Effect.runPromise(
-      computeIrregularNestingNative(req, settings, {
-        emitPortfolioProgress: (progress) =>
-          Effect.sync(() => {
-            progressEvents.push({ phase: progress.phase })
-          }),
-        emitStateSnapshot: () => {
-          snapshotOrdinals.push(nextOrdinal)
-          nextOrdinal += 1
-        }
-      })
-    )
-
-    expect(result.placedCollisionGeometries.length + result.unplacedPieceIds.length).toBe(2)
-    expect(result.portfolio.source).toBe('shared-archive')
-    expect(result.portfolio.status).toBe('completed')
-    expect(progressEvents.length).toBeGreaterThan(0)
-    // Every real production placement in this fixture fits the generous sheet.
-    expect(result.unplacedPieceIds.length).toBe(0)
+    expect(envelope.ok).toBe(true)
+    expect(events.map((event) => event.ordinal)).toEqual(events.map((_event, index) => index))
+    const firstProgress = events.find((event) => event.kind === 'portfolio-progress')
+    const firstSnapshot = events.find((event) => event.kind === 'state-snapshot')
+    const terminal = events.at(-1)
+    expect(firstProgress).toBeDefined()
+    expect(firstSnapshot).toBeDefined()
+    expect(terminal?.kind).toBe('terminal')
+    expect(firstProgress?.ordinal).toBeLessThan(firstSnapshot?.ordinal ?? Number.NaN)
+    expect(firstSnapshot?.ordinal).toBeLessThan(terminal?.ordinal ?? Number.NaN)
   })
 
   it('does not expose the real-addon envelope until a delayed progress effect drains', async () => {

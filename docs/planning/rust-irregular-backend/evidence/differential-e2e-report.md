@@ -1,11 +1,18 @@
-# Differential E2E Report — Rust Irregular Backend
+# Rust Irregular Backend: Differential E2E Report
 
-**Date:** 2026-07-30
-**Base commit:** `a709134f050c422e807192a0c226f58d17157ccf` ("feat: capacity-mode orchestration + 114-case full-job differential suite")
-**Branch:** `rust-irregular-backend` (working tree uncommitted per task instructions — do not commit)
-**Harness:** `scripts/rust-parity/run-differential.ts` (extended this session; see "Harness changes" below), driven via `node crates/irregular-nesting-native/scripts/build-native.mjs` release builds.
-**Target:** `x86_64-unknown-linux-gnu`, native addon API version 1, backend version 0.1.0.
+**Date:** 2026-07-31
 
+**Working tree:** `rust-irregular-backend` at `0fa19255e4c01bf5e7c113ed6779a6dc4eac2e7c`, with uncommitted changes.
+
+## Current verification update
+
+Required differential rows passed 16/16. Strict full required rows passed 16/16, and exploratory N1 rows passed 8/8. The comparison remains TypeScript first, Rust second, sequentially, over placements, partitions, score, portfolio, diagnostics, sorted-piece order, complete snapshots, and all five structured traces. Only documented timing/RSS field values normalize by presence.
+
+The Rust-only Mixed-61 Compact verification produced collision SHA `3839e80d26be257381f1962816765a886d4b7e3c3d78120892e4a6a943dfa742`, fitted SHA `ef2b783ae12491d2a80a12ef94d1bb2801c13cbd43aeb6e2c1cc00d86828fd3b`, 61 placed, 0 unplaced, in 30826 ms. Short Side produced collision SHA `c38a0cb4bb7765e4db102869224ef5b51f2a0bbc787cea05adf94ca0e2fe5e22`, fitted SHA `2a63c729108ba7680339cebaf86d4e39368a020eee95580caf9811d6d2bbc2ca`, 61 placed, 0 unplaced, in 31300 ms.
+
+The Mixed-61 Compact production gate passed with area `391605.85017399996`, cavities `0`, and elapsed `32061.670542` ms. The Compact nine-baseline gate passed 9 cases and 18 layouts. The capacity production report passed at `/tmp/capacity-production.Q2EH7P/report.json`.
+
+## Historical verification detail
 ## Acceptance bar
 
 > mixed-61 2000×2700 fitted canonical SHA-256 `ef2b783ae12491d2a80a12ef94d1bb2801c13cbd43aeb6e2c1cc00d86828fd3b` with 61/61 placed from the RUST backend.

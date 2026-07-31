@@ -1,10 +1,27 @@
 # Rust Irregular Backend: Memory and Cache Telemetry Report
 
 **Date:** 2026-07-31
-**Scope:** PR 27 remediation Sections 9 and 10
-**Branch:** `rust-irregular-backend`
-**Base commit:** `be32e7cb4c9d61161eef3780f1909712fd94bf86`
 
+**Working tree:** `rust-irregular-backend` at `0fa19255e4c01bf5e7c113ed6779a6dc4eac2e7c`, with uncommitted changes.
+
+## Current verification update
+
+Fresh default and effectively unlimited Mixed-61 cache profiles have the same normalized envelope SHA-256: `8735c0702f3bdac5168186519f1f839785a756b50eeaf5edb01e7855b5eae429`.
+
+| Measurement | Default | Unlimited |
+| --- | ---: | ---: |
+| Elapsed | 29922.969209 ms | 30082.023666 ms |
+| Geometry hits | 276454 | 276454 |
+| Geometry cloning hits | 276454 | 276454 |
+| Geometry misses | 5299 | 5299 |
+| Geometry peak | 11354848 B | 11354848 B |
+| Geometry eviction/rejection | 0/0 | 0/0 |
+| Free-material peak | 50609 B | 50609 B |
+| Free-material eviction/rejection | 0/0 | 0/0 |
+
+The finite production caps remain 56 MiB for geometry and 8 MiB for free material. Cache telemetry remains diagnostic-only, and normal completion clears retained storage before diagnostics publication.
+
+## Historical verification detail
 ## 1. Production policy
 
 The Rust irregular backend owns two finite, job-local caches:

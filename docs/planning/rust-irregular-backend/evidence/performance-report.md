@@ -1,14 +1,18 @@
-# Rust Irregular Backend — Performance Contract Measurement Report
+# Rust Irregular Backend: Performance Contract Measurement Report
 
-**Date:** 2026-07-30
-**Contract:** `docs/planning/rust-irregular-backend/performance-contract.md` (preregistered
-2026-07-28, thresholds binding, not revised for this report — verified by re-reading the
-contract file at the start of this session before any measurement was taken).
-**Batches executed:** C1 (primary gate, 5 samples/backend + 1-thread/2/8-thread matrix),
-C2, C3, C4 (3 samples/backend each), C6 (3 samples, TS-only per task instruction), peak RSS
-on C1 (3 samples/path). **C5 and C7 were out of scope for this batch** (not in the task's
-instructed batch list) — see §7, P5.
+**Date:** 2026-07-31
 
+**Working tree:** `rust-irregular-backend` at `0fa19255e4c01bf5e7c113ed6779a6dc4eac2e7c`, with uncommitted changes.
+
+## Current verification update
+
+The preregistered controlled Linux host remains the authority for P1 through P7. The current macOS verification host does not replace the controlled comparative performance record.
+
+P1, P4, P6, and P7 remain passed. P2 and P3 remain failed. P5 remains unevaluated. Rust must remain opt-in through `MIN_PLANE_IRREGULAR_BACKEND=rust`; TypeScript remains the default backend.
+
+Current macOS correctness runs completed Mixed-61 Compact in 30826 ms and Short Side in 31300 ms. The Compact production gate passed at `32061.670542` ms with area `391605.85017399996` and zero cavities. These are gate-completion observations, not new P1 through P7 comparative samples.
+
+## Historical controlled measurement detail
 ## 1. Machine and source provenance
 
 - Linux 6.18.38 x86_64 (NixOS host `t3vm`), CPU `Intel(R) Core(TM) Ultra 7 270K Plus`,

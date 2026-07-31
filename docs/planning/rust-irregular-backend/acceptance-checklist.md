@@ -1,21 +1,25 @@
-# Rust Irregular Backend — Final Acceptance Checklist
+# Rust Irregular Backend: Final Acceptance Checklist
 
-**Date:** 2026-07-30
-**Scope:** migration prompt §22 artifact #15 ("a final acceptance checklist"), walking §25
-("Definition of done") item by item.
-**Branch:** `rust-irregular-backend` @ `88b572711642a96d765ecd39ad2872c15b081dff` (working tree
-uncommitted per task instructions — do not commit).
-**Method:** every item below is graded **met** / **met-with-note** / **not-met** against
-evidence actually re-produced in this session (not cited from memory) — see the "Evidence"
-column for the exact document/command each verdict rests on. This checklist is deliberately
-blunt: promotion criteria that are not met are reported as not met, not softened.
+**Date:** 2026-07-31
 
-Status legend: **met** — fully satisfied, no caveat. **met-with-note** — satisfied in substance
-but with a documented, non-blocking caveat the orchestrator should know about. **not-met** —
-not satisfied; the consequence is stated explicitly, not glossed over.
+**Branch:** `rust-irregular-backend` at `0fa19255e4c01bf5e7c113ed6779a6dc4eac2e7c`, with uncommitted changes.
 
----
+## Current verification update
 
+- Release Rust suite: 590 library tests plus all integration and documentation tests passed. Thread equality passed 6/6.
+- Native package tests passed 31/31. The focused native/worker TypeScript suite passed 74/74. The full Electron suite passed 95 files with 970 passed and 17 skipped.
+- Typecheck, ESLint, changed-file Prettier, `cargo fmt`, and strict Clippy passed.
+- Required differential rows passed 16/16. Strict full required rows passed 16/16, and exploratory rows passed 8/8.
+- Compact Mixed-61: collision SHA `3839e80d26be257381f1962816765a886d4b7e3c3d78120892e4a6a943dfa742`, fitted SHA `ef2b783ae12491d2a80a12ef94d1bb2801c13cbd43aeb6e2c1cc00d86828fd3b`, 61 placed, 0 unplaced, 30826 ms.
+- Short Side Mixed-61: collision SHA `c38a0cb4bb7765e4db102869224ef5b51f2a0bbc787cea05adf94ca0e2fe5e22`, fitted SHA `2a63c729108ba7680339cebaf86d4e39368a020eee95580caf9811d6d2bbc2ca`, 61 placed, 0 unplaced, 31300 ms.
+- Production gates passed: Mixed-61 Compact area `391605.85017399996`, cavities `0`, elapsed `32061.670542` ms; Compact nine-baselines 9 cases and 18 layouts; capacity report `/tmp/capacity-production.Q2EH7P/report.json`.
+- The rebuilt macOS arm64 package passed for `aarch64-apple-darwin`, API 3. Its 46 MiB Asar contains only 9 allowlisted native-package entries, resolves the addon inside the packaged app, and unpacks the target binary. The npm tarball contained the required loader, target metadata, Darwin arm64 binary, `package.json`, `NOTICE`, and `LICENSES` assets.
+
+## Promotion verdict
+
+P1, P4, P6, and P7 remain passed in the preregistered controlled Linux performance record. P2 and P3 remain failed, and P5 remains unevaluated. Rust therefore remains opt-in through `MIN_PLANE_IRREGULAR_BACKEND=rust`; TypeScript remains the default. Current macOS figures are correctness and packaging verification, not new controlled performance-contract evidence.
+
+## Historical verification detail
 ## 1. Scope
 
 | # | Requirement | Status | Evidence |

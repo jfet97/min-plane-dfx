@@ -1,4 +1,10 @@
-//! Vendor-translated port of `clipper2-ts@2.0.1-18`'s `src/Core.ts` — core
+/*
+Copyright: Angus Johnson 2010-2025
+License: https://www.boost.org/LICENSE_1_0.txt
+Complete license text: ../../LICENSES/clipper2-ts-BSL-1.0.txt
+*/
+
+//! Vendor-translated port of `clipper2-ts@2.0.1-18`'s `src/Core.ts` - core
 //! structures and functions for the Clipper library — per ruling R10
 //! (`docs/planning/rust-irregular-backend/stage0-rulings.md`).
 //!

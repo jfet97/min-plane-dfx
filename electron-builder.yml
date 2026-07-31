@@ -1,15 +1,4 @@
-# Minimum production-grade electron-builder configuration for shipping the
-# native (napi-rs) irregular-nesting addon and the worker bundle inside a
-# packaged Electron app.
-#
-# Deliberately NOT a full release-engineering pass: no code signing, no
-# auto-update, no installer polish. See
-# docs/planning/rust-irregular-backend/build-packaging.md §7 for the full
-# design rationale behind every key below.
-#
-# appId / target list / output directory are placeholder-reasonable
-# defaults per that document's §11 open question 6 -- confirm or replace
-# before this is treated as a final release configuration.
+# Electron packaging configuration for the worker bundle and native addon
 appId: com.min-plane.dfx
 
 directories:
@@ -20,20 +9,18 @@ files:
   - node_modules/**/*
   - package.json
 
-# A native addon's .node binary cannot be dlopen'd directly from inside an
-# asar archive -- it must be unpacked. The broad glob is intentionally
-# redundant with the explicit irregular-nesting-native entry (it also
-# covers better-sqlite3's own .node file with no package-specific line
-# needed).
-asarUnpack:
-  - '**/*.node'
-  - node_modules/irregular-nesting-native/**
+extraResources:
+  - from: crates/irregular-nesting-native/NOTICE
+    to: LICENSES/irregular-nesting-native/NOTICE
+  - from: crates/irregular-nesting-native/LICENSES
+    to: LICENSES/irregular-nesting-native/LICENSES
 
-# electron-builder's default native-dependency rebuild pass is disabled;
-# pnpm native:electron (electron-rebuild -f -w better-sqlite3) remains the
-# only rebuild step in the pipeline, scoped exactly as it is today. The
-# Node-API addon is never added to that Electron-ABI rebuild step (its ABI
-# stability is the point of using napi-rs -- see build-packaging.md §6).
+# native addon binaries must remain outside app.asar for dlopen
+asarUnpack:
+  - node_modules/irregular-nesting-native/npm/*.node
+  - node_modules/better-sqlite3/build/Release/*.node
+
+# only better-sqlite3 participates in the existing electron-rebuild command
 npmRebuild: false
 
 mac:

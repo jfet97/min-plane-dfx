@@ -1,35 +1,16 @@
-# CI Matrix — Design
+# Rust Native CI Matrix
 
-Status: **Stage 0 design document.** No new workflow file is added by this
-document and no existing workflow is modified — `.github/workflows/capacity-quality.yml`
-is the only workflow file that exists in this checkout today (verified:
-`find .github/workflows -type f` → one file). Every job below is proposed for
-implementation in Stage 1+ (native build/smoke jobs can land as soon as the
-crate skeleton builds; differential/determinism/production-gate jobs land
-only as their prerequisite Stage-2+ code exists). Claims about current CI
-behavior are source-cited; claims about the target matrix are marked design.
+**Status:** implemented workflow contract at `0fa19255e4c01bf5e7c113ed6779a6dc4eac2e7c`, with uncommitted changes.
 
-Governing spec: `docs/prompts/fable5-rust-irregular-nesting-implementation.md`
-§20.3 ("CI matrix", quoted in full in §1 below). Related constraints consumed
-from: §18.6 (required production gates), §18.4 (concurrency determinism
-tests), §19.3/§20.3 ("Do not run multiple performance measurements
-concurrently on the same host").
+## Current verification update
 
-Primary sources read for this document: the migration prompt §20.3 (full);
-`.github/workflows/capacity-quality.yml` (full, the only existing workflow);
-`docs/planning/rust-irregular-backend/build-packaging.md` (full); `docs/planning/rust-irregular-backend/backend-selection-rollback.md`
-(full); `docs/planning/rust-irregular-backend/stage0-rulings.md` (full);
-`docs/operations/irregular-production-gates.md` (full); `docs/planning/rust-irregular-backend/performance-contract.md`
-§1–3; `docs/planning/rust-irregular-backend/architecture.md` (Stage 5 section,
-`crates/irregular-nesting-native` provenance); `package.json` (`scripts`,
-`engines`, full); `pnpm-workspace.yaml` (full); `flake.nix` (full); the
-`crates/irregular-nesting-native` skeleton committed at `dbcfec2`:
-`Cargo.toml`, `scripts/build-native.mjs`, `npm/index.cjs`, `src/lib.rs`,
-`rustfmt.toml`, `.gitignore` (all read in full); `docs/planning/rust-irregular-backend/characterization/tests-gates-inventory.md`
-§12 (dual-runtime hazard).
+The workflow retains `pnpm install --frozen-lockfile --ignore-scripts` and uses explicit native build steps. It includes Rust format, strict Clippy, release Rust tests, required real-addon integration, Node/V8 hypot corpus verification, required and strict full differential modes, thread equality, and four packaged native-load targets.
 
----
+The packaged target matrix is Linux x64 on `ubuntu-24.04`, Windows x64 on `windows-latest`, macOS arm64 on `macos-15`, and macOS x64 on `macos-15-intel`. The package workflow explicitly runs `pnpm native:electron`, the native package contract suite, and the safe staging wrapper before Electron-builder. The wrapper restores the workspace link after packaging even when the build fails.
 
+The rebuilt local macOS arm64 artifact passed with a 46 MiB Asar containing only the 9 allowlisted native-package entries and an unpacked addon. Do not claim hosted success for the current unpushed matrix. Pushed runs `30600486816` and `30600486817` passed, but predate current packaging changes.
+
+## Historical design detail
 ## 1. What the prompt requires, verbatim
 
 Prompt §20.3, quoted in full:

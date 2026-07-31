@@ -25,11 +25,17 @@ import { NestingOptions, NestingRequest, SheetSpec } from '@shared/domain/nestin
 import { IrregularNestingSettings, IrregularOptimizerSettings } from '@shared/irregular/domain.js'
 import { canonicalCollisionLayoutIdentity } from '../../src/workers/irregular/canonicalLayoutGeometry.js'
 import { computeIrregularNestingNative } from '../../src/workers/irregular/native/nativeIrregularBackend.js'
-import { canonicalizeIrregularLayout, type LayoutPoint } from '../lib/irregularLayoutCanonicalization.js'
+import {
+  canonicalizeIrregularLayout,
+  type LayoutPoint
+} from '../lib/irregularLayoutCanonicalization.js'
 import type { IrregularComputeResult } from '../../src/workers/algorithm/irregular/computeIrregularNesting.js'
 
 const REPO_ROOT = dirname(dirname(dirname(fileURLToPath(import.meta.url))))
-const MIXED61_FIXTURE_PATH = join(REPO_ROOT, 'tests/fixtures/irregularSheetInvariance/mixed61-request.json')
+const MIXED61_FIXTURE_PATH = join(
+  REPO_ROOT,
+  'tests/fixtures/irregularSheetInvariance/mixed61-request.json'
+)
 
 function argument(name: string): string | undefined {
   const index = process.argv.indexOf(name)
@@ -68,13 +74,15 @@ async function main(): Promise<void> {
     sheet,
     options: new NestingOptions({
       ...decoded.options,
-      timeoutMs: 0,
+      timeoutMs: Number.MAX_SAFE_INTEGER,
       historyMode: 'off',
       irregularSettings: settings
     })
   })
 
-  console.log(`[verify-mixed61-hash] sheet=${sheetArg} profile=${profileArg} pieces=${request.pieces.length}`)
+  console.log(
+    `[verify-mixed61-hash] sheet=${sheetArg} profile=${profileArg} pieces=${request.pieces.length}`
+  )
   const startedAt = Date.now()
   const result = await Effect.runPromise(computeIrregularNestingNative(request, settings))
   const elapsedMs = Date.now() - startedAt
@@ -91,7 +99,8 @@ async function main(): Promise<void> {
   // over absolute-space collision polygons. This is the acceptance-bar hash
   // (`pnpm gate:mixed61-compact`'s `--expected-canonical-sha256`).
   const polygons = absoluteCollisionPolygons(result)
-  const fittedCanonicalSha256 = polygons.length === 0 ? undefined : canonicalizeIrregularLayout(polygons).sha256
+  const fittedCanonicalSha256 =
+    polygons.length === 0 ? undefined : canonicalizeIrregularLayout(polygons).sha256
 
   console.log(
     JSON.stringify(

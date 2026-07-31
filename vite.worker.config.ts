@@ -20,7 +20,8 @@ export default defineConfig({
         'node:fs',
         'node:path',
         'node:url',
-        'node:crypto'
+        'node:crypto',
+        'irregular-nesting-native'
       ],
       output: {
         format: 'es',

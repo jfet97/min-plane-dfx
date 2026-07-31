@@ -1155,31 +1155,6 @@ fn encode_result(result: &IrregularComputeResult) -> Value {
     })
 }
 
-fn parse_f64_bits(hex: &str) -> Option<f64> {
-    let bits = u64::from_str_radix(hex.strip_prefix("0x")?, 16).ok()?;
-    Some(f64::from_bits(bits))
-}
-
-/// Known, narrow, pre-existing (not part of this task's `capacity::mode`/
-/// coordinator work) floating-point summation-order artifacts: exact
-/// contact-boundary/free-material-sliver measurement in `canonical_grid::contact`
-/// and the Clipper2-derived free-material snapshot accumulate many-term sums
-/// whose term order can differ between this port's reconstruction path and
-/// TS's for a real, geometry-derived (not fixture-synthetic) piece set --
-/// affecting ~5% of this suite's cases by at most a handful of ULPs (a
-/// relative error around 1e-15/1e-16). These two leaf fields are exempted
-/// from strict bit-exact equality (falling back to a tight relative-error
-/// bound instead, so a *real* regression -- not just summation-order noise
-/// -- still fails loudly) rather than silently masked wholesale. Root-causing
-/// the exact term-order divergence is out of this task's file-ownership
-/// scope (`search::beam_state`/`canonical_grid::contact`/`search::layout_scorer`,
-/// none of which are `capacity::mode`/`result::*`) and is recorded as a
-/// known finding in this task's own report rather than guessed at here.
-const KNOWN_NARROW_FLOAT_NOISE_FIELDS: &[&str] = &[
-    "sharedCollisionBoundaryContactUnits",
-    "freeMaterialSliverMetric",
-];
-
 /// Collects every structural/value mismatch between `actual` and `expected`
 /// (recursing through objects/arrays) into `mismatches` as `"{path}:
 /// actual={a} expected={b}"` strings, rather than panicking on the first
@@ -1217,30 +1192,6 @@ fn collect_json_diffs(actual: &Value, expected: &Value, path: &str, mismatches: 
                     &format!("{path}[{index}]"),
                     mismatches,
                 );
-            }
-        }
-        (Value::String(actual_hex), Value::String(expected_hex))
-            if KNOWN_NARROW_FLOAT_NOISE_FIELDS
-                .iter()
-                .any(|field| path.ends_with(field)) =>
-        {
-            let (Some(actual_f64), Some(expected_f64)) =
-                (parse_f64_bits(actual_hex), parse_f64_bits(expected_hex))
-            else {
-                mismatches.push(format!(
-                    "{path}: actual={actual_hex} expected={expected_hex} (not valid f64Bits hex)"
-                ));
-                return;
-            };
-            let relative_error = if expected_f64 == 0.0 {
-                actual_f64.abs()
-            } else {
-                ((actual_f64 - expected_f64) / expected_f64).abs()
-            };
-            if relative_error > 1e-9 {
-                mismatches.push(format!(
-                    "{path}: actual={actual_hex} ({actual_f64}) expected={expected_hex} ({expected_f64}) -- relative error {relative_error} exceeds the known-narrow-float-noise tolerance"
-                ));
             }
         }
         (actual_leaf, expected_leaf) => {

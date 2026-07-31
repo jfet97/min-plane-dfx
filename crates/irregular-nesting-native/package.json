@@ -2,10 +2,15 @@
   "name": "irregular-nesting-native",
   "version": "0.1.0",
   "private": true,
-  "description": "Native (napi-rs) irregular-nesting backend for the Compact / Compact Short Side archive-eligible profiles (docs/planning/rust-irregular-backend). Not published to any registry -- consumed in-repo only, via pnpm workspace linking (crates/*) and, on the TS integration side, direct relative resolution of this package's own npm/index.cjs from src/workers/irregular/native/loadNativeBackend.ts.",
+  "description": "Native (napi-rs) irregular-nesting backend for the Compact / Compact Short Side archive-eligible profiles (docs/planning/rust-irregular-backend). Consumed through the root workspace production dependency and its stable npm/index.cjs entry point.",
   "main": "npm/index.cjs",
+  "exports": "./npm/index.cjs",
   "files": [
-    "npm/index.cjs"
+    "npm/index.cjs",
+    "npm/target.cjs",
+    "npm/*.node",
+    "NOTICE",
+    "LICENSES/**"
   ],
   "scripts": {
     "build": "node scripts/build-native.mjs",

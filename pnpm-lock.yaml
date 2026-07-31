@@ -32,6 +32,9 @@ importers:
       iconv-lite:
         specifier: ^0.7.2
         version: 0.7.2
+      irregular-nesting-native:
+        specifier: workspace:*
+        version: link:crates/irregular-nesting-native
       robust-predicates:
         specifier: 3.0.3
         version: 3.0.3

@@ -1,31 +1,16 @@
-# Native Build and Packaging — Design
+# Native Build and Packaging
 
-Stage 0 design document for `docs/prompts/fable5-rust-irregular-nesting-implementation.md`
-§20 ("Packaging and Electron integration"). Design for Stage 1+; no
-`crates/` directory, no `napi`/`@napi-rs` dependency, no `Cargo.toml`, and no
-`electron-builder` configuration exist in this checkout today (verified:
-`find . -maxdepth 1 -iname electron-builder*` → none; `node -e "require('./package.json').build"`
-→ `undefined`; `grep -n napi package.json` → no hits). Every claim about
-current repository state below is source-cited; every claim about the
-Rust-era design is marked as design.
+**Status:** implemented current contract at `0fa19255e4c01bf5e7c113ed6779a6dc4eac2e7c`, with uncommitted changes.
 
-Primary sources read for this document: `docs/prompts/fable5-rust-irregular-nesting-implementation.md`
-§20 (full); `package.json` (full, `scripts`/`engines`/`devDependencies`/
-`dependencies`); `pnpm-workspace.yaml` (full); `electron.vite.config.ts`
-(full); `vite.worker.config.ts` (full); `flake.nix` (full, already extended
-with a Rust toolchain per the orchestrator's prior decision); `src/main/services/WorkerSupervisor.ts`
-(`makeWorkerThread`); `src/main/ipc/handlers.ts` (`getWorkerPath`,
-`createSupervisor`); `docs/planning/rust-irregular-backend/characterization/tests-gates-inventory.md`
-§12 (dual-runtime finding); `docs/planning/rust-irregular-backend/characterization/worker-coordination.md`;
-`.github/workflows/capacity-quality.yml` (the only existing CI workflow, for
-the `--ignore-scripts` convention); `node_modules/.pnpm/better-sqlite3@12.11.1/node_modules/better-sqlite3/package.json`
-(verified `better-sqlite3`'s own install script: `"install": "prebuild-install
-|| node-gyp rebuild --release"` — a classic V8-ABI/node-gyp addon, **not**
-Node-API, which is the concrete justification in §6 for why it needs
-`electron-rebuild` and a napi-rs addon does not).
+## Current verification update
 
----
+The stable loader resolves the package name only. Supported target and runner pairs are Linux x64 `x86_64-unknown-linux-gnu` on `ubuntu-24.04`, Windows x64 `x86_64-pc-windows-msvc` on `windows-latest`, macOS arm64 `aarch64-apple-darwin` on `macos-15`, and macOS x64 `x86_64-apple-darwin` on `macos-15-intel`.
 
+Asar unpack remains narrow: only the native addon and better-sqlite3 native binaries are unpacked. Package CI explicitly runs `pnpm native:electron` before packaging. The packaging wrapper temporarily replaces the pnpm workspace link with a physical allowlisted package, invokes Electron-builder, and restores the link in `finally`; this prevents Cargo sources and `target/` artifacts from following the workspace dependency into Asar.
+
+The rebuilt macOS arm64 artifact contains only 9 native-package entries, has a 46 MiB `app.asar`, resolves the addon inside that Asar, unpacks the target binary, and passes the API 3 verifier. The npm tarball verifier confirmed `NOTICE`, `LICENSES`, loader, target metadata, Darwin arm64 binary, and `package.json`. The Clipper2 BSL SHA-256 is `ea056d2c64294936b226f7360c265e77c52adc4ba171ee61029357f101f439cf`; native `NOTICE` SHA-256 is `1fa11aadfd5f98d734cbaced1fa10d525fd85565c560044734db4ce752037c1d`.
+
+## Historical design detail
 ## 1. Target package layout
 
 `crates/irregular-nesting-native/` (path fixed by the orchestrator's prior

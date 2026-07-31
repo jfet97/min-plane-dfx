@@ -1,0 +1,9 @@
+Min Plane DFX native irregular nesting package
+
+This package contains Rust translations of portions of clipper2-ts@2.0.1-18:
+
+Copyright: Angus Johnson 2010-2025
+License: Boost Software License 1.0
+
+The complete license text is distributed at
+LICENSES/clipper2-ts-BSL-1.0.txt.

@@ -1,17 +1,18 @@
-# Rust Irregular Backend — Determinism Report
+# Rust Irregular Backend: Determinism Report
 
-**Date:** 2026-07-30
-**Scope:** migration prompt §18.4 (concurrency determinism), §22 item 11 ("one-thread versus
-multi-thread determinism report"), and stop-condition checks for "any thread count changes
-output" / "any checkpoint resume differs from uninterrupted execution" (§24).
-**Branch:** `rust-irregular-backend` @ `88b572711642a96d765ecd39ad2872c15b081dff` (working tree
-uncommitted per task instructions — do not commit).
+**Date:** 2026-07-31
 
-This report gathers the three independent lines of determinism evidence this crate carries:
-thread-count invariance (§1), repeated-process invariance (§2), and checkpoint-resume-vs-
-uninterrupted equivalence (§3). All three were re-run in this session to confirm they are still
-green, not merely cited from memory.
+**Working tree:** `rust-irregular-backend` at `0fa19255e4c01bf5e7c113ed6779a6dc4eac2e7c`, with uncommitted changes.
 
+## Current verification update
+
+`cargo test --release --test thread_equality` passed 6/6. The canonical semantic-byte comparison sorts object keys, preserves array order and every semantic value, and normalizes only documented timing/RSS values by presence. Score fields remain exact.
+
+Required differential rows passed 16/16, strict full required rows passed 16/16, and exploratory N1 rows passed 8/8. The release Rust suite passed 590 library tests plus all integration and documentation tests.
+
+The Node/V8 hypot oracle contains 21,696 vectors generated with exact Node `v24.11.1`; corpus SHA-256: `bc444e7d2813fb2a7faa150ab03fa1c92e2be28e4c26971ad3796de5c491a266`.
+
+## Historical verification detail
 ## 1. Thread-count determinism — `tests/thread_equality.rs`
 
 **Command:** `cargo test --release --test thread_equality` (re-run this session).
