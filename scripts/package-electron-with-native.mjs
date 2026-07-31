@@ -22,8 +22,8 @@ try {
   const addonFiles = stageNativePackageForElectron(undefined, WORKSPACE_PACKAGE)
   console.log(`staged irregular-nesting-native for Electron: ${addonFiles.join(', ')}`)
 
-  const pnpmExecutable = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm'
-  const result = spawnSync(pnpmExecutable, ['exec', 'electron-builder', ...process.argv.slice(2)], {
+  const electronBuilderCli = resolve(REPOSITORY_ROOT, 'node_modules/electron-builder/cli.js')
+  const result = spawnSync(process.execPath, [electronBuilderCli, ...process.argv.slice(2)], {
     cwd: REPOSITORY_ROOT,
     stdio: 'inherit'
   })

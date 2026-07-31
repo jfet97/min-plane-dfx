@@ -103,6 +103,8 @@ test('stages only distributable native package files before Electron packaging',
 
   const packagingWrapper = readText('scripts/package-electron-with-native.mjs')
   assert.match(packagingWrapper, /renameSync\(WORKSPACE_PACKAGE, WORKSPACE_PACKAGE_BACKUP\)/)
+  assert.match(packagingWrapper, /spawnSync\(process\.execPath, \[electronBuilderCli/)
+  assert.doesNotMatch(packagingWrapper, /pnpm\.cmd/)
   assert.match(packagingWrapper, /finally \{/)
   assert.match(packagingWrapper, /renameSync\(WORKSPACE_PACKAGE_BACKUP, WORKSPACE_PACKAGE\)/)
 
