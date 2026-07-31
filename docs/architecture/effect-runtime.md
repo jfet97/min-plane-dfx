@@ -47,18 +47,12 @@ The app-owned protocol is the `NestingWorkerRpcs` group:
 
 ```text
 RunNestingPayload -> Stream<WorkerResponse>
+CancelNestingPayload -> CancelNestingAcknowledgement
 ```
 
-`WorkerSupervisor` consumes the `RunNesting` response stream and forwards history events or resolves the final result. `nesting.worker.ts` exposes the RPC handler and streams `WorkerResponse` class instances through an endable queue.
+`WorkerSupervisor` keeps one worker pool with one worker and two concurrent RPC permits: one permit for the long-lived `RunNesting` stream and one for `CancelNesting`. It forwards history events or resolves the final result while `nesting.worker.ts` streams `WorkerResponse` class instances through an endable queue.
 
-Renderer cancellation and the outer request timeout are supervisor safety
-boundaries: they emit a terminal cancellation progress event and dispose the
-worker runtime. They do not claim a partial result from a computation that was
-interrupted externally. Internal irregular deadline and cancellation checks are
-cooperative algorithm boundaries; the current renderer cancellation path still
-acts by supervisor disposal rather than by promising that an internal callback
-observed the request. Portfolio-owned GA budgets and deterministic archive caps
-remain separate and publish only validated complete layouts.
+Renderer cancellation and the outer request timeout are typed control-plane operations. The supervisor sends `CancelNesting` with the request identity and a first-writer-wins `cancelled` or `timeout` reason, emits cancellation progress, and keeps draining queued history and progress. The worker routes the same controller into TypeScript cancellation checks and deferred native cancellation registration, then returns a typed terminal failure after callback queues close. A success observed after local cancellation is suppressed, and no partial result is claimed. Worker disposal is a bounded grace-period fallback when cooperative termination or control delivery does not finish. Portfolio-owned GA budgets and deterministic archive caps remain separate and publish only validated complete layouts.
 
 Do not bypass `NodeWorker` / `NodeWorkerRunner` with direct `parentPort` listeners in the same worker.
 

@@ -15,6 +15,7 @@ import {
   type IrregularNestingSettings
 } from '@shared/irregular/domain.js'
 import { intrinsicSharedArchiveEligibility } from '@shared/irregular/executionMode.js'
+import type { WorkerCancellationReason } from '@shared/protocol/worker.js'
 import { CollisionGeometryBuilder } from '../../irregular/collisionGeometryBuilder.js'
 import { GeometryKernel, GeometrySettings } from '../../irregular/geometryKernel.js'
 import {
@@ -80,6 +81,7 @@ import {
   observeIntrinsicShortSidePairFold,
   withMeasuredIntrinsicShortSidePairFoldTrace,
   type IntrinsicShortSideConstructionKind,
+  type IntrinsicShortSidePairFoldRuntimeControl,
   type IntrinsicShortSidePairFoldTrace
 } from './intrinsicShortSidePairFoldObserver.js'
 import {
@@ -119,6 +121,7 @@ export interface ComputeIrregularNestingOptions {
   readonly emitDecisionTrace?: EmitIrregularDecisionTrace
   readonly emitPortfolioProgress?: (progress: IrregularPortfolioProgress) => Effect.Effect<void>
   readonly isCancelled?: () => boolean
+  readonly registerNativeCancellation?: (cancel: (reason: WorkerCancellationReason) => void) => void
   /** standalone benchmark hook; measurements never enter normal app output. */
   readonly onPortfolioPhase?: (measurement: IrregularPortfolioPhaseMeasurement) => void
   /** standalone benchmark hook; metrics never enter normal app output. */
@@ -176,6 +179,8 @@ export interface ComputeIrregularNestingOptions {
   ) => void
   /** Bounded exhaustive pair fold with no NFP or beam search. */
   readonly captureIntrinsicShortSidePairFoldObserver?: boolean
+  /** Test and parity-harness control; production leaves the observer bounds unchanged. */
+  readonly intrinsicShortSidePairFoldRuntimeControl?: IntrinsicShortSidePairFoldRuntimeControl
   /** Benchmark hook for one admitted exact pair fold. */
   readonly onIntrinsicShortSidePairFoldObserverWinner?: (
     winner: ReadonlyArray<IrregularPlacedPiece> | undefined
@@ -1161,7 +1166,12 @@ function coordinateIntrinsicSharedArchive(
           productionMaximumSideGrid:
             intrinsicShortSideObserverTrace.productionMaximumSideGrid,
           productionEnvelopeAreaGrid2:
-            intrinsicShortSideObserverTrace.productionEnvelopeAreaGrid2
+            intrinsicShortSideObserverTrace.productionEnvelopeAreaGrid2,
+          ...(input.options?.intrinsicShortSidePairFoldRuntimeControl === undefined
+            ? {}
+            : {
+                runtimeControl: input.options.intrinsicShortSidePairFoldRuntimeControl
+              })
         })
         intrinsicShortSidePairFoldTrace = pairFoldOutcome.trace
         input.options?.onIntrinsicShortSidePairFoldObserverWinner?.(

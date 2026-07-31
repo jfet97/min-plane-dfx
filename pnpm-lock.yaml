@@ -32,6 +32,9 @@ importers:
       iconv-lite:
         specifier: ^0.7.2
         version: 0.7.2
+      irregular-nesting-native:
+        specifier: workspace:*
+        version: link:crates/irregular-nesting-native
       robust-predicates:
         specifier: 3.0.3
         version: 3.0.3
@@ -93,6 +96,8 @@ importers:
       vue-tsc:
         specifier: ^2.1.10
         version: 2.2.12(typescript@5.9.3)
+
+  crates/irregular-nesting-native: {}
 
 packages:
 

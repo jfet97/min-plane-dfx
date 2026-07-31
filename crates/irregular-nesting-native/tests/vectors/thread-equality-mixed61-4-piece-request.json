@@ -1,0 +1,346 @@
+{
+  "version": 1,
+  "jobId": "thread-equality-4-piece",
+  "sheet": {
+    "width": 2000,
+    "height": 2700,
+    "label": "default 1x1 m"
+  },
+  "padding": 10,
+  "pieces": [
+    {
+      "id": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-1",
+      "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-1",
+      "interchangeabilityKey": "604bc424-469c-4ab8-93f1-80c0fc4090b3",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 70,
+        "longestEdge": 110,
+        "area": 7700,
+        "imbalance": 40
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-2",
+      "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-2",
+      "interchangeabilityKey": "604bc424-469c-4ab8-93f1-80c0fc4090b3",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 70,
+        "longestEdge": 110,
+        "area": 7700,
+        "imbalance": 40
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-3",
+      "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-3",
+      "interchangeabilityKey": "604bc424-469c-4ab8-93f1-80c0fc4090b3",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 70,
+        "longestEdge": 110,
+        "area": 7700,
+        "imbalance": 40
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-4",
+      "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-4",
+      "interchangeabilityKey": "604bc424-469c-4ab8-93f1-80c0fc4090b3",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 70,
+        "longestEdge": 110,
+        "area": 7700,
+        "imbalance": 40
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    }
+  ],
+  "sourcePieces": [
+    {
+      "id": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-1",
+      "sourceFileId": "a9974ea5-3511-4f73-a3ea-a56a5c88d7ad",
+      "sourceLayer": "preset",
+      "label": "trapezoid #1",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 20,
+            "y1": 0,
+            "x2": 80,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 80,
+            "y1": 0,
+            "x2": 100,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 20,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-2",
+      "sourceFileId": "a9974ea5-3511-4f73-a3ea-a56a5c88d7ad",
+      "sourceLayer": "preset",
+      "label": "trapezoid #2",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 20,
+            "y1": 0,
+            "x2": 80,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 80,
+            "y1": 0,
+            "x2": 100,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 20,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-3",
+      "sourceFileId": "a9974ea5-3511-4f73-a3ea-a56a5c88d7ad",
+      "sourceLayer": "preset",
+      "label": "trapezoid #3",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 20,
+            "y1": 0,
+            "x2": 80,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 80,
+            "y1": 0,
+            "x2": 100,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 20,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-4",
+      "sourceFileId": "a9974ea5-3511-4f73-a3ea-a56a5c88d7ad",
+      "sourceLayer": "preset",
+      "label": "trapezoid #4",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 20,
+            "y1": 0,
+            "x2": 80,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 80,
+            "y1": 0,
+            "x2": 100,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 20,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    }
+  ],
+  "options": {
+    "allowGlobalRotation": true,
+    "allowGlobalMirror": true,
+    "timeoutMs": 180000,
+    "workerMode": "irregular-convex-v2",
+    "historyMode": "final",
+    "historyScope": "winning_path",
+    "strategySelectionMode": "all_configured",
+    "strategyIds": [
+      "short-fill-bottom-left-then-short-side-fit"
+    ],
+    "layoutSelectionStrategyId": "compact-first",
+    "finalSelectionMode": "manual",
+    "topN": 3,
+    "irregularSettings": {
+      "geometry": {
+        "flatteningSagToleranceMm": 0.25,
+        "clearanceSafetyMarginMm": 0.25,
+        "geometryBackendId": "irregular-convex-v2-default",
+        "geometryBackendVersion": "0"
+      },
+      "optimizer": {
+        "orderWindow": 4,
+        "beamWidth": 8,
+        "localCandidateFanout": 4,
+        "localRepairBudget": 0,
+        "intrinsicSharedArchiveEnabled": true,
+        "transformCap": 8,
+        "transformMinimumEdgeLengthMm": 1.2,
+        "transformAngleDeduplicationToleranceDeg": 0.051,
+        "configuredRotationEnabled": true,
+        "edgeAlignmentEnabled": true,
+        "configuredRotationDeg": [],
+        "gaEnabled": false,
+        "baselineOnly": true,
+        "gaPopulation": 12,
+        "gaGenerationBudget": 2,
+        "gaEvaluationBudget": 24,
+        "gaTimeBudgetMs": 15000,
+        "gaSeed": "default",
+        "priorityOrderMutationEnabled": true,
+        "transformPreferenceMutationEnabled": true,
+        "placementPolicyMutationEnabled": true,
+        "placementPolicyId": "edge-contact-then-balanced-compactness",
+        "placementPolicyIds": [
+          "balanced-compactness",
+          "short-side-fill",
+          "edge-contact-then-balanced-compactness"
+        ]
+      }
+    }
+  }
+}

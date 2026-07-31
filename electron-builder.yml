@@ -1,0 +1,36 @@
+# Electron packaging configuration for the worker bundle and native addon
+appId: com.min-plane.dfx
+
+directories:
+  output: release
+
+files:
+  - out/**/*
+  - node_modules/**/*
+  - package.json
+
+extraResources:
+  - from: crates/irregular-nesting-native/NOTICE
+    to: LICENSES/irregular-nesting-native/NOTICE
+  - from: crates/irregular-nesting-native/LICENSES
+    to: LICENSES/irregular-nesting-native/LICENSES
+
+# native addon binaries must remain outside app.asar for dlopen
+asarUnpack:
+  - node_modules/irregular-nesting-native/npm/*.node
+  - node_modules/better-sqlite3/build/Release/*.node
+
+# only better-sqlite3 participates in the existing electron-rebuild command
+npmRebuild: false
+
+mac:
+  target:
+    - dmg
+
+win:
+  target:
+    - nsis
+
+linux:
+  target:
+    - AppImage

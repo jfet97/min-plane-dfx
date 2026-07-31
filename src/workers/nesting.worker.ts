@@ -4,7 +4,7 @@ import * as NodeWorkerRunner from '@effect/platform-node/NodeWorkerRunner'
 import { computeNesting } from './algorithm/computeNesting.js'
 import {
   computeIrregularNesting,
-  type IrregularComputeErrorType,
+  type IrregularComputeResult,
   type IrregularStateSnapshot
 } from './algorithm/irregular/computeIrregularNesting.js'
 import {
@@ -20,11 +20,26 @@ import {
   serializeIrregularDecisionTraceBatch
 } from './decisionTraceNdjson.js'
 import { IRREGULAR_WORKER_MODE } from '@shared/irregular/defaults.js'
+import { readIrregularBackendFromEnv } from '@shared/irregular/backendSelection.js'
 import { CollisionGeometryBuilder } from './irregular/collisionGeometryBuilder.js'
 import { GeometryKernel, GeometrySettings } from './irregular/geometryKernel.js'
 import { FreeMaterialServiceLive } from './irregular/freeMaterialService.js'
 import { NfpIfpServiceLive } from './irregular/nfpIfpService.js'
 import { TransformGeneratorLive } from './irregular/transformGenerator.js'
+import { computeIrregularNestingNative } from './irregular/native/nativeIrregularBackend.js'
+import { probeNativeIrregularAddon } from './irregular/native/loadNativeBackend.js'
+import {
+  computeIrregularNestingDifferential,
+  executeIrregularBackend,
+  type IrregularBackendExecutionDependencies
+} from './irregular/differential/irregularDifferential.js'
+import { toIrregularWorkerFailure } from './irregular/irregularWorkerFailure.js'
+import {
+  ActiveRunRegistry,
+  cancelActiveRunOnInterrupt,
+  type ActiveRunController,
+  workerCancellationFailure
+} from './activeRunController.js'
 import {
   NestingWorkerRpcs,
   WorkerFailureResponse,
@@ -118,10 +133,7 @@ function prepareDecisionTraceFile(
     if (historyPath === null) return null
     const path = yield* Path.Path
     const fs = yield* FileSystem.FileSystem
-    const decisionTracePath = path.join(
-      path.dirname(historyPath),
-      `${jobId}.decision-trace.ndjson`
-    )
+    const decisionTracePath = path.join(path.dirname(historyPath), `${jobId}.decision-trace.ndjson`)
     yield* fs.writeFileString(decisionTracePath, '', { flag: mode === 'append' ? 'a' : 'w' })
     return decisionTracePath
   })
@@ -190,7 +202,8 @@ function makeFrameEmitter(
 function handleRunNesting(
   send: SendResponse,
   requestId: string,
-  payload: NestingRequest
+  payload: NestingRequest,
+  controller: ActiveRunController
 ): Effect.Effect<void, never, FileSystem.FileSystem | Path.Path> {
   const jobId = payload.jobId
 
@@ -257,7 +270,8 @@ function handleRunNesting(
               ? undefined
               : (event) => {
                   decisionTraceBatcher?.add(event)
-                }
+                },
+            controller
           )
         : Effect.sync(() =>
             computeNesting(payload, {
@@ -281,6 +295,11 @@ function handleRunNesting(
     yield* Fiber.join(frameConsumer)
     yield* Fiber.join(decisionTraceConsumer)
 
+    const cancellationFailure = workerCancellationFailure(controller)
+    if (cancellationFailure !== undefined) {
+      yield* send(new WorkerFailureResponse({ requestId, jobId, error: cancellationFailure }))
+      return
+    }
     if (completion.type === 'failure') {
       yield* send(
         new WorkerFailureResponse({
@@ -304,9 +323,7 @@ function handleRunNesting(
       scope: 'winning_path',
       strategyRunIds,
       ...(historyPath ? { ndjsonPath: historyPath } : {}),
-      ...(decisionTracePath
-        ? { decisionTracePath, decisionTraceEventCount }
-        : {})
+      ...(decisionTracePath ? { decisionTracePath, decisionTraceEventCount } : {})
     }
     yield* send(
       new WorkerHistoryCompleteResponse({
@@ -316,7 +333,18 @@ function handleRunNesting(
       })
     )
 
+    const cancellationAfterHistory = workerCancellationFailure(controller)
+    if (cancellationAfterHistory !== undefined) {
+      yield* send(new WorkerFailureResponse({ requestId, jobId, error: cancellationAfterHistory }))
+      return
+    }
+
     yield* sendProgress(send, requestId, jobId, 'completed')
+    const cancellationAfterProgress = workerCancellationFailure(controller)
+    if (cancellationAfterProgress !== undefined) {
+      yield* send(new WorkerFailureResponse({ requestId, jobId, error: cancellationAfterProgress }))
+      return
+    }
     yield* send(
       new WorkerSuccessResponse({
         requestId,
@@ -339,42 +367,72 @@ function handleRunNesting(
 
 function computeIrregularWorkerResult(
   request: NestingRequest,
-  emitFrame?: (frame: NestingHistoryFramePayload) => void,
-  emitPortfolioProgress?: (progress: IrregularPortfolioProgress) => Effect.Effect<void>,
-  emitDecisionTrace?: (event: IrregularDecisionTraceEvent) => void
+  emitFrame: ((frame: NestingHistoryFramePayload) => void) | undefined,
+  emitPortfolioProgress:
+    | ((progress: IrregularPortfolioProgress) => Effect.Effect<void>)
+    | undefined,
+  emitDecisionTrace: ((event: IrregularDecisionTraceEvent) => void) | undefined,
+  controller: ActiveRunController
 ): Effect.Effect<NestingResult, WorkerResponseFailureError> {
   const startedAt = new Date().toISOString()
   const startedAtMs = Date.now()
-  const options =
-    emitFrame === undefined &&
-    emitPortfolioProgress === undefined &&
-    emitDecisionTrace === undefined
-      ? undefined
-      : {
-          ...(emitFrame !== undefined
-            ? {
-                emitStateSnapshot: (snapshot: IrregularStateSnapshot, beamWidth: number) => {
-                  emitFrame(
-                    makeIrregularHistoryFrame({
-                      request,
-                      strategyRunId: irregularStrategyRunId(
-                        request,
-                        snapshot.source ?? 'beam'
-                      ),
-                      snapshot,
-                      beamWidth,
-                      createdAt: new Date().toISOString()
-                    })
-                  )
-                }
-              }
-            : {}),
-          ...(emitPortfolioProgress !== undefined ? { emitPortfolioProgress } : {}),
-          ...(emitDecisionTrace !== undefined ? { emitDecisionTrace } : {})
+  const options = {
+    ...(emitFrame !== undefined
+      ? {
+          emitStateSnapshot: (snapshot: IrregularStateSnapshot, beamWidth: number) => {
+            emitFrame(
+              makeIrregularHistoryFrame({
+                request,
+                strategyRunId: irregularStrategyRunId(request, snapshot.source ?? 'beam'),
+                snapshot,
+                beamWidth,
+                createdAt: new Date().toISOString()
+              })
+            )
+          }
         }
+      : {}),
+    ...(emitPortfolioProgress !== undefined ? { emitPortfolioProgress } : {}),
+    ...(emitDecisionTrace !== undefined ? { emitDecisionTrace } : {}),
+    isCancelled: controller.isRequested,
+    registerNativeCancellation: controller.registerNativeCancellation
+  }
   const geometrySettings = request.options.irregularSettings ?? GeometrySettings.Make
 
-  return computeIrregularNesting(request, options).pipe(
+  /**
+   * Backend selection is out-of-band and non-persisted. Rust and differential
+   * requests preflight native capability and archive eligibility, while the
+   * default TypeScript route remains unchanged and authoritative.
+   */
+  const backend = readIrregularBackendFromEnv(irregularBackendProcessEnv())
+  const dependencies: IrregularBackendExecutionDependencies = {
+    probeNative: probeNativeIrregularAddon,
+    runRust: computeIrregularNestingNative,
+    runTypeScript: (typescriptRequest, settings, typescriptOptions) =>
+      computeIrregularNesting(typescriptRequest, typescriptOptions).pipe(
+        Effect.provide(CollisionGeometryBuilder.Live),
+        Effect.provide(TransformGeneratorLive),
+        Effect.provide(NfpIfpServiceLive),
+        Effect.provide(FreeMaterialServiceLive),
+        Effect.provide(IrregularPlacementScorer.Layer),
+        Effect.provide(IrregularLayoutScorer.Live),
+        Effect.provide(GeometryKernel.Live),
+        Effect.provide(Layer.succeed(GeometrySettings, settings)),
+        Effect.mapError(toIrregularWorkerFailure)
+      )
+  }
+  const executionInput = {
+    request,
+    settings: geometrySettings,
+    ...(options === undefined ? {} : { options }),
+    dependencies
+  }
+  const computedEffect: Effect.Effect<IrregularComputeResult, WorkerResponseFailureError> =
+    backend === 'differential'
+      ? computeIrregularNestingDifferential(executionInput)
+      : executeIrregularBackend({ ...executionInput, backend })
+
+  return computedEffect.pipe(
     Effect.map((computed) => {
       const endedAt = new Date().toISOString()
       const output = makeIrregularWorkerOutput({
@@ -387,70 +445,18 @@ function computeIrregularWorkerResult(
         }
       })
       return output.result
-    }),
-    Effect.provide(CollisionGeometryBuilder.Live),
-    Effect.provide(TransformGeneratorLive),
-    Effect.provide(NfpIfpServiceLive),
-    Effect.provide(FreeMaterialServiceLive),
-    Effect.provide(IrregularPlacementScorer.Layer),
-    Effect.provide(IrregularLayoutScorer.Live),
-    Effect.provide(GeometryKernel.Live),
-    Effect.provide(Layer.succeed(GeometrySettings, geometrySettings)),
-    Effect.mapError(toIrregularWorkerFailure)
+    })
   )
 }
 
-function toIrregularWorkerFailure(error: IrregularComputeErrorType): WorkerResponseFailureError {
-  switch (error._tag) {
-    case 'IrregularComputeError':
-      return new WorkerResponseFailureError({
-        code: 'irregular_source_geometry_missing',
-        message: error.message,
-        context: {
-          preparedPieceId: error.preparedPieceId,
-          sourcePieceId: error.sourcePieceId
-        }
-      })
-    case 'IrregularGeometryInputError':
-      return new WorkerResponseFailureError({
-        code: 'irregular_geometry_invalid',
-        message: error.message,
-        context: { operation: error.operation }
-      })
-    case 'IrregularNestingNotImplementedError':
-      return new WorkerResponseFailureError({
-        code: 'not_implemented',
-        message: error.message,
-        context: { service: error.service, operation: error.operation }
-      })
-    case 'IrregularPlacementScoringError':
-    case 'IrregularLayoutScoringError':
-      return new WorkerResponseFailureError({
-        code: 'irregular_scoring_error',
-        message: error.message,
-        context: { operation: error.operation }
-      })
-    case 'IrregularPortfolioError':
-      return new WorkerResponseFailureError({
-        code:
-          error.category === 'geometry' ? 'irregular_geometry_invalid' : 'irregular_scoring_error',
-        message: error.message,
-        context: { operation: error.operation, category: error.category }
-      })
-    case 'IrregularNoValidResultError':
-      return new WorkerResponseFailureError({
-        code: 'irregular_no_valid_result',
-        message: error.message,
-        context: { operation: error.operation }
-      })
-    case 'IrregularNfpIfpControlAbortError':
-      return new WorkerResponseFailureError({
-        code: error.reason === 'cancelled' ? 'worker_cancelled' : 'worker_timeout',
-        message: error.message,
-        context: { reason: error.reason }
-      })
-  }
+/** Same `globalThis`-cast access pattern as `HISTORY_DIR_ENV` above, read fresh per job. */
+function irregularBackendProcessEnv(): Record<string, string | undefined> {
+  return (
+    (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {}
+  )
 }
+
+const activeRuns = new ActiveRunRegistry()
 
 const NestingWorkerHandlers = NestingWorkerRpcs.toLayer(
   Effect.succeed(
@@ -463,12 +469,25 @@ const NestingWorkerHandlers = NestingWorkerRpcs.toLayer(
               Effect.catchCause(() => Effect.void),
               Effect.asVoid
             )
-          yield* handleRunNesting(send, payload.requestId, payload.request).pipe(
-            Effect.ensuring(Queue.end(queue)),
+          const controller = activeRuns.start(payload.requestId, payload.request.jobId)
+          yield* cancelActiveRunOnInterrupt(
+            controller,
+            handleRunNesting(send, payload.requestId, payload.request, controller)
+          ).pipe(
+            Effect.ensuring(
+              Queue.end(queue).pipe(
+                Effect.ensuring(
+                  Effect.sync(() => {
+                    activeRuns.finish(controller)
+                  })
+                )
+              )
+            ),
             Effect.forkScoped
           )
           return queue
-        })
+        }),
+      CancelNesting: (payload) => Effect.sync(() => activeRuns.request(payload))
     })
   )
 )

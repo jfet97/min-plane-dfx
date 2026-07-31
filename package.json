@@ -23,8 +23,10 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "native:electron": "electron-rebuild -f -w better-sqlite3",
+    "package:native:electron": "node scripts/package-electron-with-native.mjs",
     "test": "pnpm native:electron && ELECTRON_RUN_AS_NODE=1 electron ./node_modules/vitest/vitest.mjs run",
     "test:focused": "ELECTRON_RUN_AS_NODE=1 pnpm exec electron ./node_modules/vitest/vitest.mjs run",
+    "test:native:package": "node --test crates/irregular-nesting-native/scripts/build-native.test.mjs scripts/verify-native-license-compliance.test.mjs scripts/verify-native-package-layout.test.mjs scripts/verify-packaged-native-load.test.mjs",
     "test:watch": "pnpm native:electron && ELECTRON_RUN_AS_NODE=1 electron ./node_modules/vitest/vitest.mjs",
     "benchmark:irregular": "tsx --tsconfig tsconfig.node.json scripts/irregular-benchmark.ts",
     "profile:mixed61": "node scripts/profile-mixed61.mjs",
@@ -33,6 +35,8 @@
     "gate:compact-nine-baselines": "tsx --tsconfig tsconfig.node.json scripts/irregular-compact-nine-baselines.ts",
     "gate:capacity": "tsx --tsconfig tsconfig.node.json scripts/irregular-capacity-gate.ts --strict --paired",
     "gate:capacity:production": "tsx --tsconfig tsconfig.node.json scripts/irregular-capacity-gate.ts --strict",
+    "build:native": "node crates/irregular-nesting-native/scripts/build-native.mjs --release",
+    "test:differential": "tsx --tsconfig tsconfig.node.json scripts/rust-parity/differential-fixture-matrix.ts --required-only",
     "postinstall": "pnpm native:electron"
   },
   "dependencies": {
@@ -44,6 +48,7 @@
     "dxf-parser": "^1.1.2",
     "effect": "^4.0.0-beta.88",
     "iconv-lite": "^0.7.2",
+    "irregular-nesting-native": "workspace:*",
     "robust-predicates": "3.0.3"
   },
   "devDependencies": {

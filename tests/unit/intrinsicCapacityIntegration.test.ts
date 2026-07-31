@@ -162,6 +162,32 @@ describe('intrinsic capacity integration', () => {
     expect(output.historyFrames.at(-1)?.placements).toHaveLength(2)
   })
 
+  it('forwards harness-only Short Side runtime control without changing production defaults', async () => {
+    const request = makeRectangleRequest({
+      jobKey: 'short-side-runtime-control',
+      count: 2,
+      widthMm: 40,
+      heightMm: 30,
+      sheet: new SheetSpec({ width: 200, height: 300, label: 'short-side runtime control' }),
+      paddingMm: 0
+    })
+    let clockReads = 0
+
+    const computed = await compute(request, {
+      captureIntrinsicShortSideObserver: true,
+      captureIntrinsicShortSidePairFoldObserver: true,
+      intrinsicShortSidePairFoldRuntimeControl: {
+        now: () => (clockReads++ === 0 ? 0 : 31_001)
+      }
+    })
+
+    expect(computed.intrinsicShortSidePairFoldTrace).toMatchObject({
+      status: 'deadline',
+      outputInfluence: 'none'
+    })
+    expect(clockReads).toBeGreaterThan(1)
+  })
+
   it(
     'runs focused complete reconstruction by default and preserves the protected duplicate fallback',
     async () => {

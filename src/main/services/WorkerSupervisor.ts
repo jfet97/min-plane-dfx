@@ -8,6 +8,9 @@ import {
   NestingWorkerRpcs,
   WorkerProgress,
   WorkerProgressResponse,
+  type CancelNestingAcknowledgement,
+  type CancelNestingPayload,
+  type WorkerCancellationReason,
   type WorkerResponse
 } from '@shared/protocol/worker.js'
 import { NestingResult as NestingResultModel } from '@shared/domain/nesting.js'
@@ -22,10 +25,27 @@ import type { AppErrorCode } from '@shared/protocol/errors.js'
 
 export type HistoryEventListener = (event: NestingHistoryEvent) => void
 
+/** One active stream plus its cancellation control request on the same worker. */
+export const WORKER_RPC_POOL_OPTIONS = { size: 1, concurrency: 2 } as const
+
+export interface WorkerSupervisorSessionFactoryInput {
+  readonly requestId: string
+  readonly request: NestingRequest
+  readonly onMessage: (message: WorkerResponse) => void
+}
+
+export interface WorkerSupervisorSession {
+  readonly start: (input: WorkerSupervisorSessionFactoryInput) => Promise<void>
+  readonly cancel: (payload: CancelNestingPayload) => Promise<CancelNestingAcknowledgement>
+  readonly dispose: () => Promise<void>
+}
+
 export interface WorkerSupervisorOptions {
   readonly workerPath: string
   readonly historyDirectory: string
   readonly defaultTimeoutMs: number
+  readonly cancellationGraceMs?: number
+  readonly sessionFactory?: (requestId: string, jobId: JobId) => WorkerSupervisorSession
 }
 
 interface PendingJob {
@@ -34,8 +54,10 @@ interface PendingJob {
   readonly resolve: (result: NestingResult) => void
   readonly reject: (err: SupervisorError) => void
   readonly listeners: Set<HistoryEventListener>
+  readonly session: WorkerSupervisorSession
   readonly timer: NodeJS.Timeout
-  readonly dispose: () => Promise<void>
+  graceTimer: NodeJS.Timeout | null
+  cancellationReason: WorkerCancellationReason | null
   historySummary: NestingHistorySummary | null
 }
 
@@ -61,7 +83,8 @@ export class SupervisorError extends Error {
  *   - One worker, lazily spawned on first job.
  *   - If the worker crashes, the active job fails with `worker_crashed` and
  *     the worker is replaced on the next call.
- *   - Timeout terminates the worker and rejects with `worker_timeout`.
+ *   - Cancellation and timeout use a typed control RPC and drain the stream.
+ *   - Worker disposal is a bounded fallback after the cancellation grace period.
  *   - History events are streamed to registered listeners in real time.
  *   - The final NestingResult is delivered both to the runNesting promise
  *     and via the result-event broadcast channel.
@@ -109,43 +132,17 @@ export class WorkerSupervisor {
 
     const requestId = cryptoRandomId()
     const listeners = new Set<HistoryEventListener>([listener])
-    // Round 2 (F1 partial): honor the per-request timeout when present,
-    // fall back to the supervisor default otherwise. The next round will
-    // rewire this through an Effect race, but respecting the field now
-    // removes a real divergence from NestingOptions.
     const timeoutMs =
       request.options.timeoutMs && request.options.timeoutMs > 0
         ? request.options.timeoutMs
         : this.options.defaultTimeoutMs
 
     return new Promise<NestingResult>((resolve, reject) => {
-      const WorkerProtocolLive = RpcClient.layerProtocolWorker({ size: 1 }).pipe(
-        Layer.provide(NodeWorker.layer(() => this.makeWorkerThread(requestId, request.jobId)))
-      )
-      const runtime = ManagedRuntime.make(WorkerProtocolLive)
+      const session =
+        this.options.sessionFactory?.(requestId, request.jobId) ??
+        this.makeRpcSession(requestId, request.jobId)
       const timer = setTimeout(() => {
-        const current = this.current
-        if (
-          current === null ||
-          current.requestId !== requestId ||
-          current.request.jobId !== request.jobId
-        ) {
-          return
-        }
-        this.dispatchEvent(
-          current,
-          cancellationProgress(current)
-        )
-        clearTimeout(current.timer)
-        this.teardownWorker(current.dispose, 'timeout')
-        current.reject(
-          new SupervisorError(
-            'worker_timeout',
-            `Worker exceeded the configured timeout of ${timeoutMs}ms.`,
-            { requestId, jobId: request.jobId, timeoutMs }
-          )
-        )
-        this.current = null
+        this.requestCancellation(requestId, request.jobId, 'timeout', timeoutMs)
       }, timeoutMs)
 
       this.current = {
@@ -154,47 +151,75 @@ export class WorkerSupervisor {
         resolve,
         reject,
         listeners,
+        session,
         timer,
-        dispose: runtime.dispose,
+        graceTimer: null,
+        cancellationReason: null,
         historySummary: null
       }
 
-      const handleWorkerMessage = this.handleWorkerMessage.bind(this)
-      const program = Effect.gen(function* () {
-        const client = yield* RpcClient.make(NestingWorkerRpcs)
-        yield* Effect.scoped(
-          client
-            .RunNesting({ requestId, request })
-            .pipe(Stream.runForEach((message) => Effect.sync(() => handleWorkerMessage(message))))
-        )
-      })
-
-      void runtime.runPromise(Effect.scoped(program)).catch((err: unknown) => {
-        this.handleWorkerError(requestId, request.jobId, err)
-      })
+      void session
+        .start({
+          requestId,
+          request,
+          onMessage: (message) => this.handleWorkerMessage(message)
+        })
+        .then(() => this.handleWorkerStreamEnd(requestId, request.jobId))
+        .catch((err: unknown) => {
+          this.handleWorkerError(requestId, request.jobId, err)
+        })
     })
   }
 
   cancelJob(jobId: JobId): void {
-    if (!this.current || this.current.request.jobId !== jobId) return
     const current = this.current
-    this.dispatchEvent(
-      current,
-      cancellationProgress(current)
-    )
-    clearTimeout(current.timer)
-    this.teardownWorker(current.dispose, 'cancel')
-    current.reject(
-      new SupervisorError('worker_cancelled', `Job ${jobId} cancelled by renderer request.`)
-    )
-    this.current = null
+    if (current === null || current.request.jobId !== jobId) return
+    this.requestCancellation(current.requestId, jobId, 'cancelled')
   }
 
-  private teardownWorker(
-    dispose: () => Promise<void>,
-    _reason: 'cancel' | 'timeout' | 'success'
-  ): void {
-    void dispose().catch(() => undefined)
+  private teardownWorker(session: WorkerSupervisorSession): void {
+    void session.dispose().catch(() => undefined)
+  }
+
+  private makeRpcSession(requestId: string, jobId: JobId): WorkerSupervisorSession {
+    const WorkerProtocolLive = RpcClient.layerProtocolWorker(WORKER_RPC_POOL_OPTIONS).pipe(
+      Layer.provide(NodeWorker.layer(() => this.makeWorkerThread(requestId, jobId)))
+    )
+    const runtime = ManagedRuntime.make(WorkerProtocolLive)
+    let startCalled = false
+    let resolveCancel:
+      | ((cancel: (payload: CancelNestingPayload) => Promise<CancelNestingAcknowledgement>) => void)
+      | undefined
+    let rejectCancel: ((error: unknown) => void) | undefined
+    const cancelReady = new Promise<
+      (payload: CancelNestingPayload) => Promise<CancelNestingAcknowledgement>
+    >((resolve, reject) => {
+      resolveCancel = resolve
+      rejectCancel = reject
+    })
+
+    return {
+      start: ({ requestId: activeRequestId, request, onMessage }) => {
+        if (startCalled) return Promise.reject(new Error('Worker session already started.'))
+        startCalled = true
+        const program = Effect.gen(function* () {
+          const client = yield* RpcClient.make(NestingWorkerRpcs)
+          resolveCancel?.((payload) => runtime.runPromise(client.CancelNesting(payload)))
+          yield* client
+            .RunNesting({ requestId: activeRequestId, request })
+            .pipe(Stream.runForEach((message) => Effect.sync(() => onMessage(message))))
+        })
+        return runtime.runPromise(Effect.scoped(program)).catch((error: unknown) => {
+          rejectCancel?.(error)
+          throw error
+        })
+      },
+      cancel: async (payload) => {
+        const cancel = await cancelReady
+        return cancel(payload)
+      },
+      dispose: runtime.dispose
+    }
   }
 
   private makeWorkerThread(requestId: string, jobId: JobId): NodeThreadWorker {
@@ -221,6 +246,72 @@ export class WorkerSupervisor {
       process.stderr.write(`[worker:stderr] ${chunk.toString()}`)
     })
     return worker
+  }
+
+  private requestCancellation(
+    requestId: string,
+    jobId: JobId,
+    reason: WorkerCancellationReason,
+    timeoutMs?: number
+  ): void {
+    const current = this.current
+    if (
+      current === null ||
+      current.requestId !== requestId ||
+      current.request.jobId !== jobId ||
+      current.cancellationReason !== null
+    ) {
+      return
+    }
+
+    current.cancellationReason = reason
+    clearTimeout(current.timer)
+    this.dispatchEvent(current, cancellationProgress(current))
+    void current.session.cancel({ requestId, jobId, reason }).catch((error: unknown) => {
+      console.error('[main:worker] cancellation control failed', {
+        requestId,
+        jobId,
+        reason,
+        message: error instanceof Error ? error.message : String(error)
+      })
+    })
+
+    const graceMs = this.options.cancellationGraceMs ?? 2_000
+    current.graceTimer = setTimeout(() => {
+      const active = this.current
+      if (
+        active === null ||
+        active.requestId !== requestId ||
+        active.request.jobId !== jobId ||
+        active.cancellationReason !== reason
+      ) {
+        return
+      }
+      const code = reason === 'cancelled' ? 'worker_cancelled' : 'worker_timeout'
+      const message =
+        reason === 'cancelled'
+          ? `Job ${jobId} cancelled by renderer request.`
+          : `Worker exceeded the configured timeout of ${timeoutMs ?? active.request.options.timeoutMs}ms.`
+      this.failCurrent(code, message, {
+        requestId,
+        reason,
+        cancellationGraceMs: graceMs,
+        ...(timeoutMs === undefined ? {} : { timeoutMs })
+      })
+    }, graceMs)
+  }
+
+  private handleWorkerStreamEnd(requestId: string, jobId: JobId): void {
+    const current = this.current
+    if (
+      current === null ||
+      current.requestId !== requestId ||
+      current.request.jobId !== jobId ||
+      current.cancellationReason !== null
+    ) {
+      return
+    }
+    this.failCurrent('worker_crashed', 'Worker stream ended without a terminal response.')
   }
 
   private handleWorkerMessage(parsed: WorkerResponse): void {
@@ -250,6 +341,7 @@ export class WorkerSupervisor {
     }
 
     if (parsed.type === 'success') {
+      if (current.cancellationReason !== null) return
       const result: NestingResult = current.historySummary
         ? new NestingResultModel({
             ...parsed.payload,
@@ -258,7 +350,8 @@ export class WorkerSupervisor {
         : parsed.payload
       const jobId = current.request.jobId
       clearTimeout(current.timer)
-      this.teardownWorker(current.dispose, 'success')
+      if (current.graceTimer !== null) clearTimeout(current.graceTimer)
+      this.teardownWorker(current.session)
       current.resolve(result)
       this.current = null
       for (const handler of this.resultListeners) {
@@ -272,7 +365,12 @@ export class WorkerSupervisor {
     }
 
     if (parsed.type === 'failure') {
-      const code: AppErrorCode = parsed.error.code
+      const code: AppErrorCode =
+        current.cancellationReason === null
+          ? parsed.error.code
+          : current.cancellationReason === 'cancelled'
+            ? 'worker_cancelled'
+            : 'worker_timeout'
       const message = parsed.error.message
       console.error('[main:worker] failure', {
         jobId: current.request.jobId,
@@ -284,10 +382,7 @@ export class WorkerSupervisor {
     }
   }
 
-  private dispatchEvent(
-    current: PendingJob,
-    event: NestingHistoryEvent
-  ): void {
+  private dispatchEvent(current: PendingJob, event: NestingHistoryEvent): void {
     for (const listener of current.listeners) {
       try {
         listener(event)
@@ -300,13 +395,10 @@ export class WorkerSupervisor {
 
   private handleWorkerError(requestId: string, jobId: JobId, err: unknown): void {
     const current = this.current
-    if (
-      current === null ||
-      current.requestId !== requestId ||
-      current.request.jobId !== jobId
-    ) {
+    if (current === null || current.requestId !== requestId || current.request.jobId !== jobId) {
       return
     }
+    if (current.cancellationReason !== null) return
     this.failCurrent('worker_crashed', err instanceof Error ? err.message : String(err))
   }
 
@@ -317,8 +409,12 @@ export class WorkerSupervisor {
   ): void {
     if (!this.current) return
     clearTimeout(this.current.timer)
-    const err = new SupervisorError(code, message, { jobId: this.current.request.jobId, ...context })
-    this.teardownWorker(this.current.dispose, 'cancel')
+    if (this.current.graceTimer !== null) clearTimeout(this.current.graceTimer)
+    const err = new SupervisorError(code, message, {
+      jobId: this.current.request.jobId,
+      ...context
+    })
+    this.teardownWorker(this.current.session)
     this.current.reject(err)
     this.current = null
   }
