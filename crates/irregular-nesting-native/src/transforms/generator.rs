@@ -99,15 +99,14 @@
 //! the same historical lineage V8's own `v8/src/base/ieee754.cc` trig
 //! implementation descends from) measurably agrees with V8 more often than
 //! `std`/glibc for `atan2`/`asin`/`sin`/`cos`, but is measurably **worse**
-//! for `hypot`. **Neither option achieves full bit-exact parity with V8 for
-//! any of these functions** -- this is a real, open, per-function numeric
-//! risk, not one this crate can close by picking a single "correct" libm.
-//! Given that evidence, this module routes only `atan2` and `asin`
-//! (the two functions actually feeding `rotation_deg`/the angle-tolerance
-//! threshold here) through `libm`, and leaves `hypot` (edge length,
+//! for `hypot`. The exact V8 corpus remains diagnostic characterization, not
+//! a production requirement. Given that evidence and the maintenance-first
+//! policy, this module routes only `atan2` and `asin` (the two functions
+//! actually feeding `rotation_deg`/the angle-tolerance threshold here)
+//! through `libm`, and keeps `hypot` (edge length,
 //! `derive_usable_edges`; max-vertex-radius,
-//! `derive_effective_transform_policy`) on `std::f64::hypot`, since `std`
-//! measured marginally *better* than `libm` for `hypot` specifically.
+//! `derive_effective_transform_policy`) at the audited `std::f64::hypot`
+//! boundary.
 //! `transforms::rotate`'s `sin`/`cos` (a **different** call site, ported
 //! separately) is left on `std` per that module's own doc -- its dedicated
 //! 650-case/2,850-point differential vector suite passed 100% bit-exact
@@ -482,13 +481,13 @@ fn derive_usable_edges(
         let delta_x = end.x - start.x;
         let delta_y = end.y - start.y;
         /*
-         * N2 audit: the Node/V8-compatible `js_math::hypot` supplies `length`,
-         * which is stored as `UsableEdge::length_mm` and
+         * The audited `js_math::hypot` boundary supplies `length`, which is
+         * stored as `UsableEdge::length_mm` and
          * `AngleCandidate::edge_length_mm`. The
          * `compare_representative_significance` and `compare_output_order`
-         * tie-breaks subtract these fields directly; a one-ULP divergence can
-         * flip candidate ordering as it did for N1's
-         * `sharedCollisionBoundaryLengthMm`.
+         * tie-breaks subtract these fields directly. Final legality, quality,
+         * and deterministic candidate ordering are blocking; Node/V8 ULP
+         * differences are diagnostic.
          */
         let length = js_math::hypot(delta_x, delta_y);
         if !delta_x.is_finite() || !delta_y.is_finite() || !length.is_finite() {

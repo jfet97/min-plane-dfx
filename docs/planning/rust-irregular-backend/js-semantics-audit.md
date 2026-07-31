@@ -28,6 +28,18 @@ trace, or is purely diagnostic. All file:line references were verified
 against the working tree at the commit checked out when this document was
 written (branch `rust-irregular-backend`).
 
+## Superseding 2026-07-31 maintenance-first decision
+
+The earlier exact-V8 `Math.hypot` requirement and custom implementation are
+historical and superseded. Production geometry and scoring now use the single
+audited `js_math::hypot` boundary backed by Rust's `f64::hypot`; the exact
+Node/V8 corpus and cross-backend hashes remain diagnostic characterization.
+Unchanged legality, quality, capacity, determinism, and supported-platform
+gates remain blocking. Performance improvement is not required for this
+numeric maintenance change; acceptance requires no material regression. No
+candidate result is asserted here beyond the historical corpus observation
+recorded in item 5 below.
+
 **Total pattern counts found in `src/workers/` + `src/shared/` (this audit's raw sweep):**
 
 | Pattern | Count | Files |
@@ -744,19 +756,20 @@ easy to miss when porting mechanically:
    `Math.sign(NaN) === NaN` (Rust has no direct `f64` equivalent method;
    `f64::signum()` returns `NaN` for `NaN` input too, so this one case
    matches, but the zero case does not, per above).
-5. **`Math.hypot`** (21 call sites) — JS's `Math.hypot(a, b, ...)` is
-   specified to handle overflow/underflow more carefully than a naive
-   `sqrt(a*a+b*b)` (spec explicitly requires certain special-case results
-   for `±Infinity`/`NaN` operands, `Math.hypot(Infinity, NaN) === Infinity`
-   notably — `Infinity` wins over `NaN`, an explicit spec carve-out). Rust's
-   `f64::hypot` (libm-backed) is also overflow/underflow-aware per IEEE 754
-   but its exact `NaN`-vs-`Infinity` precedence should be checked against
-   the specific libm implementation linked, not assumed identical to V8's
-   `Math.hypot`, for any call site whose operands could plausibly be
-   `Infinity`/`NaN` (most geometry call sites operate on already-validated
-   finite coordinates, per the pervasive `Number.isFinite` gating found
-   throughout this sweep, §7.4 — so this is a low-probability but
-   nonzero-severity edge case).
+5. **`Math.hypot`** (21 call sites): historical exact-V8 handling was
+   previously treated as a production requirement because JS specifies
+   overflow/underflow behavior and special-case precedence such as
+   `Math.hypot(Infinity, NaN) === Infinity`. That requirement and the custom
+   V8-compatible implementation are **superseded by the 2026-07-31
+   maintenance-first decision**: production calls route through the single
+   audited `js_math::hypot` boundary, which delegates to Rust's
+   `f64::hypot`. The committed exact Node/V8 corpus remains diagnostic
+   characterization. It does not replace the blocking legality, quality,
+   capacity, determinism, or supported-platform gates. Cross-backend hashes
+   are diagnostic comparisons as well. The observed local corpus evidence,
+   521 of 21,696 vectors differing by at most 2 ULPs, is preserved as
+   historical evidence and is not a new candidate result claimed by this
+   audit.
 6. **`Math.atan2`, `Math.sin`/`Math.cos`, `Math.PI`, `Math.SQRT1_2`** — used
    for transform/rotation angle math (owned by `collision-prep.md` and
    `short-side.md`'s clusters for the geometric meaning); the *numeric*

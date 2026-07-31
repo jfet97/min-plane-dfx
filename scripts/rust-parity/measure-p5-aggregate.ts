@@ -311,9 +311,20 @@ export function makeAuthoritativeHostStatus(input: {
   }
 }
 
+export type WrapperProvenance = Readonly<Record<string, unknown>>
+
+export function parseWrapperProvenanceJson(source: string): WrapperProvenance {
+  const parsed: unknown = JSON.parse(source)
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    throw new Error('wrapper provenance must be a JSON object')
+  }
+  return parsed as WrapperProvenance
+}
+
 export interface RawEvidenceEnvelope {
   readonly generatedAt: string
   readonly metadata: ReproducibilityMetadata
+  readonly wrapperProvenance?: WrapperProvenance
   readonly samples: ReadonlyArray<BenchmarkSample>
   readonly suites: Readonly<Record<string, unknown>>
 }
@@ -1166,6 +1177,7 @@ interface CliArguments {
   readonly measuredSamples: number
   readonly includeWarmups: boolean
   readonly outputPath: string
+  readonly wrapperProvenancePath: string | undefined
   readonly controlledLinux: boolean
   readonly dryRun: boolean
   readonly help: boolean
@@ -1185,6 +1197,7 @@ function parseCliArguments(argv: ReadonlyArray<string>): CliArguments {
   let measuredSamples = 3
   let includeWarmups = true
   let outputPath = join(process.cwd(), 'p5-aggregate-evidence.json')
+  let wrapperProvenancePath: string | undefined
   let controlledLinux = process.env.P5_CONTROLLED_LINUX === '1'
   let dryRun = false
   let help = false
@@ -1212,6 +1225,11 @@ function parseCliArguments(argv: ReadonlyArray<string>): CliArguments {
     } else if (argument === '--output') {
       outputPath = argv[index + 1] ?? outputPath
       index += 1
+    } else if (argument === '--wrapper-provenance') {
+      const value = argv[index + 1]
+      if (value === undefined) throw new Error('--wrapper-provenance requires a path')
+      wrapperProvenancePath = value
+      index += 1
     } else {
       throw new Error(`unrecognized argument ${JSON.stringify(argument)}`)
     }
@@ -1222,6 +1240,7 @@ function parseCliArguments(argv: ReadonlyArray<string>): CliArguments {
     measuredSamples,
     includeWarmups,
     outputPath,
+    wrapperProvenancePath,
     controlledLinux,
     dryRun,
     help
@@ -1238,6 +1257,8 @@ Options:
   --skip-warmups           Omit discarded warmups for bounded profiling only
   --controlled-linux      Declare that this process runs on the controlled Linux host
   --output PATH           Preserve raw JSON evidence at PATH
+  --wrapper-provenance PATH
+                          Include wrapper-owned host/container classification in raw evidence
   --dry-run               Print the explicit schedule without running algorithms
   --help                  Print this help
 
@@ -1258,6 +1279,7 @@ export interface AggregateCellStatistics {
 export interface AggregateReport {
   readonly host: AuthoritativeHostStatus
   readonly metadata: ReproducibilityMetadata
+  readonly wrapperProvenance: WrapperProvenance | undefined
   readonly schedules: Readonly<Record<string, ReadonlyArray<MeasurementScheduleItem>>>
   readonly runs: ReadonlyArray<TimedSuiteRun>
   readonly statistics: ReadonlyArray<AggregateCellStatistics>
@@ -1366,6 +1388,10 @@ export function collectThresholds(
 }
 
 async function runAggregate(args: CliArguments): Promise<AggregateReport> {
+  const wrapperProvenance =
+    args.wrapperProvenancePath === undefined
+      ? undefined
+      : parseWrapperProvenanceJson(await readFile(args.wrapperProvenancePath, 'utf8'))
   const host = makeAuthoritativeHostStatus({
     platform: hostPlatform(),
     controlledLinux: args.controlledLinux
@@ -1450,7 +1476,16 @@ async function runAggregate(args: CliArguments): Promise<AggregateReport> {
         : allThresholdsPassed
           ? 'pass'
           : 'fail'
-  return { host, metadata, schedules, runs, statistics, thresholds, verdict }
+  return {
+    host,
+    metadata,
+    wrapperProvenance,
+    schedules,
+    runs,
+    statistics,
+    thresholds,
+    verdict
+  }
 }
 
 async function main(): Promise<void> {
@@ -1464,6 +1499,9 @@ async function main(): Promise<void> {
     await preserveRawEvidence(args.outputPath, {
       generatedAt: new Date().toISOString(),
       metadata: report.metadata,
+      ...(report.wrapperProvenance === undefined
+        ? {}
+        : { wrapperProvenance: report.wrapperProvenance }),
       samples: report.runs.flatMap((run) =>
         run.errors.length === 0
           ? [

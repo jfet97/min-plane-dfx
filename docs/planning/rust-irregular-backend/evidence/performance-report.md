@@ -14,6 +14,74 @@ The follow-up policy in `../quality-acceptance.md` explicitly supersedes PR27's 
 
 Current macOS correctness runs completed Mixed-61 Compact in 30826 ms and Short Side in 31300 ms. The Compact production gate passed at `32061.670542` ms with area `391605.85017399996` and zero cavities. These are gate-completion observations, not new P1 through P7 comparative samples.
 
+### Docker/Linux P5 runner availability
+
+Task 187 adds a reproducible container wrapper for the existing aggregate
+benchmark:
+
+```sh
+pnpm benchmark:p5:linux -- --output-dir out/p5-linux-container
+```
+
+A metadata-only command review is available through
+`pnpm benchmark:p5:linux -- --dry-run`. No CPU-heavy P5 batch was executed while
+adding the runner, so this report's P5 verdict remains **NOT EVALUATED**.
+
+The image pins the contract's user-space toolchain, but Docker does not make a
+host comply with the required Linux 6.18.38 x86_64 kernel, 16 hardware threads,
+or 125 GiB RAM. `docker/p5-controlled-host.contract.json` is checked against
+the source host, Docker daemon host and identity, image, container, and
+toolchain provenance. The controlled daemon is NixOS host `t3vm`; Docker
+Desktop or any other daemon identity is blocked rather than treating its Linux
+VM as the controlled host. Local Linux arm64,
+linux/amd64 emulation on arm64, and any native x64 contract mismatch are all
+recorded as blocked and non-authoritative. Only an exact match forwards
+`--controlled-linux` to `measure-p5-aggregate.ts`.
+
+The mounted output directory receives `p5-wrapper-provenance.json` and
+`p5-aggregate-evidence.json`. The latter includes the wrapper-provided
+classification and provenance alongside the unchanged aggregate schedules,
+samples, correctness checks, statistics, thresholds, and verdict. A blocked
+run can be retained for diagnostics, but it cannot change the historical P5
+status or become controlled evidence.
+
+## Superseding 2026-07-31 maintenance-first decision
+
+The earlier exact-V8 `Math.hypot` requirement and custom implementation are
+historical and superseded to remove maintenance burden. Production calls now
+use Rust's `f64::hypot` through the single audited `js_math::hypot` boundary.
+The exact Node/V8 corpus and cross-backend hashes remain diagnostic; unchanged
+legality, quality, capacity, determinism, and supported-platform gates remain
+blocking. Performance improvement is not required for this maintenance change;
+the blocking performance condition is absence of a material regression.
+
+The historical local characterization observed 521 differing vectors out of
+21,696, with a maximum difference of 2 ULPs. That observation is preserved from
+prior evidence and is not presented here as a new candidate run. The historical
+controlled measurements and their former exact-hash and opt-in conclusions
+remain below, explicitly superseded by the current quality-acceptance policy.
+
+### Local standard-candidate comparison
+
+The macOS host remains non-authoritative for P5. After a release-addon rebuild,
+the candidate used the identical native-only entry points and valid custom-hypot
+baseline artifacts under `/tmp/rust-hypot-std`, with one discarded Rust warmup
+and three measured Rust samples per case. No TypeScript or custom-hypot run was
+repeated. Every candidate suite run executed the Rust addon, passed its built-in
+quality checks, and used the default one-thread setting.
+
+| Case | custom-hypot samples (ms) | `f64::hypot` samples (ms) | custom median (ms) | candidate median (ms) | candidate/custom |
+| --- | --- | --- | --- | --- | --- |
+| C1 Mixed-61 Compact | 30843, 30791, 30951 | 30845, 31009, 30754 | 30843 | 30845 | 1.0001 (0.006% slower) |
+| C5 Compact nine-layout suite | 57985.755, 58071.412, 58197.214 | 57322.275, 58063.342, 57599.019 | 58071.412 | 57599.019 | 0.9919 (0.813% faster) |
+| C6 comparable production-capacity suite | 89939.402, 90259.825, 91298.689 | 90963.441, 91080.476, 90483.836 | 90259.825 | 90963.441 | 1.0078 (0.780% slower) |
+
+The local comparison found no candidate regression above 5%. It does not alter
+the controlled-Linux P5 status or historical P1 through P7 verdicts. Raw
+candidate artifacts are `/tmp/rust-hypot-std/standard-c1/`,
+`/tmp/rust-hypot-std/standard-c5/`, and `/tmp/rust-hypot-std/standard-c6/`; the
+summary is `/tmp/rust-hypot-std/standard-candidate-summary.json`.
+
 ## Historical controlled measurement detail
 ## 1. Machine and source provenance
 
@@ -24,8 +92,9 @@ Current macOS correctness runs completed Mixed-61 Compact in 30826 ms and Short 
 - Branch `rust-irregular-backend`, commit `88b572711642a96d765ecd39ad2872c15b081dff`
   ("perf: canonical-key buffer writing + deterministic Rayon infrastructure"), **working
   tree dirty** (per task instructions: do not commit). Uncommitted diff at measurement time:
-  10 files changed (223 insertions, 52 deletions) — the N2 fix (`js_number/js_math.rs`
-  Node/V8-compatible two-argument `Math.hypot`), canonical-key/contact/transform/validation follow-on changes,
+  10 files changed (223 insertions, 52 deletions): the historical N2 fix
+  (`js_number/js_math.rs` custom Node/V8-compatible two-argument `Math.hypot`),
+  canonical-key/contact/transform/validation follow-on changes,
   packaging additions (`package.json` `build:native`/`test:differential` scripts,
   `.github/workflows/rust-native.yml`, `electron-builder.yml`), plus this batch's own
   additions: `examples/run_mixed61.rs` (VmHWM printer, +27 lines, additive-only),
@@ -287,7 +356,13 @@ a verdict.
 Everything else predates this measurement session — the N2 fix and packaging work whose
 completion was this batch's precondition.)
 
-## 9. Honest promotion conclusion
+## 9. Historical promotion conclusion (superseded)
+
+The conclusions in this section describe the historical custom-hypot tree and
+its exact-hash promotion policy. They remain evidence, not the current
+acceptance rule. Current acceptance uses the standard-library boundary and
+blocking legality, quality, capacity, determinism, and supported-platform
+gates; exact corpus and cross-backend hash equality are diagnostic.
 
 - **P1 (one-thread native win): PASS.** The Rust backend, run single-threaded, is a real,
   solid 1.61× wall-clock win over TypeScript on the primary gate (43.15 s → 26.84 s,

@@ -1,5 +1,19 @@
 # Rust Irregular Quality Acceptance
 
+## Superseding 2026-07-31 maintenance-first decision
+
+The earlier exact-V8 `Math.hypot` requirement and custom implementation are
+historical and superseded to remove maintenance burden. Production calls now
+use the single audited `js_math::hypot` boundary backed by Rust's
+`f64::hypot`. The exact Node/V8 corpus and cross-backend hashes are diagnostic
+comparisons; they do not replace acceptance. Unchanged legality, quality,
+capacity, determinism, and supported-platform gates remain blocking. This
+change does not claim a candidate result that has not run. Performance
+improvement is not required; absence of a material regression is sufficient.
+
+Historical exact-V8 evidence remains below and is labeled as superseded where
+its former production requirement or promotion consequence is discussed.
+
 ## Post-PR27 policy
 
 This follow-up policy supersedes PR27's performance-gated opt-in product decision.
@@ -10,8 +24,9 @@ a failure or blocked authoritative measurement does not silently change runtime
 routing or count as a performance pass. Explicit
 `MIN_PLANE_IRREGULAR_BACKEND=typescript` remains the immediate rollback.
 
-The TypeScript irregular backend remains the exact semantic oracle and rollback
-path. The Rust backend is accepted through two independent lanes:
+The TypeScript irregular backend remains the reference oracle for diagnostic
+comparison and the rollback path. The Rust backend is accepted through two
+independent lanes:
 
 1. The exact semantic differential comparator remains diagnostic and unchanged.
    It compares the complete success or typed-failure projection, including
@@ -36,9 +51,10 @@ The quality lane has exactly four outcomes:
 Hard invariants take precedence over quality thresholds. Threshold boundaries
 remain inclusive where the historical gates are inclusive: a minimum placed
 count is accepted at the minimum, and maximum area or cavity limits are
-accepted at the maximum. Existing TypeScript hashes, identities, counts,
-traces, tolerances, runtimes, and historical gates are not changed by this
-policy.
+accepted at the maximum. Existing TypeScript hashes, identities, counts, traces, tolerances, runtimes,
+and historical gates are not changed by this policy. Cross-backend hash
+agreement remains diagnostic; hashes recomputed within a required quality
+proof remain hard invariants of that proof.
 
 ## Reused authorities
 

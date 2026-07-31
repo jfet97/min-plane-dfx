@@ -227,65 +227,13 @@ pub fn min_all(values: &[f64]) -> f64 {
     values.iter().copied().fold(f64::INFINITY, min)
 }
 
-/// `Math.hypot(x, y)` (two-argument form) uses a Node/V8-compatible
-/// algorithm: normalize both absolute inputs by the largest magnitude, sum
-/// their squared normalized values with Neumaier compensation, then multiply
-/// the square root by that magnitude. This deliberately differs from Rust's
-/// platform-backed `f64::hypot` and from `libm::hypot`, which ports fdlibm's
-/// high/low-word-splitting `e_hypot.c` algorithm.
+/// Two-argument Euclidean norm used by semantic geometry and scoring paths.
 ///
-/// The compatibility evidence is reproducible and committed. Under the
-/// repository's pinned Node 24.11.1 runtime, run `pnpm exec tsx --tsconfig
-/// tsconfig.node.json scripts/rust-parity/dump-js-hypot.ts --check` to
-/// regenerate and compare the 21,696-vector Node/V8 oracle at
-/// `tests/vectors/js-hypot.json`.
-/// `tests/js_hypot_vectors.rs` asserts every finite or infinite output by raw
-/// binary64 bits and asserts NaN classification. The corpus metadata pins the
-/// Node and V8 versions, seed, generator hash, and corpus hash. Together,
-/// that generator, corpus, and test prove parity against the committed
-/// 21,696-vector oracle for this two-argument implementation.
-///
-/// This primitive was introduced after
-/// `canonical_grid::contact::collinear_overlap_segment`'s edge length reached
-/// `IrregularBeamState::sharedCollisionBoundaryLengthMm`, a tie-break input to
-/// `search::strict_decoder::compare_local_scores`. The affected candidates
-/// tied in TypeScript but differed in the final bits under both
-/// `std::f64::hypot` and `libm::hypot`, changing the first-wins fold.
-///
-/// Scope: every `x.hypot(y)`-style call whose result can reach a score, metric,
-/// comparator tie-break, serialized result, or trace DTO uses this function.
-/// This includes the production call sites in `canonical_grid::contact`,
-/// `search::layout_scorer`, `transforms::generator`, and
-/// `transforms::flattening`. The two Rust-only analytic assertions in
-/// `transforms::flattening` and the zero-production-caller code in
-/// `validation::sat` retain their documented `std`/`libm` choices.
+/// Final geometry, quality, and deterministic output are authoritative. The
+/// committed Node/V8 corpus remains diagnostic characterization of bounded
+/// binary64 differences from JavaScript.
 pub fn hypot(x: f64, y: f64) -> f64 {
-    if x.is_infinite() || y.is_infinite() {
-        return f64::INFINITY;
-    }
-    if x.is_nan() || y.is_nan() {
-        return f64::NAN;
-    }
-    let abs_x = x.abs();
-    let abs_y = y.abs();
-    let mut max = if abs_x > abs_y { abs_x } else { abs_y };
-    if max == 0.0 {
-        max = 1.0;
-    }
-    let mut sum = 0.0_f64;
-    let mut compensation = 0.0_f64;
-    for arg in [abs_x, abs_y] {
-        let normalized = arg / max;
-        let summand = normalized * normalized;
-        let preliminary = sum + summand;
-        if sum.abs() >= summand.abs() {
-            compensation += (sum - preliminary) + summand;
-        } else {
-            compensation += (summand - preliminary) + sum;
-        }
-        sum = preliminary;
-    }
-    (sum + compensation).sqrt() * max
+    x.hypot(y)
 }
 
 #[cfg(test)]
@@ -375,46 +323,25 @@ mod tests {
         assert!(min_all(&[1.0, f64::NAN, 3.0]).is_nan());
     }
 
-    /// Bit-exact against a real Node v24 `Math.hypot` oracle (captured via
-    /// `DataView.setFloat64`/`getUint8` big-endian bytes -- same technique
-    /// `js_number_vectors.rs`'s own oracle capture uses elsewhere in this
-    /// crate). Covers: a scalene-triangle edge (the exact case
-    /// `transforms::generator`'s own module doc names as the historical
-    /// `f64::atan2` 1-ULP divergence example, included here as a
-    /// cross-reference point, not because `hypot` diverged on it), an
-    /// equal-magnitude case (this crate's own axis-aligned contact geometry
-    /// shape), a 3-4-5 exact triangle, extreme magnitudes (`1e300`/`1e-300`),
-    /// one-sided (zero) arguments, and every zero-sign combination.
     #[test]
-    fn hypot_matches_v8_oracle_bit_exact() {
-        let cases: &[(f64, f64, u64)] = &[
-            (-1.2, -3.7, 0x400f_1e2a_cc3a_3770),
-            (5000.0, 5000.0, 0x40bb_9f11_5c1e_5080),
-            (3.0, 4.0, 0x4014_0000_0000_0000),
-            (0.001, 999.999, 0x408f_3ffd_f3b6_56d0),
-            (1e300, 1e300, 0x7e40_e4d5_0f99_b211),
-            (1e-300, 1e-300, 0x01ae_4e8d_1276_2226),
-            (7.0, 0.0, 0x401c_0000_0000_0000),
-            (0.0, -7.0, 0x401c_0000_0000_0000),
-            (0.0, 0.0, 0x0000_0000_0000_0000),
-            (-0.0, 0.0, 0x0000_0000_0000_0000),
-            (-0.0, -0.0, 0x0000_0000_0000_0000),
+    fn hypot_delegates_to_standard_rounding_and_handles_extremes() {
+        let cases = [
+            (1.0_f64, std::f64::consts::SQRT_2),
+            (f64::MAX, f64::MIN_POSITIVE),
+            (1e308, 1e-308),
+            (1e-300, 1e-300),
+            (-3.0, 4.0),
+            (4.0, -3.0),
         ];
-        for &(x, y, expected_bits) in cases {
-            let got = hypot(x, y);
-            assert_eq!(
-                got.to_bits(),
-                expected_bits,
-                "hypot({x}, {y}) = {got:?} (0x{:016x}), expected 0x{expected_bits:016x}",
-                got.to_bits()
-            );
+
+        for (x, y) in cases {
+            assert_eq!(hypot(x, y).to_bits(), x.hypot(y).to_bits());
+            assert_eq!(hypot(x, y).to_bits(), hypot(y, x).to_bits());
         }
     }
 
-    /// `Infinity` takes precedence over `NaN` in any argument position
-    /// (`Math.hypot(Infinity, NaN) === Infinity`, verified against Node
-    /// v24) -- the ECMA-262 spec algorithm checks every argument for
-    /// infinity *before* checking any for `NaN`.
+    /// Rust's standard `f64::hypot` returns infinity when either argument is
+    /// infinite, including when the other argument is `NaN`.
     #[test]
     fn hypot_infinity_takes_precedence_over_nan() {
         assert_eq!(hypot(f64::INFINITY, f64::NAN), f64::INFINITY);
