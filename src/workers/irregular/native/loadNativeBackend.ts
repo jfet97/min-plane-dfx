@@ -21,6 +21,7 @@ import { existsSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import type { WorkerCancellationReason } from '@shared/protocol/worker.js'
 
 /** `lib.rs`'s `Capability` struct, camelCase per napi-rs's default object-field mapping. */
 export interface NativeCapability {
@@ -35,10 +36,14 @@ export interface NativeIrregularAddon {
   readonly nativeCapability: () => NativeCapability
   readonly runIrregularJob: (
     requestJson: string,
+    invocationToken: string,
     onEvent: (json: string) => void,
     emitStateSnapshots: boolean
   ) => Promise<string>
-  readonly cancelIrregularJob: (jobId: string) => boolean
+  readonly cancelIrregularJob: (
+    invocationToken: string,
+    reason: WorkerCancellationReason
+  ) => boolean
   readonly getLastJobDiagnostics: () => string
 }
 
@@ -63,7 +68,7 @@ export type NativeCapabilityProbe =
     }
 
 /** N-API contract version this TypeScript build was written against. */
-export const EXPECTED_NATIVE_API_VERSION = 2
+export const EXPECTED_NATIVE_API_VERSION = 3
 
 function candidateAddonEntryPaths(): ReadonlyArray<string> {
   const moduleDir = dirname(fileURLToPath(import.meta.url))

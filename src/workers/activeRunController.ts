@@ -13,19 +13,27 @@ export interface ActiveRunController {
   readonly request: (reason: WorkerCancellationReason) => WorkerCancellationReason
   readonly reason: () => WorkerCancellationReason | undefined
   readonly isRequested: () => boolean
-  readonly registerNativeCancellation: (cancel: () => void) => void
+  readonly registerNativeCancellation: (
+    cancel: (reason: WorkerCancellationReason) => void
+  ) => void
 }
 
 function makeActiveRunController(requestId: string, jobId: JobId): ActiveRunController {
   let cancellationReason: WorkerCancellationReason | undefined
-  let nativeCancellation: (() => void) | undefined
+  let nativeCancellation: ((reason: WorkerCancellationReason) => void) | undefined
   let nativeCancellationInvoked = false
 
   const invokeNativeCancellation = (): void => {
-    if (nativeCancellationInvoked || nativeCancellation === undefined) return
+    if (
+      nativeCancellationInvoked ||
+      nativeCancellation === undefined ||
+      cancellationReason === undefined
+    ) {
+      return
+    }
     nativeCancellationInvoked = true
     try {
-      nativeCancellation()
+      nativeCancellation(cancellationReason)
     } catch {
       // cancellation remains requested; the supervisor grace watchdog is the fallback
     }

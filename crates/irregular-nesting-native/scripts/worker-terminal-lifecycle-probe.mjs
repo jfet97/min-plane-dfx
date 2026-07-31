@@ -42,7 +42,7 @@ function loadAddon() {
   const require = createRequire(import.meta.url)
   const addon = require(ADDON_ENTRY_PATH)
   const capability = addon.nativeCapability()
-  assert(capability.apiVersion === 2, `expected apiVersion 2, received ${capability.apiVersion}`)
+  assert(capability.apiVersion === 3, `expected apiVersion 3, received ${capability.apiVersion}`)
   return addon
 }
 
@@ -252,6 +252,7 @@ function runWorker() {
   const addon = loadAddon()
   const nativePromise = addon.runIrregularJob(
     JSON.stringify(workerData.request),
+    'native-worker-terminal-lifecycle-invocation-token',
     (json) => {
       const event = JSON.parse(json)
       if (event.kind !== 'terminal') return

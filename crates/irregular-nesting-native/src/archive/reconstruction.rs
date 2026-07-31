@@ -370,8 +370,13 @@ fn default_timing_now() -> f64 {
 // reborrow at this file's one call site works.
 // ===========================================================================
 
+/* Records only an abort returned by the caller-supplied control. This keeps
+ * externally requested deadlines terminal while preserving the strict decoder's
+ * own per-decode deadline as a protected reconstruction fallback.
+ */
 struct ReconstructionControl<'a> {
     inner: Option<&'a mut dyn NfpIfpControl>,
+    external_abort_reason: Option<NfpIfpAbortReason>,
 }
 
 impl NfpIfpControl for ReconstructionControl<'_> {
@@ -381,7 +386,13 @@ impl NfpIfpControl for ReconstructionControl<'_> {
     ) -> Result<(), NfpIfpControlAbortError> {
         match self.inner.as_deref_mut() {
             None => Ok(()),
-            Some(control) => control.checkpoint(phase),
+            Some(control) => match control.checkpoint(phase) {
+                Ok(()) => Ok(()),
+                Err(abort) => {
+                    self.external_abort_reason = Some(abort.reason);
+                    Err(abort)
+                }
+            },
         }
     }
 }
@@ -1018,6 +1029,7 @@ pub fn run_intrinsic_reconstruction_portfolio(
 
     let mut control = ReconstructionControl {
         inner: input.control,
+        external_abort_reason: None,
     };
 
     for spec in &specs {
@@ -1093,7 +1105,7 @@ pub fn run_intrinsic_reconstruction_portfolio(
             match construct_intrinsic_strict_state(construct_input, settings, geometry_cache) {
                 Ok(constructed) => Some(constructed),
                 Err(IntrinsicStrictDecoderFailure::Abort(abort)) => {
-                    if abort.reason == NfpIfpAbortReason::Cancelled {
+                    if control.external_abort_reason == Some(abort.reason) {
                         return Err(IntrinsicReconstructionPortfolioFailure::Strict(
                             IntrinsicStrictDecoderFailure::Abort(abort),
                         ));
@@ -1641,6 +1653,31 @@ mod tests {
         assert!(!deadline.candidate_evaluation_accounting_complete);
 
         let mut cache = GeometryCacheStore::new();
+        let per_decode_deadline = run_intrinsic_reconstruction_portfolio(
+            RunIntrinsicReconstructionPortfolioInput {
+                all_prepared_pieces: &pieces,
+                baseline_seeds: std::slice::from_ref(&seed),
+                maximum_runtime_ms_per_decode: Some(0.0),
+                maximum_total_runtime_ms: None,
+                role_family: Some(IntrinsicReconstructionRoleFamily::EndpointQ90RightToLeft),
+                maximum_candidate_evaluations_per_decode: None,
+                maximum_total_candidate_evaluations: None,
+                control: None,
+                timing_now: None,
+            },
+            &settings,
+            &mut cache,
+        )
+        .expect("per-decode deadline remains a protected fallback");
+        let focused = per_decode_deadline
+            .runs
+            .iter()
+            .find(|run| run.role == IntrinsicReconstructionRole::EndpointQ90RightToLeft)
+            .expect("focused role present");
+        assert_eq!(focused.status, IntrinsicReconstructionRunStatus::Deadline);
+        assert!(!per_decode_deadline.candidate_evaluation_accounting_complete);
+
+        let mut cache = GeometryCacheStore::new();
         let capped = run_intrinsic_reconstruction_portfolio(
             RunIntrinsicReconstructionPortfolioInput {
                 all_prepared_pieces: &pieces,
@@ -1671,16 +1708,18 @@ mod tests {
     }
 
     #[test]
-    fn propagates_cancellation() {
-        struct CancelControl;
-        impl NfpIfpControl for CancelControl {
+    fn propagates_external_cancellation_reasons() {
+        struct AbortControl {
+            reason: NfpIfpAbortReason,
+        }
+        impl NfpIfpControl for AbortControl {
             fn checkpoint(
                 &mut self,
                 _phase: crate::nfp_ifp::NfpIfpCheckpointPhase,
             ) -> Result<(), NfpIfpControlAbortError> {
                 Err(NfpIfpControlAbortError {
-                    reason: NfpIfpAbortReason::Cancelled,
-                    message: "cancelled".to_string(),
+                    reason: self.reason,
+                    message: "external cancellation".to_string(),
                 })
             }
         }
@@ -1701,30 +1740,33 @@ mod tests {
             metrics: sample_metrics("protected", 30.0),
         };
         let settings = settings();
-        let mut cache = GeometryCacheStore::new();
-        let mut control = CancelControl;
-        let result = run_intrinsic_reconstruction_portfolio(
-            RunIntrinsicReconstructionPortfolioInput {
-                all_prepared_pieces: &pieces,
-                baseline_seeds: std::slice::from_ref(&seed),
-                maximum_runtime_ms_per_decode: None,
-                maximum_total_runtime_ms: None,
-                role_family: Some(IntrinsicReconstructionRoleFamily::EndpointQ90RightToLeft),
-                maximum_candidate_evaluations_per_decode: None,
-                maximum_total_candidate_evaluations: None,
-                control: Some(&mut control),
-                timing_now: None,
-            },
-            &settings,
-            &mut cache,
-        );
-        match result {
-            Err(IntrinsicReconstructionPortfolioFailure::Strict(
-                IntrinsicStrictDecoderFailure::Abort(abort),
-            )) => {
-                assert_eq!(abort.reason, NfpIfpAbortReason::Cancelled);
+
+        for reason in [NfpIfpAbortReason::Cancelled, NfpIfpAbortReason::Deadline] {
+            let mut cache = GeometryCacheStore::new();
+            let mut control = AbortControl { reason };
+            let result = run_intrinsic_reconstruction_portfolio(
+                RunIntrinsicReconstructionPortfolioInput {
+                    all_prepared_pieces: &pieces,
+                    baseline_seeds: std::slice::from_ref(&seed),
+                    maximum_runtime_ms_per_decode: None,
+                    maximum_total_runtime_ms: None,
+                    role_family: Some(IntrinsicReconstructionRoleFamily::EndpointQ90RightToLeft),
+                    maximum_candidate_evaluations_per_decode: None,
+                    maximum_total_candidate_evaluations: None,
+                    control: Some(&mut control),
+                    timing_now: None,
+                },
+                &settings,
+                &mut cache,
+            );
+            match result {
+                Err(IntrinsicReconstructionPortfolioFailure::Strict(
+                    IntrinsicStrictDecoderFailure::Abort(abort),
+                )) => {
+                    assert_eq!(abort.reason, reason);
+                }
+                other => panic!("expected a propagated external abort, got {other:?}"),
             }
-            other => panic!("expected a propagated cancellation abort, got {other:?}"),
         }
     }
 }

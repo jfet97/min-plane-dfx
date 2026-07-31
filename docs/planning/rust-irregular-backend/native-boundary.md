@@ -118,7 +118,7 @@ Three independent version/identity strings, never conflated:
 
 | Identifier | Meaning | Example |
 |---|---|---|
-| `native_api_version` | The N-API **contract** version defined by this document (request/result/event/error shapes). Bumped only when a boundary-visible shape changes incompatibly. | `2` |
+| `native_api_version` | The N-API **contract** version defined by this document (request/result/event/error shapes). Bumped only when a boundary-visible shape changes incompatibly. | `3` |
 | `backend_version` | The Rust algorithm crate's own semantic version (`Cargo.toml` `version`). Bumped on any algorithm-affecting change, informational only. | `"0.1.0"` |
 | `geometry_backend_id` / `geometry_backend_version` | Identity of the vendored Clipper2 translation, mirroring the existing TS concept (`IrregularGeometrySettings.geometryBackendId`/`geometryBackendVersion`, `src/shared/irregular/domain.ts:280-299`, already part of the trusted request DTO — see §7.4). This pair is *not* about the request's geometry settings; it is the Rust addon's own compiled-in Clipper2-translation identity, reported for diagnostics. | `"clipper2-rs-vendor"` / `"2.0.1-18"` |
 
@@ -178,7 +178,7 @@ The TypeScript integration layer (the future analogue of
    the backend selector must not route to Rust (migration prompt §17).
 2. On successful load, call `get_capability()` and compare
    `native_api_version` against a compile-time constant embedded in the TS
-   wrapper (`EXPECTED_NATIVE_API_VERSION = 2`).
+   wrapper (`EXPECTED_NATIVE_API_VERSION = 3`).
 3. On mismatch, treat the addon as unavailable for the **same** reason as a
    load failure — do not attempt to call `run` on a version-mismatched
    addon. If a test or gate explicitly forced the Rust backend, this must
@@ -199,6 +199,35 @@ is new capability introduced by the native boundary itself, not a change to
 any existing accepted TypeScript behavior — consistent with the migration
 prompt's own framing of this code as "anticipating the future native/N-API
 boundary" (`errors-protocol.md` §1).
+
+### 3.4 API v3 invocation cancellation
+
+API version 3 changes only the N-API execution and cancellation argument
+contract. The semantic `NestingRequest` JSON remains byte-for-byte unchanged:
+`jobId` stays in that JSON as diagnostic and semantic request data, but never
+identifies a native cancellation registration.
+
+The TypeScript adapter encodes the request JSON first, then generates one
+opaque invocation token and calls:
+
+```ts
+runIrregularJob(requestJson, invocationToken, onEvent, emitStateSnapshots)
+cancelIrregularJob(invocationToken, reason)
+```
+
+`reason` is exactly `"cancelled" | "timeout"`. Native registration is
+synchronous before `runIrregularJob` returns its promise, so the adapter must
+call `runIrregularJob` before it supplies its deferred native cancellation
+callback. A registration records the first valid reason only. `cancelled`
+produces `worker_cancelled` with `context.reason: "cancelled"`; `timeout`
+produces `worker_timeout` with `context.reason: "deadline"`. Unknown tokens,
+invalid reasons, and already-completed invocations return `false` without
+changing another invocation.
+
+The registry is keyed exclusively by the opaque token. Therefore overlapping
+runs that share a public `jobId` remain independently cancellable. Completion
+removes a token only when the completing task owns the registry's current
+lease for that token.
 
 ---
 
@@ -1023,8 +1052,9 @@ that exist in both. Notes and caveats to carry forward, all sourced from
 
 ## 10. Streamed event delivery
 
-API v2 exposes one `onEvent(json)` callback and one `emitStateSnapshots`
-boolean on `runIrregularJob`. It does not expose independent progress,
+API v3 exposes one `onEvent(json)` callback and one `emitStateSnapshots`
+boolean on `runIrregularJob`. Its separate opaque invocation-token argument
+does not alter the event channel or expose independent progress,
 snapshot, or decision-trace callback channels. Each JSON value uses this
 tagged wire shape:
 
@@ -1066,7 +1096,7 @@ external callbacks while the tail itself continues to drain. Decode failures,
 ordinal gaps, duplicates, reversals, callback failures, and post-terminal
 events are stable `worker_protocol_error` failures. Transport resolution
 without a synchronously recorded terminal is an immediate typed
-`nativeEventTerminal` protocol failure because API v2 guarantees terminal
+`nativeEventTerminal` protocol failure because API v3 guarantees terminal
 receipt before native promise resolution.
 
 ### 10.1 Portfolio progress
@@ -1104,8 +1134,11 @@ semantics.
 - The TypeScript callback is synchronous at the N-API boundary. It validates
   arrivals and appends ordered work only. It never fire-and-forgets a progress
   Effect, and it accepts no callback after terminal or failure.
-- Existing cancellation polling and registry cleanup remain unchanged. This
-  API does not add RPC cancellation or registry-ownership behavior.
+- API v3 cancellation is keyed by an opaque per-invocation token supplied
+  outside semantic request JSON. The registry owns one lease per active token,
+  rejects duplicate registration, retains the first cancellation reason, and
+  removes an entry only when the completing task owns the pointer-identical
+  lease. Public `jobId` remains diagnostic request data only.
 
 ---
 

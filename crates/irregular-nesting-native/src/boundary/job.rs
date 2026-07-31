@@ -23,28 +23,27 @@
 //!
 //! # Cancellation
 //!
-//! `cancel_irregular_job(job_id)` flips a job-keyed `Arc<AtomicBool>` in a
-//! process-global registry (`OnceLock<Mutex<HashMap<...>>>` -- this crate has
-//! no existing job-registry helper to reuse; a plain `Mutex`-guarded map is
-//! the minimal correct structure for "look up or insert one entry, guarded
-//! against concurrent `cancel`/job-completion races," and every operation on
-//! it is O(1) and briefly held, so lock contention is not a concern). The
-//! flag is polled from `Task::compute`'s own thread only (never mutated
-//! there), satisfying `native-boundary.md` §6.3's "the flag is read only by
-//! the single logically-serial coordinator thread." The entry is removed
-//! once the job's `compute()` finishes, so `cancel_irregular_job` on an
-//! unknown/already-finished job id is a harmless, idempotent no-op (returns
-//! `false`).
+//! Each invocation receives an opaque token outside the semantic request JSON.
+//! `CancellationRegistry` owns its token-keyed `CancellationLease` entries;
+//! production N-API exports share one lazily-created registry, while tests
+//! construct independent registries. A lease records the first requested
+//! `Cancelled` or `Deadline` reason, which `Task::compute` polls from its own
+//! coordinator thread. Completion removes a registration only when its lease
+//! is pointer-identical to the stored lease, preventing an older completion
+//! from removing a newer registration. An unknown token or invalid wire reason
+//! is a harmless no-op that returns `false`.
 
-use std::collections::HashMap;
+use std::collections::{hash_map::Entry, HashMap};
 use std::ffi::c_void;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Instant;
 
 use napi::bindgen_prelude::{AsyncTask, Function, Unknown};
-use napi::{Env, Error, Result as NapiResult, Status, Task};
+use napi::{Env, Error, Result, Status, Task};
 use napi_derive::napi;
+
+use crate::nfp_ifp::NfpIfpAbortReason;
 
 use super::diagnostics::{
     increment_terminal_cleanup_hooks_fired, last_job_diagnostics_json, record_last_job_diagnostics,
@@ -53,15 +52,111 @@ use super::diagnostics::{
 use super::events::{BoundaryEventSink, JsonEventFn, TerminalLatch};
 use super::run_job::run_job_from_json;
 
-fn job_registry() -> &'static Mutex<HashMap<String, Arc<AtomicBool>>> {
-    static REGISTRY: OnceLock<Mutex<HashMap<String, Arc<AtomicBool>>>> = OnceLock::new();
-    REGISTRY.get_or_init(|| Mutex::new(HashMap::new()))
+const CANCELLATION_RUNNING: u8 = 0;
+const CANCELLATION_CANCELLED: u8 = 1;
+const CANCELLATION_TIMEOUT: u8 = 2;
+
+/// One task-owned cancellation state. The first accepted cancellation reason
+/// is retained so later control-plane requests cannot rewrite the terminal
+/// failure this invocation reports.
+struct CancellationLease {
+    reason: AtomicU8,
 }
 
-fn registry_lock() -> std::sync::MutexGuard<'static, HashMap<String, Arc<AtomicBool>>> {
-    job_registry()
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner())
+impl CancellationLease {
+    fn new() -> Self {
+        Self {
+            reason: AtomicU8::new(CANCELLATION_RUNNING),
+        }
+    }
+
+    fn request(&self, reason: NfpIfpAbortReason) {
+        let encoded = match reason {
+            NfpIfpAbortReason::Cancelled => CANCELLATION_CANCELLED,
+            NfpIfpAbortReason::Deadline => CANCELLATION_TIMEOUT,
+        };
+        let _ = self.reason.compare_exchange(
+            CANCELLATION_RUNNING,
+            encoded,
+            Ordering::AcqRel,
+            Ordering::Acquire,
+        );
+    }
+
+    fn reason(&self) -> Option<NfpIfpAbortReason> {
+        match self.reason.load(Ordering::Acquire) {
+            CANCELLATION_RUNNING => None,
+            CANCELLATION_CANCELLED => Some(NfpIfpAbortReason::Cancelled),
+            CANCELLATION_TIMEOUT => Some(NfpIfpAbortReason::Deadline),
+            unexpected => panic!("invalid native cancellation state {unexpected}"),
+        }
+    }
+}
+
+/// Invocation-token keyed cancellation registrations for one addon instance.
+/// Tests construct isolated registries directly; the N-API exports share the
+/// lazily-created addon registry below.
+struct CancellationRegistry {
+    leases: Mutex<HashMap<String, Arc<CancellationLease>>>,
+}
+
+impl CancellationRegistry {
+    fn new() -> Self {
+        Self {
+            leases: Mutex::new(HashMap::new()),
+        }
+    }
+
+    fn lock(&self) -> std::sync::MutexGuard<'_, HashMap<String, Arc<CancellationLease>>> {
+        self.leases
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+
+    fn register(
+        &self,
+        invocation_token: String,
+        lease: Arc<CancellationLease>,
+    ) -> std::result::Result<(), ()> {
+        match self.lock().entry(invocation_token) {
+            Entry::Vacant(entry) => {
+                entry.insert(lease);
+                Ok(())
+            }
+            Entry::Occupied(_) => Err(()),
+        }
+    }
+
+    fn cancel(&self, invocation_token: &str, reason: NfpIfpAbortReason) -> bool {
+        let Some(lease) = self.lock().get(invocation_token).cloned() else {
+            return false;
+        };
+        lease.request(reason);
+        true
+    }
+
+    fn remove_if_current(&self, invocation_token: &str, completing_lease: &Arc<CancellationLease>) {
+        let mut leases = self.lock();
+        if leases
+            .get(invocation_token)
+            .is_some_and(|stored_lease| Arc::ptr_eq(stored_lease, completing_lease))
+        {
+            leases.remove(invocation_token);
+        }
+    }
+}
+
+fn native_cancellation_registry() -> Arc<CancellationRegistry> {
+    static REGISTRY: OnceLock<Arc<CancellationRegistry>> = OnceLock::new();
+    Arc::clone(REGISTRY.get_or_init(|| Arc::new(CancellationRegistry::new())))
+}
+
+fn cancellation_reason_from_wire(reason: &str) -> Option<NfpIfpAbortReason> {
+    match reason {
+        "cancelled" => Some(NfpIfpAbortReason::Cancelled),
+        "timeout" => Some(NfpIfpAbortReason::Deadline),
+        _ => None,
+    }
 }
 
 struct TerminalCleanupHookData {
@@ -77,7 +172,7 @@ struct TerminalCleanupHook {
 unsafe impl Send for TerminalCleanupHook {}
 
 impl TerminalCleanupHook {
-    fn register(env: &Env, terminal_latch: TerminalLatch) -> NapiResult<Self> {
+    fn register(env: &Env, terminal_latch: TerminalLatch) -> Result<Self> {
         let fired = Arc::new(AtomicBool::new(false));
         let data = Box::into_raw(Box::new(TerminalCleanupHookData {
             terminal_latch,
@@ -102,7 +197,7 @@ impl TerminalCleanupHook {
         Ok(Self { data, fired })
     }
 
-    fn remove_and_reclaim(self, env: &Env) -> NapiResult<()> {
+    fn remove_and_reclaim(self, env: &Env) -> Result<()> {
         if self.fired.load(Ordering::Acquire) {
             return Ok(());
         }
@@ -136,35 +231,17 @@ unsafe extern "C" fn terminal_cleanup_hook(data: *mut c_void) {
     hook_data.terminal_latch.close_for_cleanup();
 }
 
-/// Requests cooperative cancellation of the job identified by `job_id`.
-/// Idempotent; returns `true` iff a running job with that id was found (the
-/// return value is diagnostic convenience only, never load-bearing --
-/// TypeScript must not branch its own success/failure handling on it, since
-/// a job that finishes between lookup and flag-set still completes
-/// normally, matching `native-boundary.md` §6.3's "no partial result"
-/// framing applied to this simplified single-call surface).
+/// Requests cooperative cancellation of the native invocation identified by
+/// its opaque `invocation_token`. The public `jobId` remains semantic request
+/// data and is never used to locate a native cancellation lease. Returns
+/// `false` for an unknown token or an invalid reason, and otherwise records
+/// the first cancellation reason without replacing it.
 #[napi]
-pub fn cancel_irregular_job(job_id: String) -> bool {
-    match registry_lock().get(&job_id) {
-        Some(flag) => {
-            flag.store(true, Ordering::SeqCst);
-            true
-        }
-        None => false,
-    }
-}
-
-/// Best-effort, cheap extraction of `jobId` from the raw wire JSON, used
-/// only to key the cancellation registry entry *before* the real
-/// [`super::request::RequestDto`] decode (which requires every other field
-/// too) runs inside `Task::compute`. Never used for anything
-/// safety-critical: if this returns `None` (malformed top-level JSON, or a
-/// missing/non-string `jobId`), the job simply is not registered for
-/// cancellation -- `Task::compute`'s own real decode will independently
-/// reject the same malformed request with a proper `BoundaryError`.
-fn extract_job_id_best_effort(request_json: &str) -> Option<String> {
-    let value: serde_json::Value = serde_json::from_str(request_json).ok()?;
-    value.get("jobId")?.as_str().map(str::to_string)
+pub fn cancel_irregular_job(invocation_token: String, reason: String) -> bool {
+    let Some(reason) = cancellation_reason_from_wire(&reason) else {
+        return false;
+    };
+    native_cancellation_registry().cancel(&invocation_token, reason)
 }
 
 /// The `napi::Task` this crate's `AsyncTask` wraps. Every field is `Send`
@@ -172,11 +249,12 @@ fn extract_job_id_best_effort(request_json: &str) -> Option<String> {
 /// napi-rs's own unsafe impl) so the whole struct can move onto the libuv
 /// worker thread `compute()` runs on.
 pub struct RunIrregularJobTask {
-    job_id: Option<String>,
+    invocation_token: String,
+    cancellation_registry: Arc<CancellationRegistry>,
+    cancellation_lease: Arc<CancellationLease>,
     request_json: String,
     on_event: JsonEventFn,
     emit_state_snapshots: bool,
-    cancel_flag: Arc<AtomicBool>,
     terminal_latch: TerminalLatch,
     terminal_cleanup_hook: Option<TerminalCleanupHook>,
 }
@@ -195,10 +273,10 @@ impl Task for RunIrregularJobTask {
     /// `decode_and_route` call) happens here too, not before spawning --
     /// see `run_job`'s own top doc for why every failure mode resolves
     /// through the same envelope rather than throwing/rejecting.
-    fn compute(&mut self) -> NapiResult<Self::Output> {
+    fn compute(&mut self) -> Result<Self::Output> {
         let started_at = Instant::now();
         let request_json = std::mem::take(&mut self.request_json);
-        let cancel_flag = Arc::clone(&self.cancel_flag);
+        let cancellation_lease = Arc::clone(&self.cancellation_lease);
         let mut sink = BoundaryEventSink::new(
             &self.on_event,
             self.emit_state_snapshots,
@@ -208,9 +286,13 @@ impl Task for RunIrregularJobTask {
         let outcome = super::contain_panics(
             "runIrregularJob",
             std::panic::AssertUnwindSafe(|| {
-                let mut is_cancelled = || cancel_flag.load(Ordering::SeqCst);
-                let (envelope, geometry_cache, thread_count_used) =
-                    run_job_from_json(&request_json, &mut sink, Some(&mut is_cancelled), None);
+                let mut cancellation_reason = || cancellation_lease.reason();
+                let (envelope, geometry_cache, thread_count_used) = run_job_from_json(
+                    &request_json,
+                    &mut sink,
+                    Some(&mut cancellation_reason),
+                    None,
+                );
                 record_last_job_diagnostics(JobDiagnostics {
                     backend_version: env!("CARGO_PKG_VERSION").to_string(),
                     thread_count_used: thread_count_used as u32,
@@ -225,9 +307,8 @@ impl Task for RunIrregularJobTask {
         sink.emit_terminal_and_wait();
         let delivery_failure = sink.first_delivery_failure();
 
-        if let Some(job_id) = &self.job_id {
-            registry_lock().remove(job_id);
-        }
+        self.cancellation_registry
+            .remove_if_current(&self.invocation_token, &self.cancellation_lease);
 
         if let Some(status) = delivery_failure {
             let boundary_error =
@@ -254,11 +335,11 @@ impl Task for RunIrregularJobTask {
         }
     }
 
-    fn resolve(&mut self, _env: Env, output: Self::Output) -> NapiResult<Self::JsValue> {
+    fn resolve(&mut self, _env: Env, output: Self::Output) -> Result<Self::JsValue> {
         Ok(output)
     }
 
-    fn finally(mut self, env: Env) -> NapiResult<()> {
+    fn finally(mut self, env: Env) -> Result<()> {
         if let Some(terminal_cleanup_hook) = self.terminal_cleanup_hook.take() {
             terminal_cleanup_hook.remove_and_reclaim(&env)?;
         }
@@ -267,36 +348,50 @@ impl Task for RunIrregularJobTask {
 }
 
 /// TS-facing entry point (re-exported by `lib.rs`'s `#[napi]`
-/// `run_irregular_job`). Always returns `Ok(AsyncTask<_>)` -- i.e. always a
-/// real `Promise` -- except when building a `ThreadsafeFunction` from one of
-/// the supplied callbacks itself fails (a fundamentally malformed call, e.g.
-/// a non-function argument; effectively unreachable from a
-/// correctly-typed TypeScript caller). Decoding, revalidation, and
+/// `run_irregular_job`). Returns `Ok(AsyncTask<_>)`, and therefore a real
+/// `Promise`, after callback construction and invocation-token registration
+/// succeed. A malformed callback or duplicate active token throws synchronously
+/// before an async task is created. Decoding, revalidation, and
 /// archive-eligibility routing all happen inside the spawned task, not here
 /// -- see `run_job`'s own top doc for why.
 #[napi]
 pub fn run_irregular_job(
     env: Env,
     request_json: String,
+    invocation_token: String,
     on_event: Function<'_, String, Unknown<'static>>,
     emit_state_snapshots: bool,
-) -> NapiResult<AsyncTask<RunIrregularJobTask>> {
+) -> Result<AsyncTask<RunIrregularJobTask>> {
     let on_event = on_event.build_threadsafe_function::<String>().build()?;
-    let terminal_latch = TerminalLatch::new();
-    let terminal_cleanup_hook = TerminalCleanupHook::register(&env, terminal_latch.clone())?;
+    let cancellation_registry = native_cancellation_registry();
+    let cancellation_lease = Arc::new(CancellationLease::new());
 
-    let cancel_flag = Arc::new(AtomicBool::new(false));
-    let job_id = extract_job_id_best_effort(&request_json);
-    if let Some(job_id) = &job_id {
-        registry_lock().insert(job_id.clone(), Arc::clone(&cancel_flag));
+    if cancellation_registry
+        .register(invocation_token.clone(), Arc::clone(&cancellation_lease))
+        .is_err()
+    {
+        return Err(Error::new(
+            Status::InvalidArg,
+            "native irregular invocation token is already registered",
+        ));
     }
 
+    let terminal_latch = TerminalLatch::new();
+    let terminal_cleanup_hook = match TerminalCleanupHook::register(&env, terminal_latch.clone()) {
+        Ok(terminal_cleanup_hook) => terminal_cleanup_hook,
+        Err(error) => {
+            cancellation_registry.remove_if_current(&invocation_token, &cancellation_lease);
+            return Err(error);
+        }
+    };
+
     Ok(AsyncTask::new(RunIrregularJobTask {
-        job_id,
+        invocation_token,
+        cancellation_registry,
+        cancellation_lease,
         request_json,
         on_event,
         emit_state_snapshots,
-        cancel_flag,
         terminal_latch,
         terminal_cleanup_hook: Some(terminal_cleanup_hook),
     }))
@@ -310,4 +405,93 @@ pub fn run_irregular_job(
 #[napi]
 pub fn get_last_job_diagnostics() -> String {
     last_job_diagnostics_json()
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use crate::nfp_ifp::NfpIfpAbortReason;
+
+    use super::{CancellationLease, CancellationRegistry};
+
+    #[test]
+    fn cancellation_registry_keeps_overlapping_public_job_ids_independently_cancellable() {
+        let registry = CancellationRegistry::new();
+        let public_job_id = "shared-public-job-id";
+        let first_token = format!("{public_job_id}:first-invocation");
+        let second_token = format!("{public_job_id}:second-invocation");
+        let first_lease = Arc::new(CancellationLease::new());
+        let second_lease = Arc::new(CancellationLease::new());
+
+        registry
+            .register(first_token.clone(), Arc::clone(&first_lease))
+            .expect("first invocation token registers");
+        registry
+            .register(second_token.clone(), Arc::clone(&second_lease))
+            .expect("second invocation token registers");
+
+        assert!(registry.cancel(&second_token, NfpIfpAbortReason::Deadline));
+        assert_eq!(first_lease.reason(), None);
+        assert_eq!(second_lease.reason(), Some(NfpIfpAbortReason::Deadline));
+
+        assert!(registry.cancel(&first_token, NfpIfpAbortReason::Cancelled));
+        assert_eq!(first_lease.reason(), Some(NfpIfpAbortReason::Cancelled));
+        assert_eq!(second_lease.reason(), Some(NfpIfpAbortReason::Deadline));
+    }
+
+    #[test]
+    fn cancellation_registry_retains_the_first_cancellation_reason() {
+        let registry = CancellationRegistry::new();
+        let lease = Arc::new(CancellationLease::new());
+        let token = "first-reason-token";
+
+        registry
+            .register(token.to_string(), Arc::clone(&lease))
+            .expect("token registers");
+        assert!(registry.cancel(token, NfpIfpAbortReason::Deadline));
+        assert!(registry.cancel(token, NfpIfpAbortReason::Cancelled));
+
+        assert_eq!(lease.reason(), Some(NfpIfpAbortReason::Deadline));
+    }
+
+    #[test]
+    fn cancellation_registry_rejects_a_duplicate_token_without_replacing_its_lease() {
+        let registry = CancellationRegistry::new();
+        let original_lease = Arc::new(CancellationLease::new());
+        let duplicate_lease = Arc::new(CancellationLease::new());
+
+        registry
+            .register("duplicate-token".to_string(), Arc::clone(&original_lease))
+            .expect("original token registers");
+        assert!(registry
+            .register("duplicate-token".to_string(), Arc::clone(&duplicate_lease))
+            .is_err());
+
+        assert!(registry.cancel("duplicate-token", NfpIfpAbortReason::Deadline));
+        assert_eq!(original_lease.reason(), Some(NfpIfpAbortReason::Deadline));
+        assert_eq!(duplicate_lease.reason(), None);
+    }
+
+    #[test]
+    fn cancellation_registry_removes_only_the_pointer_identical_completing_lease() {
+        let registry = CancellationRegistry::new();
+        let registered_lease = Arc::new(CancellationLease::new());
+        let unrelated_lease = Arc::new(CancellationLease::new());
+        let token = "pointer-identity-token";
+
+        registry
+            .register(token.to_string(), Arc::clone(&registered_lease))
+            .expect("token registers");
+        registry.remove_if_current(token, &unrelated_lease);
+
+        assert!(registry.cancel(token, NfpIfpAbortReason::Cancelled));
+        assert_eq!(
+            registered_lease.reason(),
+            Some(NfpIfpAbortReason::Cancelled)
+        );
+
+        registry.remove_if_current(token, &registered_lease);
+        assert!(!registry.cancel(token, NfpIfpAbortReason::Cancelled));
+    }
 }

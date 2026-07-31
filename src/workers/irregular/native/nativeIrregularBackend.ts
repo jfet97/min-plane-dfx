@@ -52,11 +52,15 @@
  * reconstructs the exact `IrregularBeamState` shape consumed by
  * `makeIrregularHistoryFrame`, including reveal titles and remaining IDs.
  */
+import { randomUUID } from 'node:crypto'
 import { Effect, Schema } from 'effect'
 import { PieceId } from '@shared/domain/ids.js'
 import { NestingRequest } from '@shared/domain/nesting.js'
 import { AppErrorCode } from '@shared/protocol/errors.js'
-import { WorkerResponseFailureError } from '@shared/protocol/worker.js'
+import {
+  WorkerResponseFailureError,
+  type WorkerCancellationReason
+} from '@shared/protocol/worker.js'
 import {
   CollisionGeometryDiagnostic,
   CollisionGeometryDiagnosticSchema,
@@ -675,10 +679,11 @@ type EventChannelState = 'open' | 'terminal-seen' | 'closed'
 export interface NativeIrregularJobTransport {
   readonly run: (
     requestJson: string,
+    invocationToken: string,
     onEvent: (json: string) => void,
     emitStateSnapshots: boolean
   ) => Promise<string>
-  readonly cancel: (jobId: string) => boolean
+  readonly cancel: (invocationToken: string, reason: WorkerCancellationReason) => boolean
 }
 
 interface NativeEventDispatcher {
@@ -845,9 +850,9 @@ export function computeIrregularNestingNative(
     })
     return yield* computeIrregularNestingNativeWithTransportForTests(
       {
-        run: (requestJson, onEvent, emitStateSnapshots) =>
-          addon.runIrregularJob(requestJson, onEvent, emitStateSnapshots),
-        cancel: (jobId) => addon.cancelIrregularJob(jobId)
+        run: (requestJson, invocationToken, onEvent, emitStateSnapshots) =>
+          addon.runIrregularJob(requestJson, invocationToken, onEvent, emitStateSnapshots),
+        cancel: (invocationToken, reason) => addon.cancelIrregularJob(invocationToken, reason)
       },
       request,
       geometrySettings,
@@ -872,6 +877,7 @@ export function computeIrregularNestingNativeWithTransportForTests(
           { requestedBackend: 'rust' }
         )
     })
+    const invocationToken = randomUUID()
     const dispatcher = createNativeEventDispatcher(options)
     let cancelPollTimer: ReturnType<typeof setInterval> | undefined
     let cancellationPollingStopped = false
@@ -887,7 +893,7 @@ export function computeIrregularNestingNativeWithTransportForTests(
     if (isCancelled !== undefined && options?.registerNativeCancellation === undefined) {
       cancelPollTimer = setInterval(() => {
         if (isCancelled()) {
-          transport.cancel(request.jobId)
+          transport.cancel(invocationToken, 'cancelled')
           stopCancellationPolling()
         }
       }, isCancelledPollIntervalMs)
@@ -897,11 +903,12 @@ export function computeIrregularNestingNativeWithTransportForTests(
       try {
         const runPromise = transport.run(
           requestJson,
+          invocationToken,
           dispatcher.onEvent,
           options?.emitStateSnapshot !== undefined
         )
-        options?.registerNativeCancellation?.(() => {
-          transport.cancel(request.jobId)
+        options?.registerNativeCancellation?.((reason) => {
+          transport.cancel(invocationToken, reason)
         })
         return {
           ok: true as const,

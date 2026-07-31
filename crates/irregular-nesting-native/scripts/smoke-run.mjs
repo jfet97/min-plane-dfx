@@ -14,7 +14,7 @@
 //     ordinals starting at 0;
 //   - the result carries a placement for every requested piece (2 pieces,
 //     a small enough case to always fit the fixture's real sheet);
-//   - `cancelIrregularJob` on an unrelated/unknown job id is a harmless
+//   - `cancelIrregularJob` on an unrelated/unknown invocation token is a harmless
 //     `false` no-op (does not disturb the real job in flight);
 //   - `getLastJobDiagnostics()` returns valid JSON with this job's identity
 //     fields populated, structurally separate from the semantic result.
@@ -111,7 +111,7 @@ async function main() {
 
   const capability = native.nativeCapability();
   log(`native capability: ${JSON.stringify(capability)}`);
-  assert(capability.apiVersion === 2, 'native capability reports API version 2');
+  assert(capability.apiVersion === 3, 'native capability reports API version 3');
 
   const request = deriveTwoPieceRequest();
   log(`derived a ${request.pieces.length}-piece request from the mixed61 fixture (sheet ${request.sheet.width}x${request.sheet.height}mm)`);
@@ -120,8 +120,10 @@ async function main() {
   const stateSnapshotEvents = [];
 
   let terminalEvent;
+  const invocationToken = 'smoke-run-main-invocation-token';
   const promiseValue = native.runIrregularJob(
     JSON.stringify(request),
+    invocationToken,
     (json) => {
       const event = JSON.parse(json);
       if (event.kind === 'portfolio-progress') progressEvents.push(event);
@@ -132,11 +134,18 @@ async function main() {
   );
   assert(promiseValue instanceof Promise, 'runIrregularJob returns a real Promise');
 
-  // Exercise cancelIrregularJob against an unrelated id while the real job
-  // may still be in flight -- must be a harmless no-op, never disturbing
-  // the real job (native-boundary.md §6.3's idempotent-no-op contract).
-  const cancelledUnrelated = native.cancelIrregularJob('not-the-real-job-id');
-  assert(cancelledUnrelated === false, 'cancelIrregularJob on an unrelated id returns false');
+  /* Exercise cancelIrregularJob against an unrelated invocation token while the
+   * real job may still be in flight. This must be a harmless no-op that never
+   * disturbs the real job (native-boundary.md §6.3's idempotent-no-op contract).
+   */
+  const cancelledUnrelated = native.cancelIrregularJob(
+    'not-the-real-invocation-token',
+    'cancelled'
+  );
+  assert(
+    cancelledUnrelated === false,
+    'cancelIrregularJob on an unrelated token returns false'
+  );
 
   const envelopeJson = await promiseValue;
   const envelope = JSON.parse(envelopeJson);
@@ -187,7 +196,14 @@ async function main() {
   // Malformed-request and archive-ineligible-routing paths both resolve
   // (never reject/throw) with a distinguishable `ok:false` envelope -- see
   // `boundary::run_job`'s own doc for why.
-  const malformedEnvelope = JSON.parse(await native.runIrregularJob('not json', () => {}, false));
+  const malformedEnvelope = JSON.parse(
+    await native.runIrregularJob(
+      'not json',
+      'smoke-run-malformed-request-invocation-token',
+      () => {},
+      false
+    )
+  );
   assert(malformedEnvelope.ok === false, 'malformed JSON resolves ok:false');
   assert(malformedEnvelope.error.category === 'worker_protocol_error', 'malformed JSON maps to worker_protocol_error');
 

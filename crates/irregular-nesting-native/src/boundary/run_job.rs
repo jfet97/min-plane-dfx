@@ -48,6 +48,7 @@
 //! direct boundary calls that bypass worker preflight.
 
 use crate::caches::GeometryCacheStore;
+use crate::nfp_ifp::NfpIfpAbortReason;
 use crate::result::coordinator::{compute_irregular_nesting, ComputeIrregularNestingOptions};
 use crate::result::progress::IrregularComputeEventSink;
 use crate::search::layout_scorer::FreeMaterialCache;
@@ -86,13 +87,17 @@ pub fn decode_and_route(request_json: &str) -> Result<PreparedRequest, BoundaryE
 pub fn run_job_from_json<'a>(
     request_json: &str,
     event_sink: &'a mut dyn IrregularComputeEventSink,
-    is_cancelled: Option<&'a mut (dyn FnMut() -> bool + 'a)>,
+    cancellation_reason: Option<&'a mut (dyn FnMut() -> Option<NfpIfpAbortReason> + 'a)>,
     thread_count_override: Option<usize>,
 ) -> (String, Option<GeometryCacheStore>, usize) {
     match decode_and_route(request_json) {
         Ok(prepared) => {
-            let (envelope, cache, thread_count) =
-                run_job(prepared, event_sink, is_cancelled, thread_count_override);
+            let (envelope, cache, thread_count) = run_job(
+                prepared,
+                event_sink,
+                cancellation_reason,
+                thread_count_override,
+            );
             (envelope, Some(cache), thread_count)
         }
         Err(error) => {
@@ -124,14 +129,14 @@ pub fn run_job_from_json<'a>(
 pub fn run_job<'a>(
     prepared: PreparedRequest,
     event_sink: &'a mut dyn IrregularComputeEventSink,
-    is_cancelled: Option<&'a mut (dyn FnMut() -> bool + 'a)>,
+    cancellation_reason: Option<&'a mut (dyn FnMut() -> Option<NfpIfpAbortReason> + 'a)>,
     thread_count_override: Option<usize>,
 ) -> (String, GeometryCacheStore, usize) {
     let mut geometry_cache = GeometryCacheStore::new();
     let mut free_material_cache = FreeMaterialCache::new();
     let mut options = ComputeIrregularNestingOptions {
         event_sink: Some(event_sink),
-        is_cancelled,
+        cancellation_reason,
         focused_complete_reconstruction_enabled: true,
     };
 
@@ -164,6 +169,7 @@ pub fn run_job<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::nfp_ifp::NfpIfpAbortReason;
     use crate::result::progress::NullEventSink;
 
     fn mixed61_like_request_json() -> serde_json::Value {
@@ -267,19 +273,30 @@ mod tests {
     }
 
     #[test]
-    fn run_job_stops_immediately_when_already_cancelled() {
-        let json = mixed61_like_request_json().to_string();
-        let prepared = decode_and_route(&json).expect("request decodes and routes");
-        let mut sink = NullEventSink;
-        let mut always_cancelled = || true;
-        let (envelope, _cache, _threads) =
-            run_job(prepared, &mut sink, Some(&mut always_cancelled), None);
-        let parsed: serde_json::Value = serde_json::from_str(&envelope).expect("envelope is JSON");
-        assert_eq!(parsed["ok"], serde_json::json!(false));
-        assert_eq!(
-            parsed["error"]["category"],
-            serde_json::json!("worker_cancelled")
-        );
+    fn run_job_preserves_each_cancellation_reason_in_the_typed_failure_envelope() {
+        for (reason, category, context_reason) in [
+            (
+                NfpIfpAbortReason::Cancelled,
+                "worker_cancelled",
+                "cancelled",
+            ),
+            (NfpIfpAbortReason::Deadline, "worker_timeout", "deadline"),
+        ] {
+            let json = mixed61_like_request_json().to_string();
+            let prepared = decode_and_route(&json).expect("request decodes and routes");
+            let mut sink = NullEventSink;
+            let mut cancellation_reason = || Some(reason);
+            let (envelope, _cache, _threads) =
+                run_job(prepared, &mut sink, Some(&mut cancellation_reason), None);
+            let parsed: serde_json::Value =
+                serde_json::from_str(&envelope).expect("envelope is JSON");
+            assert_eq!(parsed["ok"], serde_json::json!(false));
+            assert_eq!(parsed["error"]["category"], serde_json::json!(category));
+            assert_eq!(
+                parsed["error"]["context"]["reason"],
+                serde_json::json!(context_reason)
+            );
+        }
     }
 
     // `run_job_from_json` (the real `boundary::job::RunIrregularJobTask::compute`

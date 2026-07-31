@@ -348,7 +348,7 @@ fn two_small_squares_on_a_roomy_sheet_settle_through_the_shared_archive_winner_p
     let mut sink = RecordingSink::default();
     let mut options = ComputeIrregularNestingOptions {
         event_sink: Some(&mut sink),
-        is_cancelled: None,
+        cancellation_reason: None,
         focused_complete_reconstruction_enabled: true,
     };
     let mut geometry_cache = GeometryCacheStore::new();
@@ -407,7 +407,7 @@ fn history_mode_off_suppresses_state_snapshots_but_not_progress() {
     let mut sink = RecordingSink::default();
     let mut options = ComputeIrregularNestingOptions {
         event_sink: Some(&mut sink),
-        is_cancelled: None,
+        cancellation_reason: None,
         focused_complete_reconstruction_enabled: true,
     };
     let mut geometry_cache = GeometryCacheStore::new();
@@ -1431,13 +1431,13 @@ fn run_cancellation_scenario(
     u64,
 ) {
     let mut call_count: u64 = 0;
-    let mut is_cancelled = || {
+    let mut cancellation_reason = || {
         call_count += 1;
-        Some(call_count) == cancel_at_ordinal
+        (Some(call_count) == cancel_at_ordinal).then_some(NfpIfpAbortReason::Cancelled)
     };
     let mut options = ComputeIrregularNestingOptions {
         event_sink: None,
-        is_cancelled: Some(&mut is_cancelled),
+        cancellation_reason: Some(&mut cancellation_reason),
         focused_complete_reconstruction_enabled: true,
     };
     let mut geometry_cache = GeometryCacheStore::new();

@@ -51,14 +51,16 @@ describe('worker active-run cancellation controller', () => {
     expect(controller.reason()).toBe('cancelled')
   })
 
-  it('replays cancellation requested before one-shot native registration exactly once', () => {
+  it('replays the first cancellation reason to one-shot native registration exactly once', () => {
     const registry = new ActiveRunRegistry()
     const controller = registry.start('request-1', jobId)
     let nativeCancellationCount = 0
+    let nativeCancellationReason: 'cancelled' | 'timeout' | undefined
 
     controller.request('timeout')
-    controller.registerNativeCancellation(() => {
+    controller.registerNativeCancellation((reason) => {
       nativeCancellationCount += 1
+      nativeCancellationReason = reason
     })
     controller.registerNativeCancellation(() => {
       nativeCancellationCount += 10
@@ -66,6 +68,7 @@ describe('worker active-run cancellation controller', () => {
     controller.request('cancelled')
 
     expect(nativeCancellationCount).toBe(1)
+    expect(nativeCancellationReason).toBe('timeout')
     expect(controller.reason()).toBe('timeout')
   })
 

@@ -15,6 +15,7 @@ import {
   type IrregularNestingSettings
 } from '@shared/irregular/domain.js'
 import { intrinsicSharedArchiveEligibility } from '@shared/irregular/executionMode.js'
+import type { WorkerCancellationReason } from '@shared/protocol/worker.js'
 import { CollisionGeometryBuilder } from '../../irregular/collisionGeometryBuilder.js'
 import { GeometryKernel, GeometrySettings } from '../../irregular/geometryKernel.js'
 import {
@@ -120,7 +121,7 @@ export interface ComputeIrregularNestingOptions {
   readonly emitDecisionTrace?: EmitIrregularDecisionTrace
   readonly emitPortfolioProgress?: (progress: IrregularPortfolioProgress) => Effect.Effect<void>
   readonly isCancelled?: () => boolean
-  readonly registerNativeCancellation?: (cancel: () => void) => void
+  readonly registerNativeCancellation?: (cancel: (reason: WorkerCancellationReason) => void) => void
   /** standalone benchmark hook; measurements never enter normal app output. */
   readonly onPortfolioPhase?: (measurement: IrregularPortfolioPhaseMeasurement) => void
   /** standalone benchmark hook; metrics never enter normal app output. */

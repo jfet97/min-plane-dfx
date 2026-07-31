@@ -42,7 +42,7 @@ const eligibleSettings = new IrregularNestingSettings({
 })
 const availableProbe = {
   available: true as const,
-  nativeApiVersion: 2,
+  nativeApiVersion: 3,
   backendVersion: 'test',
   targetTriple: 'test-target',
   profiles: ['compact']

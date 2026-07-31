@@ -113,9 +113,10 @@ use super::{
 /// archive path even though production never disables it).
 pub struct ComputeIrregularNestingOptions<'a> {
     pub event_sink: Option<&'a mut dyn IrregularComputeEventSink>,
-    /// TS: `options?.isCancelled` -- inert in production (`worker-coordination.md`
-    /// §10) but a real, load-bearing seam for test/script harnesses.
-    pub is_cancelled: Option<&'a mut dyn FnMut() -> bool>,
+    /// Native cancellation reason observed at the existing cooperative
+    /// checkpoints. `None` keeps the checkpoint live; `Some` preserves whether
+    /// worker control requested cancellation or deadline expiry.
+    pub cancellation_reason: Option<&'a mut dyn FnMut() -> Option<NfpIfpAbortReason>>,
     /// TS: `options?.focusedCompleteReconstructionControlArm !== 'disable'`.
     /// `true` unless explicitly disabled.
     pub focused_complete_reconstruction_enabled: bool,
@@ -125,7 +126,7 @@ impl Default for ComputeIrregularNestingOptions<'_> {
     fn default() -> Self {
         Self {
             event_sink: None,
-            is_cancelled: None,
+            cancellation_reason: None,
             focused_complete_reconstruction_enabled: true,
         }
     }
@@ -463,13 +464,13 @@ pub fn compute_irregular_nesting(
         Some(sink) => sink,
         None => &mut null_sink,
     };
-    let is_cancelled = options.is_cancelled.take();
+    let cancellation_reason = options.cancellation_reason.take();
     let focused_complete_reconstruction_enabled = options.focused_complete_reconstruction_enabled;
 
     coordinate_intrinsic_shared_archive(
         &input,
         event_sink,
-        is_cancelled,
+        cancellation_reason,
         focused_complete_reconstruction_enabled,
         geometry_cache,
         free_material_cache,
@@ -525,7 +526,7 @@ struct CoordinateIntrinsicSharedArchiveInput<'a> {
 fn coordinate_intrinsic_shared_archive(
     input: &CoordinateIntrinsicSharedArchiveInput<'_>,
     event_sink: &mut dyn IrregularComputeEventSink,
-    is_cancelled: Option<&mut dyn FnMut() -> bool>,
+    cancellation_reason: Option<&mut dyn FnMut() -> Option<NfpIfpAbortReason>>,
     focused_complete_reconstruction_enabled: bool,
     geometry_cache: &mut GeometryCacheStore,
     free_material_cache: &mut FreeMaterialCache,
@@ -564,15 +565,12 @@ fn coordinate_intrinsic_shared_archive(
         0.0,
     );
 
-    // TS: `control` (`:512-525`) -- a checkpoint closure that fails with
-    // `cancelled` when `isCancelled()` returns true, or `None` when no
-    // `isCancelled` callback was supplied (mirroring every downstream
-    // `...(control === undefined ? {} : {control})` spread). Kept as a
-    // concrete (`Sized`), non-trait-object local; every call site below
-    // builds its own short-lived `&mut dyn NfpIfpControl` fresh via
-    // `.as_mut().map(...)` rather than storing one long-lived trait-object
-    // reborrow (see this module's top doc).
-    let mut control = is_cancelled.map(cancellation_control);
+    /* A concrete (`Sized`), non-trait-object control wraps the optional native
+     * cancellation-reason callback. Every call site below builds a fresh,
+     * short-lived `&mut dyn NfpIfpControl` via `control_dyn` instead of storing
+     * one long-lived trait-object reborrow (see this module's top doc).
+     */
+    let mut control = cancellation_reason.map(cancellation_control);
 
     let preflight_started_at = Instant::now();
     let preflight = preflight_intrinsic_complete_capacity(
@@ -925,7 +923,7 @@ fn coordinate_intrinsic_shared_archive(
                     match reconstruction_outcome {
                         Err(reconstruction::IntrinsicReconstructionPortfolioFailure::Strict(
                             IntrinsicStrictDecoderFailure::Abort(abort),
-                        )) if abort.reason == NfpIfpAbortReason::Cancelled => {
+                        )) => {
                             return Err(IrregularComputeErrorType::NfpIfpControlAbort(abort));
                         }
                         Err(failure) => {
@@ -1271,29 +1269,34 @@ fn owned_prepared_pieces(pieces: &[Arc<IrregularPreparedPiece>]) -> Vec<Irregula
     pieces.iter().map(|piece| (**piece).clone()).collect()
 }
 
-/// Concrete (`Sized`), non-trait-object wrapper around the optional
-/// `isCancelled` closure. See this module's top doc.
+/// Concrete (`Sized`), non-trait-object wrapper around the optional native
+/// cancellation-reason closure. See this module's top doc.
 struct CancellationControl<'a> {
-    is_cancelled: &'a mut (dyn FnMut() -> bool + 'a),
+    cancellation_reason: &'a mut (dyn FnMut() -> Option<NfpIfpAbortReason> + 'a),
 }
 
 impl NfpIfpControl for CancellationControl<'_> {
     fn checkpoint(&mut self, _phase: NfpIfpCheckpointPhase) -> Result<(), NfpIfpControlAbortError> {
-        if (self.is_cancelled)() {
-            Err(NfpIfpControlAbortError {
-                reason: NfpIfpAbortReason::Cancelled,
-                message: "intrinsic shared archive was cancelled".to_string(),
-            })
-        } else {
-            Ok(())
-        }
+        let Some(reason) = (self.cancellation_reason)() else {
+            return Ok(());
+        };
+        Err(NfpIfpControlAbortError {
+            reason,
+            message: match reason {
+                NfpIfpAbortReason::Cancelled => "intrinsic shared archive was cancelled",
+                NfpIfpAbortReason::Deadline => "intrinsic shared archive reached its deadline",
+            }
+            .to_string(),
+        })
     }
 }
 
 fn cancellation_control<'a>(
-    is_cancelled: &'a mut (dyn FnMut() -> bool + 'a),
+    cancellation_reason: &'a mut (dyn FnMut() -> Option<NfpIfpAbortReason> + 'a),
 ) -> CancellationControl<'a> {
-    CancellationControl { is_cancelled }
+    CancellationControl {
+        cancellation_reason,
+    }
 }
 
 /// Builds a fresh, short-lived `&mut dyn NfpIfpControl` from the concrete

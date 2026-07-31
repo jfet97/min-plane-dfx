@@ -57,7 +57,7 @@ pub struct Capability {
 #[napi]
 pub fn native_capability() -> Capability {
     Capability {
-        api_version: 2,
+        api_version: 3,
         crate_version: env!("CARGO_PKG_VERSION").to_string(),
         // Set by build.rs from Cargo's `TARGET` env var at compile time.
         target_triple: env!("IRREGULAR_NATIVE_TARGET").to_string(),
@@ -72,15 +72,18 @@ mod tests {
     #[test]
     fn native_capability_reports_expected_shape() {
         let capability = native_capability();
-        assert_eq!(capability.api_version, 2);
+        assert_eq!(capability.api_version, 3);
         assert_eq!(capability.crate_version, env!("CARGO_PKG_VERSION"));
         assert!(!capability.target_triple.is_empty());
         assert_eq!(capability.profiles, vec!["compact", "compact-short-side"]);
     }
 
     #[test]
-    fn cancel_irregular_job_on_an_unknown_job_id_is_a_harmless_no_op() {
-        assert!(!cancel_irregular_job("no-such-job".to_string()));
+    fn cancel_irregular_job_on_an_unknown_invocation_token_is_a_harmless_no_op() {
+        assert!(!cancel_irregular_job(
+            "no-such-invocation-token".to_string(),
+            "cancelled".to_string(),
+        ));
     }
 
     #[test]

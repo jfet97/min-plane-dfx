@@ -1,5 +1,6 @@
 import { Effect, Schema } from 'effect'
 import { spawn } from 'node:child_process'
+import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -12,10 +13,14 @@ import { IrregularNestingSettings, IrregularOptimizerSettings } from '@shared/ir
 import {
   computeIrregularNestingNative,
   computeIrregularNestingNativeWithTransportForTests,
+  encodeNativeRequestJson,
   setIsCancelledPollIntervalMsForTests,
   type NativeIrregularJobTransport
 } from '../../src/workers/irregular/native/nativeIrregularBackend.js'
-import { probeNativeIrregularAddon } from '../../src/workers/irregular/native/loadNativeBackend.js'
+import {
+  loadNativeIrregularAddon,
+  probeNativeIrregularAddon
+} from '../../src/workers/irregular/native/loadNativeBackend.js'
 import { makeIrregularWorkerOutput } from '../../src/workers/algorithm/irregular/irregularWorkerOutput.js'
 
 /**
@@ -223,10 +228,30 @@ describeIfAvailable('computeIrregularNestingNative', () => {
   it('reports the native addon as available with the expected N-API contract', () => {
     expect(probe.available).toBe(true)
     if (probe.available) {
-      expect(probe.nativeApiVersion).toBe(2)
+      expect(probe.nativeApiVersion).toBe(3)
       expect(probe.profiles).toContain('compact')
       expect(probe.profiles).toContain('compact-short-side')
     }
+  })
+
+  it('throws when a real-addon invocation token is already registered', async () => {
+    const addon = loadNativeIrregularAddon()
+    const invocationToken = `duplicate-registration-${randomUUID()}`
+    const requestJson = encodeNativeRequestJson(realGeometryRequest(24), archiveEligibleSettings())
+    const originalRun = addon.runIrregularJob(requestJson, invocationToken, () => undefined, false)
+
+    expect(originalRun).toBeInstanceOf(Promise)
+    expect(() =>
+      addon.runIrregularJob(requestJson, invocationToken, () => undefined, false)
+    ).toThrow('native irregular invocation token is already registered')
+    expect(addon.cancelIrregularJob(invocationToken, 'cancelled')).toBe(true)
+
+    const envelope = JSON.parse(await originalRun) as {
+      readonly ok: boolean
+      readonly error?: { readonly category?: string }
+    }
+    expect(envelope.ok).toBe(false)
+    expect(envelope.error?.category).toBe('worker_cancelled')
   })
 
   it(
@@ -543,7 +568,7 @@ describe('native irregular event dispatcher', () => {
     let nativeRunRegistered = false
     let nativeCancellationCount = 0
     const transport: NativeIrregularJobTransport = {
-      run: (_requestJson, onEvent) => {
+      run: (_requestJson, _invocationToken, onEvent) => {
         nativeRunRegistered = true
         onEvent(nativeEvent('terminal', 0))
         return Promise.resolve(nativeFailureEnvelope())
@@ -558,7 +583,7 @@ describe('native irregular event dispatcher', () => {
     const error = await Effect.runPromise(
       nativeTestEffect(transport, {
         isCancelled: () => true,
-        registerNativeCancellation: (cancel) => cancel()
+        registerNativeCancellation: (cancel) => cancel('cancelled')
       }).pipe(Effect.flip)
     )
 
@@ -566,11 +591,117 @@ describe('native irregular event dispatcher', () => {
     expect(nativeCancellationCount).toBe(1)
   })
 
+  it('gives overlapping runs with one public job ID distinct opaque tokens outside request JSON', async () => {
+    const received: Array<{ readonly requestJson: string; readonly invocationToken: unknown }> = []
+    const transport = {
+      run: (requestJson: string, invocationToken: unknown, onEvent: unknown) => {
+        received.push({ requestJson, invocationToken })
+        if (typeof onEvent === 'function') onEvent(nativeEvent('terminal', 0))
+        return Promise.resolve(nativeFailureEnvelope())
+      },
+      cancel: () => false
+    } as unknown as NativeIrregularJobTransport
+    const sharedJobRequest = request(
+      [prepared('piece-1')],
+      [source('piece-1')],
+      'same-public-job-id'
+    )
+
+    await Promise.all([
+      Effect.runPromise(
+        computeIrregularNestingNativeWithTransportForTests(
+          transport,
+          sharedJobRequest,
+          archiveEligibleSettings()
+        ).pipe(Effect.flip)
+      ),
+      Effect.runPromise(
+        computeIrregularNestingNativeWithTransportForTests(
+          transport,
+          sharedJobRequest,
+          archiveEligibleSettings()
+        ).pipe(Effect.flip)
+      )
+    ])
+
+    expect(received).toHaveLength(2)
+    for (const { requestJson, invocationToken } of received) {
+      expect(typeof invocationToken).toBe('string')
+      if (typeof invocationToken !== 'string') continue
+      expect(JSON.parse(requestJson)).not.toHaveProperty('invocationToken')
+      expect(requestJson).not.toContain(invocationToken)
+    }
+    expect(new Set(received.map(({ invocationToken }) => invocationToken)).size).toBe(2)
+  })
+
+  it('forwards each first cancellation reason to its own invocation token', async () => {
+    const invocationTokens: unknown[] = []
+    const cancellationCalls: Array<{
+      readonly invocationToken: unknown
+      readonly reason: unknown
+    }> = []
+    let firstNativeCancellation: ((reason: 'cancelled' | 'timeout') => void) | undefined
+    let secondNativeCancellation: ((reason: 'cancelled' | 'timeout') => void) | undefined
+    const transport = {
+      run: (_requestJson: string, invocationToken: unknown, onEvent: unknown) => {
+        invocationTokens.push(invocationToken)
+        if (typeof onEvent === 'function') onEvent(nativeEvent('terminal', 0))
+        return Promise.resolve(nativeFailureEnvelope())
+      },
+      cancel: (invocationToken: unknown, reason: unknown) => {
+        cancellationCalls.push({ invocationToken, reason })
+        return true
+      }
+    } as unknown as NativeIrregularJobTransport
+    const sharedJobRequest = request(
+      [prepared('piece-1')],
+      [source('piece-1')],
+      'same-public-job-id'
+    )
+
+    await Promise.all([
+      Effect.runPromise(
+        computeIrregularNestingNativeWithTransportForTests(
+          transport,
+          sharedJobRequest,
+          archiveEligibleSettings(),
+          {
+            registerNativeCancellation: (cancel) => {
+              firstNativeCancellation = cancel
+            }
+          }
+        ).pipe(Effect.flip)
+      ),
+      Effect.runPromise(
+        computeIrregularNestingNativeWithTransportForTests(
+          transport,
+          sharedJobRequest,
+          archiveEligibleSettings(),
+          {
+            registerNativeCancellation: (cancel) => {
+              secondNativeCancellation = cancel
+            }
+          }
+        ).pipe(Effect.flip)
+      )
+    ])
+
+    expect(firstNativeCancellation).toBeDefined()
+    expect(secondNativeCancellation).toBeDefined()
+    firstNativeCancellation?.('cancelled')
+    secondNativeCancellation?.('timeout')
+
+    expect(cancellationCalls).toEqual([
+      { invocationToken: invocationTokens[0], reason: 'cancelled' },
+      { invocationToken: invocationTokens[1], reason: 'timeout' }
+    ])
+  })
+
   it('serializes delayed progress and snapshot callbacks before exposing the envelope', async () => {
     let releaseProgress: (() => void) | undefined
     let snapshotsDelivered = 0
     let settled = false
-    const addon = fakeNativeTransport(async (_requestJson, onEvent) => {
+    const addon = fakeNativeTransport(async (_requestJson, _invocationToken, onEvent) => {
       onEvent(nativeEvent('portfolio-progress', 0))
       onEvent(nativeEvent('state-snapshot', 1))
       onEvent(nativeEvent('terminal', 2))
@@ -608,7 +739,7 @@ describe('native irregular event dispatcher', () => {
     ['duplicate', [nativeEvent('portfolio-progress', 0), nativeEvent('terminal', 0)]],
     ['missing', [nativeEvent('portfolio-progress', 0), nativeEvent('terminal', 2)]]
   ] as const)('rejects a %s ordinal sequence', async (_caseName, events) => {
-    const addon = fakeNativeTransport(async (_requestJson, onEvent) => {
+    const addon = fakeNativeTransport(async (_requestJson, _invocationToken, onEvent) => {
       events.forEach(onEvent)
       return nativeFailureEnvelope()
     })
@@ -617,7 +748,7 @@ describe('native irregular event dispatcher', () => {
   })
 
   it('rejects a malformed event', async () => {
-    const addon = fakeNativeTransport(async (_requestJson, onEvent) => {
+    const addon = fakeNativeTransport(async (_requestJson, _invocationToken, onEvent) => {
       onEvent('{not json')
       onEvent(nativeEvent('terminal', 0))
       return nativeFailureEnvelope()
@@ -628,7 +759,7 @@ describe('native irregular event dispatcher', () => {
 
   it('maps a rejected progress callback and suppresses the queued snapshot callback', async () => {
     let snapshotCallbackCount = 0
-    const transport = fakeNativeTransport(async (_requestJson, onEvent) => {
+    const transport = fakeNativeTransport(async (_requestJson, _invocationToken, onEvent) => {
       onEvent(nativeEvent('portfolio-progress', 0))
       onEvent(nativeEvent('state-snapshot', 1))
       onEvent(nativeEvent('terminal', 2))
@@ -648,7 +779,7 @@ describe('native irregular event dispatcher', () => {
   })
 
   it('maps a throwing snapshot callback to a sanitized protocol failure', async () => {
-    const addon = fakeNativeTransport(async (_requestJson, onEvent) => {
+    const addon = fakeNativeTransport(async (_requestJson, _invocationToken, onEvent) => {
       onEvent(nativeEvent('state-snapshot', 0))
       onEvent(nativeEvent('terminal', 1))
       return nativeFailureEnvelope()
@@ -669,7 +800,7 @@ describe('native irregular event dispatcher', () => {
     let progressFinished = false
     let snapshotCallbackCount = 0
     let settled = false
-    const transport = fakeNativeTransport(async (_requestJson, onEvent) => {
+    const transport = fakeNativeTransport(async (_requestJson, _invocationToken, onEvent) => {
       onEvent(nativeEvent('portfolio-progress', 0))
       await Promise.resolve()
       onEvent(nativeEvent('state-snapshot', 1))
@@ -721,7 +852,7 @@ describe('native irregular event dispatcher', () => {
     async (_name, expectedOperation, finish) => {
       let releaseProgress: (() => void) | undefined
       let settled = false
-      const transport = fakeNativeTransport(async (_requestJson, onEvent) => {
+      const transport = fakeNativeTransport(async (_requestJson, _invocationToken, onEvent) => {
         onEvent(nativeEvent('portfolio-progress', 0))
         onEvent(nativeEvent('terminal', 1))
         return finish()
@@ -778,7 +909,7 @@ describe('native irregular event dispatcher', () => {
   })
 
   it('rejects a callback received after terminal', async () => {
-    const transport = fakeNativeTransport(async (_requestJson, onEvent) => {
+    const transport = fakeNativeTransport(async (_requestJson, _invocationToken, onEvent) => {
       onEvent(nativeEvent('terminal', 0))
       onEvent(nativeEvent('portfolio-progress', 1))
       return nativeFailureEnvelope()
@@ -790,7 +921,7 @@ describe('native irregular event dispatcher', () => {
   it('suppresses callbacks scheduled after adapter settlement', async () => {
     let lateOnEvent: ((json: string) => void) | undefined
     let publicCallbackCount = 0
-    const transport = fakeNativeTransport(async (_requestJson, onEvent) => {
+    const transport = fakeNativeTransport(async (_requestJson, _invocationToken, onEvent) => {
       lateOnEvent = onEvent
       onEvent(nativeEvent('terminal', 0))
       return nativeFailureEnvelope()
