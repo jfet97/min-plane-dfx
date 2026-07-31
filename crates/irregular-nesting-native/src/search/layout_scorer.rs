@@ -55,6 +55,8 @@ use std::cmp::Ordering;
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 
+use serde::Serialize;
+
 use crate::domain::{
     FreeMaterialSnapshot, IrregularNestingSettings, IrregularPlacedPiece, IrregularPoint,
     IrregularPolygon, PieceId, SheetSpec,
@@ -198,41 +200,182 @@ const FREE_MATERIAL_CACHE_VERSION: &str = "irregular-free-material-v1";
 /// ("requires an ordered-map structure... not `std::collections::HashMap`";
 /// this crate has no `indexmap` dependency to add, and editing `Cargo.toml`
 /// is out of this task's file-ownership scope).
-#[derive(Default)]
+pub const FREE_MATERIAL_CACHE_CAP_BYTES: u64 = 8 * 1024 * 1024;
+
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FreeMaterialCacheTelemetry {
+    pub cap_bytes: u64,
+    pub current_bytes: u64,
+    pub peak_bytes: u64,
+    pub entries: u64,
+    pub admissions: u64,
+    pub replacements: u64,
+    pub evictions: u64,
+    pub evicted_bytes: u64,
+    pub oversized_rejections: u64,
+    pub hits: u64,
+    pub misses: u64,
+}
+
+/// The free-material cache retains TS insertion-order FIFO semantics. The
+/// charged limit is additional safety only: cache hits never reorder keys.
 pub struct FreeMaterialCache {
-    entries: HashMap<String, FreeMaterialSnapshot>,
+    entries: HashMap<String, (FreeMaterialSnapshot, u64)>,
     insertion_order: VecDeque<String>,
+    byte_cap: u64,
+    telemetry: FreeMaterialCacheTelemetry,
+}
+
+impl Default for FreeMaterialCache {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl FreeMaterialCache {
+    /// Constructs the finite 8 MiB free-material cache budget for one job.
     pub fn new() -> Self {
-        Self::default()
+        Self::with_byte_cap(FREE_MATERIAL_CACHE_CAP_BYTES)
     }
 
-    pub fn get(&self, key: &str) -> Option<&FreeMaterialSnapshot> {
-        self.entries.get(key)
+    #[cfg(test)]
+    fn new_with_byte_cap_for_test(byte_cap: u64) -> Self {
+        Self::with_byte_cap(byte_cap)
+    }
+
+    pub(crate) fn with_byte_cap(byte_cap: u64) -> Self {
+        Self {
+            entries: HashMap::new(),
+            insertion_order: VecDeque::new(),
+            byte_cap,
+            telemetry: FreeMaterialCacheTelemetry {
+                cap_bytes: byte_cap,
+                ..FreeMaterialCacheTelemetry::default()
+            },
+        }
+    }
+
+    pub fn get(&mut self, key: &str) -> Option<&FreeMaterialSnapshot> {
+        match self.entries.get(key) {
+            Some((value, _)) => {
+                self.telemetry.hits = self.telemetry.hits.saturating_add(1);
+                Some(value)
+            }
+            None => {
+                self.telemetry.misses = self.telemetry.misses.saturating_add(1);
+                None
+            }
+        }
     }
 
     pub fn size(&self) -> usize {
         self.entries.len()
     }
 
-    /// TS: `freeMaterialCache.set(key, snapshot)` (line 197-200) -- re-setting
-    /// an existing key updates its value only, matching JS `Map.set`'s own
-    /// "does not move an existing key" insertion-order semantics.
-    fn set(&mut self, key: String, value: FreeMaterialSnapshot) {
-        if !self.entries.contains_key(&key) {
-            self.insertion_order.push_back(key.clone());
+    fn set(&mut self, key: String, value: FreeMaterialSnapshot) -> bool {
+        let charge = free_material_entry_charge(&key, &value);
+        if charge > self.byte_cap {
+            self.telemetry.oversized_rejections =
+                self.telemetry.oversized_rejections.saturating_add(1);
+            return false;
         }
-        self.entries.insert(key, value);
+
+        let replacing = self.entries.contains_key(&key);
+        let old_charge = self.entries.get(&key).map_or(0, |(_, charge)| *charge);
+        let mut planned_bytes = self.telemetry.current_bytes.saturating_sub(old_charge);
+        let mut planned_entries = self.entries.len();
+        let mut planned_evictions = Vec::new();
+        let mut ordered = self.insertion_order.iter();
+
+        while planned_bytes.saturating_add(charge) > self.byte_cap
+            || (!replacing && planned_entries >= MAX_FREE_MATERIAL_CACHE_ENTRIES)
+        {
+            let Some(oldest) = ordered.next() else {
+                self.telemetry.oversized_rejections =
+                    self.telemetry.oversized_rejections.saturating_add(1);
+                return false;
+            };
+            if replacing && oldest == &key {
+                self.telemetry.oversized_rejections =
+                    self.telemetry.oversized_rejections.saturating_add(1);
+                return false;
+            }
+            let Some((_, oldest_charge)) = self.entries.get(oldest) else {
+                self.telemetry.oversized_rejections =
+                    self.telemetry.oversized_rejections.saturating_add(1);
+                return false;
+            };
+            planned_bytes = planned_bytes.saturating_sub(*oldest_charge);
+            planned_entries = planned_entries.saturating_sub(1);
+            planned_evictions.push(oldest.clone());
+        }
+
+        let evicted_any = !planned_evictions.is_empty();
+        for expected_oldest in planned_evictions {
+            let actual_oldest = self
+                .insertion_order
+                .pop_front()
+                .expect("every planned FIFO eviction has an insertion-order entry");
+            debug_assert_eq!(actual_oldest, expected_oldest);
+            self.evict_key(actual_oldest);
+        }
+
+        if replacing {
+            let (stored_value, stored_charge) = self
+                .entries
+                .get_mut(&key)
+                .expect("a replacement cannot evict its own FIFO entry");
+            self.telemetry.current_bytes = self
+                .telemetry
+                .current_bytes
+                .saturating_sub(*stored_charge)
+                .saturating_add(charge);
+            *stored_value = value;
+            *stored_charge = charge;
+            self.telemetry.replacements = self.telemetry.replacements.saturating_add(1);
+        } else {
+            self.entries.insert(key.clone(), (value, charge));
+            self.insertion_order.push_back(key);
+            self.telemetry.current_bytes = self.telemetry.current_bytes.saturating_add(charge);
+            self.telemetry.entries = self.telemetry.entries.saturating_add(1);
+        }
+        self.telemetry.peak_bytes = self.telemetry.peak_bytes.max(self.telemetry.current_bytes);
+        self.telemetry.admissions = self.telemetry.admissions.saturating_add(1);
+        if evicted_any {
+            self.entries.shrink_to_fit();
+            self.insertion_order.shrink_to_fit();
+        }
+        true
     }
 
-    /// TS: `freeMaterialCache.keys().next().value` then `.delete(oldestKey)`
-    /// (lines 193-195).
+    #[cfg(test)]
     fn evict_oldest(&mut self) {
         if let Some(oldest) = self.insertion_order.pop_front() {
-            self.entries.remove(&oldest);
+            self.evict_key(oldest);
         }
+    }
+
+    fn evict_key(&mut self, key: String) {
+        if let Some((_, charge)) = self.entries.remove(&key) {
+            self.telemetry.current_bytes = self.telemetry.current_bytes.saturating_sub(charge);
+            self.telemetry.entries = self.telemetry.entries.saturating_sub(1);
+            self.telemetry.evictions = self.telemetry.evictions.saturating_add(1);
+            self.telemetry.evicted_bytes = self.telemetry.evicted_bytes.saturating_add(charge);
+        }
+    }
+
+    pub fn clear_and_shrink(&mut self) {
+        self.entries.clear();
+        self.entries.shrink_to_fit();
+        self.insertion_order.clear();
+        self.insertion_order.shrink_to_fit();
+        self.telemetry.current_bytes = 0;
+        self.telemetry.entries = 0;
+    }
+
+    pub fn telemetry(&self) -> &FreeMaterialCacheTelemetry {
+        &self.telemetry
     }
 }
 
@@ -271,6 +414,50 @@ fn make_free_material_cache_key(
 
 fn json_string(value: &str) -> String {
     serde_json::to_string(value).expect("a plain &str always serializes to a JSON string")
+}
+
+fn free_material_entry_charge(key: &String, snapshot: &FreeMaterialSnapshot) -> u64 {
+    let mut charge = (std::mem::size_of::<FreeMaterialSnapshot>() as u64).saturating_add(64);
+    charge = charge.saturating_add(string_capacity_charge(key).saturating_mul(2));
+    charge = charge.saturating_add(string_capacity_charge(&snapshot.sheet.label));
+    charge = charge.saturating_add(capacity_charge::<crate::domain::FreeMaterialRegion>(
+        snapshot.regions.capacity(),
+    ));
+    for region in &snapshot.regions {
+        charge =
+            charge.saturating_add(capacity_charge::<IrregularPolygon>(region.holes.capacity()));
+        charge = charge.saturating_add(polygon_points_capacity_charge(&region.boundary));
+        for hole in &region.holes {
+            charge = charge.saturating_add(polygon_points_capacity_charge(hole));
+        }
+    }
+    charge = charge.saturating_add(
+        capacity_charge::<crate::domain::CollisionGeometryDiagnostic>(
+            snapshot.diagnostics.capacity(),
+        ),
+    );
+    for diagnostic in &snapshot.diagnostics {
+        charge = charge.saturating_add(string_capacity_charge(&diagnostic.code));
+        charge = charge.saturating_add(string_capacity_charge(&diagnostic.message));
+        if let Some(piece_id) = &diagnostic.piece_id {
+            charge = charge.saturating_add(string_capacity_charge(&piece_id.0));
+        }
+    }
+    charge
+}
+
+fn polygon_points_capacity_charge(polygon: &IrregularPolygon) -> u64 {
+    capacity_charge::<IrregularPoint>(polygon.points.capacity())
+}
+
+fn capacity_charge<T>(capacity: usize) -> u64 {
+    u64::try_from(capacity)
+        .unwrap_or(u64::MAX)
+        .saturating_mul(std::mem::size_of::<T>() as u64)
+}
+
+fn string_capacity_charge(value: &String) -> u64 {
+    u64::try_from(value.capacity()).unwrap_or(u64::MAX)
 }
 
 /// TS: `irregularLayoutScorer.ts:129-145` `scoreState` (the `.Make`
@@ -338,10 +525,7 @@ fn compute_snapshot_with_parent_fallback(
             full()?
         };
 
-    if cache.size() >= MAX_FREE_MATERIAL_CACHE_ENTRIES {
-        cache.evict_oldest();
-    }
-    cache.set(
+    let _admitted = cache.set(
         make_free_material_cache_key(&input.sheet, settings, &input.state),
         computed.clone(),
     );
@@ -1022,8 +1206,8 @@ fn fail_scoring(message: String) -> IrregularLayoutScoringError {
 mod tests {
     use super::*;
     use crate::domain::{
-        FreeMaterialRegion, IntrinsicObjectiveProfileId, IrregularBounds,
-        IrregularGeometrySettings, IrregularOptimizerSettings, IrregularPlacement,
+        CollisionGeometryDiagnostic, FreeMaterialRegion, IntrinsicObjectiveProfileId,
+        IrregularBounds, IrregularGeometrySettings, IrregularOptimizerSettings, IrregularPlacement,
         IrregularTransform, IrregularTransformCandidate, IrregularTransformReason,
         TransformedCollisionGeometry,
     };
@@ -1140,6 +1324,164 @@ mod tests {
             }],
             diagnostics: vec![],
         }
+    }
+
+    #[test]
+    fn free_material_cache_rejects_oversized_snapshot_without_evicting_fifo_entry() {
+        let sheet = sheet();
+        let retained = empty_snapshot(&sheet);
+        let retained_charge = free_material_entry_charge(&"retained".to_string(), &retained);
+        let mut cache = FreeMaterialCache::new_with_byte_cap_for_test(retained_charge);
+        assert!(cache.set("retained".to_string(), retained));
+        assert!(!cache.set("oversized".to_string(), empty_snapshot(&sheet)));
+        assert!(cache.get("retained").is_some());
+        assert_eq!(cache.telemetry().entries, 1);
+        assert_eq!(cache.telemetry().oversized_rejections, 1);
+        assert_eq!(cache.telemetry().evictions, 0);
+    }
+
+    #[test]
+    fn free_material_clear_releases_current_bytes_and_retains_peak_counters() {
+        let sheet = sheet();
+        let snapshot = empty_snapshot(&sheet);
+        let mut cache = FreeMaterialCache::new();
+        assert_eq!(cache.telemetry().cap_bytes, 8 * 1024 * 1024);
+        assert!(cache.set("snapshot".to_string(), snapshot));
+        let peak_bytes = cache.telemetry().peak_bytes;
+
+        cache.clear_and_shrink();
+
+        assert_eq!(cache.telemetry().current_bytes, 0);
+        assert_eq!(cache.telemetry().entries, 0);
+        assert_eq!(cache.telemetry().peak_bytes, peak_bytes);
+        assert_eq!(cache.telemetry().admissions, 1);
+        assert!(cache.entries.is_empty());
+        assert!(cache.insertion_order.is_empty());
+    }
+
+    #[test]
+    fn successful_replacement_updates_bytes_and_counters_without_reordering() {
+        let sheet = sheet();
+        let small = empty_snapshot(&sheet);
+        let mut larger = small.clone();
+        larger.regions[0].boundary = IrregularPolygon::new(vec![IrregularPoint::new(0.0, 0.0); 64]);
+        let large_charge = free_material_entry_charge(&"first".to_string(), &larger);
+        let mut cache = FreeMaterialCache::new_with_byte_cap_for_test(large_charge * 2);
+
+        assert!(cache.set("first".to_string(), small));
+        assert!(cache.set("other".to_string(), empty_snapshot(&sheet)));
+        assert!(cache.set("first".to_string(), larger));
+
+        assert_eq!(
+            cache.insertion_order,
+            VecDeque::from(["first".to_string(), "other".to_string()])
+        );
+        assert_eq!(cache.telemetry().entries, 2);
+        assert_eq!(cache.telemetry().replacements, 1);
+        assert_eq!(cache.telemetry().admissions, 3);
+        assert_eq!(cache.telemetry().evictions, 0);
+        assert!(cache.telemetry().current_bytes <= cache.telemetry().cap_bytes);
+        assert!(cache.telemetry().peak_bytes >= cache.telemetry().current_bytes);
+    }
+
+    #[test]
+    fn charged_replacement_rejects_before_evicting_its_own_fifo_record() {
+        let sheet = sheet();
+        let small = empty_snapshot(&sheet);
+        let mut larger = small.clone();
+        larger.regions[0].boundary = IrregularPolygon::new(vec![IrregularPoint::new(0.0, 0.0); 64]);
+        let small_charge = free_material_entry_charge(&"first".to_string(), &small);
+        let large_charge = free_material_entry_charge(&"first".to_string(), &larger);
+        let mut cache = FreeMaterialCache::new_with_byte_cap_for_test(
+            small_charge.saturating_add(large_charge).saturating_sub(1),
+        );
+
+        assert!(cache.set("first".to_string(), small.clone()));
+        assert!(cache.set("other".to_string(), small.clone()));
+        assert!(!cache.set("first".to_string(), larger));
+        assert_eq!(
+            cache.insertion_order,
+            VecDeque::from(["first".to_string(), "other".to_string()])
+        );
+        assert_eq!(cache.get("first"), Some(&small));
+        assert_eq!(cache.get("other"), Some(&small));
+        assert_eq!(cache.telemetry().replacements, 0);
+        assert_eq!(cache.telemetry().evictions, 0);
+    }
+
+    #[test]
+    fn free_material_charge_counts_inline_polygon_storage_once() {
+        let sheet = sheet();
+        let mut snapshot = empty_snapshot(&sheet);
+        snapshot.regions[0]
+            .holes
+            .push(IrregularPolygon::new(Vec::with_capacity(7)));
+        let key = "charge-key".to_string();
+
+        let region = &snapshot.regions[0];
+        let expected = (std::mem::size_of::<FreeMaterialSnapshot>() as u64)
+            .saturating_add(64)
+            .saturating_add(string_capacity_charge(&key).saturating_mul(2))
+            .saturating_add(string_capacity_charge(&snapshot.sheet.label))
+            .saturating_add(capacity_charge::<FreeMaterialRegion>(
+                snapshot.regions.capacity(),
+            ))
+            .saturating_add(capacity_charge::<IrregularPolygon>(region.holes.capacity()))
+            .saturating_add(capacity_charge::<IrregularPoint>(
+                region.boundary.points.capacity(),
+            ))
+            .saturating_add(capacity_charge::<IrregularPoint>(
+                region.holes[0].points.capacity(),
+            ))
+            .saturating_add(capacity_charge::<CollisionGeometryDiagnostic>(
+                snapshot.diagnostics.capacity(),
+            ));
+
+        assert_eq!(free_material_entry_charge(&key, &snapshot), expected);
+    }
+
+    #[test]
+    fn free_material_multi_eviction_shrinks_retained_container_capacity() {
+        let sheet = sheet();
+        let mut cache = FreeMaterialCache::new_with_byte_cap_for_test(64 * 1024);
+        for index in 0..100 {
+            assert!(cache.set(format!("small-{index}"), empty_snapshot(&sheet)));
+        }
+        let entries_capacity_before = cache.entries.capacity();
+        let order_capacity_before = cache.insertion_order.capacity();
+        let mut large = empty_snapshot(&sheet);
+        large.regions[0].boundary =
+            IrregularPolygon::new(vec![IrregularPoint::new(0.0, 0.0); 2_500]);
+
+        assert!(cache.set("large".to_string(), large));
+        assert!(cache.telemetry().evictions > 1);
+        assert!(cache.entries.capacity() < entries_capacity_before);
+        assert!(cache.insertion_order.capacity() < order_capacity_before);
+    }
+
+    #[test]
+    fn free_material_charge_includes_diagnostic_string_and_piece_id_capacities() {
+        let sheet = sheet();
+        let plain = empty_snapshot(&sheet);
+        let plain_charge = free_material_entry_charge(&"same-key".to_string(), &plain);
+        let mut diagnostic_snapshot = plain.clone();
+        let mut code = String::with_capacity(1024);
+        code.push('c');
+        let mut message = String::with_capacity(2048);
+        message.push('m');
+        let mut piece_id = String::with_capacity(4096);
+        piece_id.push('p');
+        diagnostic_snapshot
+            .diagnostics
+            .push(CollisionGeometryDiagnostic {
+                code,
+                message,
+                piece_id: Some(PieceId::new(piece_id)),
+            });
+
+        let diagnostic_charge =
+            free_material_entry_charge(&"same-key".to_string(), &diagnostic_snapshot);
+        assert!(diagnostic_charge >= plain_charge + 1024 + 2048 + 4096);
     }
 
     #[test]

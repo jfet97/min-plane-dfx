@@ -115,7 +115,7 @@ fn fixture_path(piece_count: usize) -> String {
 /// deliberately normalizes.
 fn run_once(request_json: &str, thread_count: usize) -> Value {
     let mut sink = NullEventSink;
-    let (envelope, _cache, resolved_thread_count) =
+    let (envelope, _cache, _free_material_telemetry, resolved_thread_count) =
         run_job_from_json(request_json, &mut sink, None, Some(thread_count));
     assert_eq!(
         resolved_thread_count, thread_count,

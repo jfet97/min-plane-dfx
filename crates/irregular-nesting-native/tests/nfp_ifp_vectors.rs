@@ -1224,10 +1224,12 @@ fn run_nfp_cache_sequence(case: &CacheSequenceCase) {
                 &key_input,
                 NfpConstructionAlgorithm::VertexPairHull,
             );
-            cache.set(
+            let stale_value = IrregularPolygon::new(vec![IrregularPoint::new(0.0, 0.0)]);
+            assert!(cache.set(
                 &key,
-                IrregularPolygon::new(vec![IrregularPoint::new(0.0, 0.0)]),
-            );
+                stale_value.clone(),
+                irregular_nesting_native::caches::charge_nfp_polygon(&stale_value),
+            ));
         }
         let result = compute_nfp(&input, &mut cache, NfpConstructionAlgorithm::VertexPairHull);
         assert_eq!(step.ok, result.is_ok(), "step {step_index}: ok mismatch");
@@ -1308,14 +1310,16 @@ fn run_ifp_cache_sequence(case: &CacheSequenceCase) {
                 moving: &moving,
             };
             let key = irregular_nesting_native::caches::make_inner_fit_bounds_cache_key(&key_input);
-            cache.set(
+            let stale_value = irregular_nesting_native::domain::IrregularIfpBounds {
+                sheet: sheet.clone(),
+                moving_piece_id: PieceId::new("a-different-piece-id"),
+                bounds: IrregularBounds::new(-999.0, -999.0, 999.0, 999.0),
+            };
+            assert!(cache.set(
                 &key,
-                irregular_nesting_native::domain::IrregularIfpBounds {
-                    sheet: sheet.clone(),
-                    moving_piece_id: PieceId::new("a-different-piece-id"),
-                    bounds: IrregularBounds::new(-999.0, -999.0, 999.0, 999.0),
-                },
-            );
+                stale_value.clone(),
+                irregular_nesting_native::caches::charge_ifp_bounds(&stale_value),
+            ));
         }
         let result = compute_ifp_bounds(&input, &mut cache);
         assert_eq!(step.ok, result.is_ok(), "step {step_index}: ok mismatch");

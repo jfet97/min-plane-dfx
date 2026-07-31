@@ -22,13 +22,10 @@
 //!
 //! `docs/planning/rust-irregular-backend/cache-concurrency-design.md` §1
 //! confirms this store's backing structure is never iterated in production
-//! (`Map.get`/`.set`/`.delete` only — no `for...of`/`.keys()`/`.values()`
-//! observed reaching output), so a plain `HashMap` keyed by the exact
-//! `serializeGeometryCacheKey` byte string is sufficient — no
-//! insertion-ordered `Vec` shadow structure is needed here (contrast with
-//! TS `Map` types elsewhere in this crate whose iteration order *is*
-//! observable, which would require a `Vec`+`HashMap` combination per this
-//! crate's stage-2 scope note).
+//! (`Map.get`/`.set`/`.delete` only). A `HashMap` owns the values under the
+//! exact `serializeGeometryCacheKey` string. One coordinator-owned linked
+//! recency node per admitted entry provides deterministic LRU eviction and
+//! constant-time hot-key touches without making map iteration observable.
 //!
 //! # Type-erased values
 //!
@@ -59,6 +56,14 @@ use super::telemetry::CacheTelemetrySnapshot;
 /// already-unified [`crate::domain::IrregularGeometryCacheKey`]
 /// rather than a second declaration.
 pub type GeometryCacheKey = IrregularGeometryCacheKey;
+
+/// Outcome of the coordinator-only typed validity probe used by the NFP prepass.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum GeometryCacheProbe {
+    HotValid,
+    Cold,
+    StaleRemoved,
+}
 
 /// TS: `core/geometryCacheStore.ts:13-15` (`serializeGeometryCacheKey`).
 ///
@@ -146,17 +151,37 @@ fn push_json_string(out: &mut String, value: &str) {
 /// TS: `geometryCacheStoreLive.ts:6-30` (`GeometryCacheStore`,
 /// `makeGeometryCacheStore`).
 ///
-/// One job-local backing store for cache namespaces 1.1–1.3. Per
-/// `cache-concurrency-design.md` §2 ("Rust design"): constructed once per
-/// job (this crate's future `boundary::run_job`), owned (not `Arc`-shared in
-/// Stage 2 — single-threaded), dropped when the job's stack frame returns.
-/// No explicit `.clear()` call belongs in that lifecycle either — production
-/// TS never calls `GeometryCache.clear()` (§2 "Cleanup on completion"); this
-/// struct still exposes [`Self::clear`] because the TS interface declares it
-/// and a differential/stress-test harness may want it, matching TS's own
-/// unused-in-production-but-present method.
+/// One job-local backing store for cache namespaces 1.1-1.3. It is constructed
+/// once per job, mutated only by the coordinator, and bounded by a deterministic
+/// charged LRU. Production explicitly clears and shrinks retained storage after
+/// the job completes, before publishing the diagnostics snapshot. Normal Rust
+/// ownership remains the unwind cleanup path if execution panics.
+const GEOMETRY_CACHE_DEFAULT_CAP_BYTES: u64 = 56 * 1024 * 1024;
+const HASHMAP_ENTRY_OVERHEAD_BYTES: u64 = 64;
+
+struct GeometryCacheEntry {
+    value: Box<dyn Any>,
+    charge_bytes: u64,
+    namespace: String,
+    recency_node: usize,
+}
+
+struct RecencyNode {
+    key: String,
+    previous: Option<usize>,
+    next: Option<usize>,
+}
+
+/// One job-local geometry backing store. The coordinator owns every mutation,
+/// lookup touch, eviction, and publication. Rayon workers only receive pure
+/// geometry inputs and return pure computed values for serial publication.
 pub struct GeometryCacheStore {
-    entries: HashMap<String, Box<dyn Any>>,
+    entries: HashMap<String, GeometryCacheEntry>,
+    recency_nodes: Vec<Option<RecencyNode>>,
+    recency_head: Option<usize>,
+    recency_tail: Option<usize>,
+    free_recency_nodes: Vec<usize>,
+    byte_cap: u64,
     telemetry: CacheTelemetrySnapshot,
 }
 
@@ -167,108 +192,435 @@ impl Default for GeometryCacheStore {
 }
 
 impl GeometryCacheStore {
-    /// TS: `makeGeometryCacheStore()` (`geometryCacheStoreLive.ts:9-11`).
-    /// Constructs a brand-new backing map and records one cache-instance
-    /// telemetry tick (`NfpIfpTelemetry.recordCacheInstance()`).
+    /// Constructs the finite 56 MiB geometry cache budget for one job.
     pub fn new() -> Self {
-        let mut telemetry = CacheTelemetrySnapshot::default();
-        telemetry.cache_instances += 1;
+        Self::with_byte_cap(GEOMETRY_CACHE_DEFAULT_CAP_BYTES)
+    }
+
+    #[cfg(test)]
+    fn new_with_byte_cap_for_test(byte_cap: u64) -> Self {
+        Self::with_byte_cap(byte_cap)
+    }
+
+    pub(crate) fn with_byte_cap(byte_cap: u64) -> Self {
+        let telemetry = CacheTelemetrySnapshot {
+            cache_instances: 1,
+            cap_bytes: byte_cap,
+            ..CacheTelemetrySnapshot::default()
+        };
         Self {
             entries: HashMap::new(),
+            recency_nodes: Vec::new(),
+            recency_head: None,
+            recency_tail: None,
+            free_recency_nodes: Vec::new(),
+            byte_cap,
             telemetry,
         }
     }
 
-    /// TS: `get: <A>(key) => ...` (`geometryCacheStoreLive.ts:13-17`).
-    ///
-    /// Always records one lookup for `key.namespace` (TS: `getCalls`,
-    /// unconditional). When the entry is absent, also records one miss
-    /// directly (absence is knowable from the store alone, unlike
-    /// hit-vs-stale, which needs a namespace-specific validity check this
-    /// store has no knowledge of — see `record_hit`/`record_stale_detection`
-    /// below, which callers with that knowledge invoke explicitly).
-    pub fn get<A: Clone + 'static>(&mut self, key: &GeometryCacheKey) -> Option<A> {
+    /// Invokes `inspect` with a typed borrowed value without cloning it. The
+    /// callback cannot retain the borrow, allowing this store to update LRU
+    /// recency after inspection on the coordinator thread.
+    fn probe<A: 'static, R>(
+        &mut self,
+        key: &GeometryCacheKey,
+        inspect: impl FnOnce(Option<&A>) -> R,
+    ) -> R {
         let serialized = serialize_geometry_cache_key(key);
-        let found = self
+        let present = self
             .entries
             .get(&serialized)
-            .and_then(|boxed| boxed.downcast_ref::<A>())
-            .cloned();
+            .and_then(|entry| entry.value.downcast_ref::<A>());
+        let result = inspect(present);
         let counters = self.telemetry.namespace_mut(&key.namespace);
-        counters.lookups += 1;
-        if found.is_none() {
-            counters.misses += 1;
+        counters.lookups = counters.lookups.saturating_add(1);
+        if present.is_some() {
+            self.touch(&serialized);
+        } else {
+            counters.misses = counters.misses.saturating_add(1);
         }
-        found
+        result
     }
 
-    /// TS: `set: <A>(key, value) => ...` (`geometryCacheStoreLive.ts:18-21`).
-    /// Records one store (TS: `setCalls`) and increments the namespace's
-    /// live entry count when this key was not already present.
-    pub fn set<A: 'static>(&mut self, key: &GeometryCacheKey, value: A) {
+    /// Checks a typed cached value without cloning it. Invalid values are
+    /// removed immediately so a later resolver observes a true miss.
+    pub fn probe_valid<A: 'static>(
+        &mut self,
+        key: &GeometryCacheKey,
+        is_valid: impl FnOnce(&A) -> bool,
+    ) -> GeometryCacheProbe {
+        match self.probe(key, |value: Option<&A>| value.map(is_valid)) {
+            Some(true) => GeometryCacheProbe::HotValid,
+            Some(false) => {
+                self.record_stale_detection(&key.namespace);
+                self.remove(key);
+                GeometryCacheProbe::StaleRemoved
+            }
+            None => GeometryCacheProbe::Cold,
+        }
+    }
+
+    /// The real resolvers use this cloning lookup only when they need the
+    /// candidate value. Prepasses use [`Self::probe_valid`] instead.
+    pub fn get<A: Clone + 'static>(&mut self, key: &GeometryCacheKey) -> Option<A> {
+        let value = self.probe(key, |cached: Option<&A>| cached.cloned());
+        if value.is_some() {
+            let counters = self.telemetry.namespace_mut(&key.namespace);
+            counters.cloning_hits = counters.cloning_hits.saturating_add(1);
+        }
+        value
+    }
+
+    /// Publishes a value with a caller-supplied conservative retained-value
+    /// charge. The store adds serialized-key capacity and metadata/container
+    /// overhead, then deterministically evicts least-recent entries as needed.
+    /// A single oversized value is rejected without changing unrelated entries.
+    pub fn set<A: 'static>(&mut self, key: &GeometryCacheKey, value: A, value_charge: u64) -> bool {
         let serialized = serialize_geometry_cache_key(key);
-        let is_new = !self.entries.contains_key(&serialized);
-        self.entries.insert(serialized, Box::new(value));
-        let counters = self.telemetry.namespace_mut(&key.namespace);
-        counters.stores += 1;
-        if is_new {
-            counters.entries += 1;
+        let entry_charge =
+            conservative_entry_charge(&serialized, key.namespace.capacity(), value_charge);
+        if entry_charge > self.byte_cap {
+            self.record_oversized_rejection(&key.namespace);
+            return false;
         }
+
+        let replacing = self.entries.contains_key(&serialized);
+        let previous = self.entries.remove(&serialized);
+        if let Some(previous) = previous {
+            self.remove_recency_node(previous.recency_node);
+            self.subtract_current(&previous.namespace, previous.charge_bytes, false);
+        }
+
+        let mut evicted_any = false;
+        while self.telemetry.current_bytes.saturating_add(entry_charge) > self.byte_cap {
+            let Some(oldest) = self.recency_head else {
+                break;
+            };
+            let oldest_key = self
+                .recency_nodes
+                .get(oldest)
+                .and_then(Option::as_ref)
+                .expect("the LRU head must reference a live node")
+                .key
+                .clone();
+            self.remove_recency_node(oldest);
+            let Some(evicted) = self.entries.remove(&oldest_key) else {
+                continue;
+            };
+            self.subtract_current(&evicted.namespace, evicted.charge_bytes, true);
+            evicted_any = true;
+        }
+
+        let namespace = key.namespace.clone();
+        let recency_node = self.insert_recency_node(serialized.clone());
+        self.entries.insert(
+            serialized,
+            GeometryCacheEntry {
+                value: Box::new(value),
+                charge_bytes: entry_charge,
+                namespace: namespace.clone(),
+                recency_node,
+            },
+        );
+        self.add_current(&namespace, entry_charge);
+        {
+            let counters = self.telemetry.namespace_mut(&namespace);
+            counters.stores = counters.stores.saturating_add(1);
+            if replacing {
+                counters.replacements = counters.replacements.saturating_add(1);
+            } else {
+                counters.entries = counters.entries.saturating_add(1);
+            }
+            counters.admissions = counters.admissions.saturating_add(1);
+        }
+        if replacing {
+            self.telemetry.replacements = self.telemetry.replacements.saturating_add(1);
+        }
+        self.telemetry.admissions = self.telemetry.admissions.saturating_add(1);
+        if evicted_any {
+            self.compact_retained_storage();
+        }
+        true
     }
 
-    /// TS: `remove: (key) => ...` (`geometryCacheStoreLive.ts:22-25`).
-    ///
-    /// Per every namespace's exact access sequence (design doc §1.1–§1.3),
-    /// `remove` is only ever called immediately after a stale-cache
-    /// detection, strictly before recompute — this store therefore records
-    /// the removal directly as a stale removal (TS: `removeCalls`; design
-    /// doc §6: "equals `stale_detections` in a correct implementation").
+    /// Removes a stale value before recomputation and releases its complete
+    /// charged record. The stale counter remains paired with the caller's
+    /// explicit stale-detection record.
     pub fn remove(&mut self, key: &GeometryCacheKey) {
         let serialized = serialize_geometry_cache_key(key);
-        let existed = self.entries.remove(&serialized).is_some();
+        let removed = self.entries.remove(&serialized);
         let counters = self.telemetry.namespace_mut(&key.namespace);
-        counters.stale_removals += 1;
-        if existed {
+        counters.stale_removals = counters.stale_removals.saturating_add(1);
+        if let Some(removed) = removed {
+            self.remove_recency_node(removed.recency_node);
+            self.subtract_current(&removed.namespace, removed.charge_bytes, false);
+            let counters = self.telemetry.namespace_mut(&removed.namespace);
             counters.entries = counters.entries.saturating_sub(1);
+            self.compact_retained_storage();
         }
     }
 
-    /// TS: `clear: () => cache.clear()` (`geometryCacheStoreLive.ts:26-28`).
-    /// Not called anywhere in production TS (see this struct's doc comment);
-    /// present only for interface parity. Does not touch telemetry, mirroring
-    /// TS (`clear` has no `NfpIfpTelemetry` call).
-    pub fn clear(&mut self) {
+    /// Releases all retained allocation capacity after producing the diagnostic
+    /// snapshot. Counters and peak values remain available for that snapshot.
+    pub fn clear_and_shrink(&mut self) {
         self.entries.clear();
+        self.entries.shrink_to_fit();
+        self.recency_nodes.clear();
+        self.recency_nodes.shrink_to_fit();
+        self.recency_head = None;
+        self.recency_tail = None;
+        self.free_recency_nodes.clear();
+        self.free_recency_nodes.shrink_to_fit();
+        self.telemetry.current_bytes = 0;
         for counters in self.telemetry.namespaces.values_mut() {
             counters.entries = 0;
+            counters.approx_bytes = 0;
         }
     }
 
-    /// Records a lookup resolving to a valid, immediately-usable cached
-    /// value — the "hit" half of TS's conflated `getPresent`, split out per
-    /// `cache-concurrency-design.md` §6 (see `telemetry.rs`'s module doc).
-    /// Callers invoke this only after running the namespace-specific
-    /// `isValidCached*` check this store has no visibility into.
+    pub fn clear(&mut self) {
+        self.clear_and_shrink();
+    }
+
     pub fn record_hit(&mut self, namespace: &str) {
         let counters = self.telemetry.namespace_mut(namespace);
-        counters.hits += 1;
-        counters.backing_cache_hits += 1;
+        counters.hits = counters.hits.saturating_add(1);
+        counters.backing_cache_hits = counters.backing_cache_hits.saturating_add(1);
     }
 
-    /// Records a lookup whose cached value failed namespace-specific
-    /// re-validation — the "stale" half of TS's conflated `getPresent`. Per
-    /// every namespace's exact access sequence, a stale detection is always
-    /// immediately followed by a paired `remove` call, so this method takes
-    /// no compensating action itself (see [`Self::remove`]).
     pub fn record_stale_detection(&mut self, namespace: &str) {
-        self.telemetry.namespace_mut(namespace).stale_detections += 1;
+        let counters = self.telemetry.namespace_mut(namespace);
+        counters.stale_detections = counters.stale_detections.saturating_add(1);
     }
 
-    /// Read-only telemetry snapshot for this store, aggregated across every
-    /// action performed on it so far this job.
     pub fn telemetry(&self) -> &CacheTelemetrySnapshot {
         &self.telemetry
     }
+
+    fn touch(&mut self, serialized: &str) {
+        let Some(recency_node) = self.entries.get(serialized).map(|entry| entry.recency_node)
+        else {
+            return;
+        };
+        if self.recency_tail == Some(recency_node) {
+            return;
+        }
+        self.detach_recency_node(recency_node);
+        self.append_recency_node(recency_node);
+    }
+
+    fn insert_recency_node(&mut self, key: String) -> usize {
+        let node = RecencyNode {
+            key,
+            previous: None,
+            next: None,
+        };
+        let recency_node = match self.free_recency_nodes.pop() {
+            Some(index) => {
+                self.recency_nodes[index] = Some(node);
+                index
+            }
+            None => {
+                self.recency_nodes.push(Some(node));
+                self.recency_nodes.len() - 1
+            }
+        };
+        self.append_recency_node(recency_node);
+        recency_node
+    }
+
+    fn remove_recency_node(&mut self, recency_node: usize) {
+        self.detach_recency_node(recency_node);
+        self.recency_nodes[recency_node] = None;
+        self.free_recency_nodes.push(recency_node);
+    }
+
+    fn detach_recency_node(&mut self, recency_node: usize) {
+        let (previous, next) = {
+            let node = self.recency_nodes[recency_node]
+                .as_ref()
+                .expect("every entry must retain one live LRU node");
+            (node.previous, node.next)
+        };
+
+        if let Some(previous) = previous {
+            self.recency_nodes[previous]
+                .as_mut()
+                .expect("LRU predecessor must be live")
+                .next = next;
+        } else {
+            self.recency_head = next;
+        }
+        if let Some(next) = next {
+            self.recency_nodes[next]
+                .as_mut()
+                .expect("LRU successor must be live")
+                .previous = previous;
+        } else {
+            self.recency_tail = previous;
+        }
+        let node = self.recency_nodes[recency_node]
+            .as_mut()
+            .expect("every entry must retain one live LRU node");
+        node.previous = None;
+        node.next = None;
+    }
+
+    fn append_recency_node(&mut self, recency_node: usize) {
+        let previous_tail = self.recency_tail;
+        {
+            let node = self.recency_nodes[recency_node]
+                .as_mut()
+                .expect("every entry must retain one live LRU node");
+            node.previous = previous_tail;
+            node.next = None;
+        }
+        if let Some(previous_tail) = previous_tail {
+            self.recency_nodes[previous_tail]
+                .as_mut()
+                .expect("LRU tail must be live")
+                .next = Some(recency_node);
+        } else {
+            self.recency_head = Some(recency_node);
+        }
+        self.recency_tail = Some(recency_node);
+    }
+
+    fn compact_retained_storage(&mut self) {
+        let mut ordered_keys = Vec::with_capacity(self.entries.len());
+        let mut cursor = self.recency_head;
+        while let Some(index) = cursor {
+            let node = self.recency_nodes[index]
+                .as_ref()
+                .expect("the LRU chain must contain only live nodes");
+            ordered_keys.push(node.key.clone());
+            cursor = node.next;
+        }
+
+        let entry_count = ordered_keys.len();
+        let mut compacted = Vec::with_capacity(entry_count);
+        for (index, key) in ordered_keys.into_iter().enumerate() {
+            let previous = index.checked_sub(1);
+            let next = (index + 1 < entry_count).then_some(index + 1);
+            self.entries
+                .get_mut(&key)
+                .expect("every LRU key must identify a live cache entry")
+                .recency_node = index;
+            compacted.push(Some(RecencyNode {
+                key,
+                previous,
+                next,
+            }));
+        }
+        self.recency_nodes = compacted;
+        self.recency_nodes.shrink_to_fit();
+        self.recency_head = (entry_count > 0).then_some(0);
+        self.recency_tail = entry_count.checked_sub(1);
+        self.free_recency_nodes.clear();
+        self.free_recency_nodes.shrink_to_fit();
+        self.entries.shrink_to_fit();
+    }
+
+    fn add_current(&mut self, namespace: &str, charge_bytes: u64) {
+        self.telemetry.current_bytes = self.telemetry.current_bytes.saturating_add(charge_bytes);
+        self.telemetry.peak_bytes = self.telemetry.peak_bytes.max(self.telemetry.current_bytes);
+        let counters = self.telemetry.namespace_mut(namespace);
+        counters.cap_bytes = self.byte_cap;
+        counters.approx_bytes = counters.approx_bytes.saturating_add(charge_bytes);
+        counters.peak_bytes = counters.peak_bytes.max(counters.approx_bytes);
+    }
+
+    fn subtract_current(&mut self, namespace: &str, charge_bytes: u64, evicted: bool) {
+        self.telemetry.current_bytes = self.telemetry.current_bytes.saturating_sub(charge_bytes);
+        let counters = self.telemetry.namespace_mut(namespace);
+        counters.approx_bytes = counters.approx_bytes.saturating_sub(charge_bytes);
+        if evicted {
+            counters.entries = counters.entries.saturating_sub(1);
+            counters.evictions = counters.evictions.saturating_add(1);
+            counters.evicted_bytes = counters.evicted_bytes.saturating_add(charge_bytes);
+            self.telemetry.evictions = self.telemetry.evictions.saturating_add(1);
+            self.telemetry.evicted_bytes =
+                self.telemetry.evicted_bytes.saturating_add(charge_bytes);
+        }
+    }
+
+    fn record_oversized_rejection(&mut self, namespace: &str) {
+        let counters = self.telemetry.namespace_mut(namespace);
+        counters.cap_bytes = self.byte_cap;
+        counters.oversized_rejections = counters.oversized_rejections.saturating_add(1);
+        self.telemetry.oversized_rejections = self.telemetry.oversized_rejections.saturating_add(1);
+    }
+}
+
+fn conservative_entry_charge(
+    serialized_key: &String,
+    namespace_capacity: usize,
+    retained_value_charge: u64,
+) -> u64 {
+    let key_capacity = u64::try_from(serialized_key.capacity()).unwrap_or(u64::MAX);
+    let namespace_capacity = u64::try_from(namespace_capacity).unwrap_or(u64::MAX);
+    retained_value_charge
+        .checked_add(key_capacity)
+        .and_then(|charge| charge.checked_add(key_capacity))
+        .and_then(|charge| charge.checked_add(namespace_capacity))
+        .and_then(|charge| charge.checked_add(HASHMAP_ENTRY_OVERHEAD_BYTES))
+        .and_then(|charge| charge.checked_add(std::mem::size_of::<GeometryCacheEntry>() as u64))
+        .and_then(|charge| charge.checked_add(std::mem::size_of::<RecencyNode>() as u64))
+        .unwrap_or(u64::MAX)
+}
+
+/// Conservative retained-value charge for a relative NFP polygon.
+pub fn charge_nfp_polygon(value: &crate::domain::IrregularPolygon) -> u64 {
+    charge_value_with_vec_capacity::<crate::domain::IrregularPolygon, crate::domain::IrregularPoint>(
+        value.points.capacity(),
+    )
+}
+
+/// Conservative retained-value charge for a cached rectangular IFP bounds value.
+pub fn charge_ifp_bounds(value: &crate::domain::IrregularIfpBounds) -> u64 {
+    charge_sum(&[
+        std::mem::size_of::<crate::domain::IrregularIfpBounds>() as u64,
+        string_owned_capacity_charge(&value.sheet.label),
+        string_owned_capacity_charge(&value.moving_piece_id.0),
+    ])
+}
+
+/// Conservative retained-value charge for transformed collision geometry.
+pub fn charge_transformed_collision_geometry<T>(value: &T) -> u64
+where
+    T: crate::caches::TransformedCollisionGeometryLike,
+{
+    charge_sum(&[
+        std::mem::size_of::<T>() as u64,
+        string_owned_capacity_charge(&value.source_piece_id().0),
+        capacity_charge::<crate::domain::IrregularPoint>(value.polygon().points.capacity()),
+    ])
+}
+
+fn charge_value_with_vec_capacity<T, U>(capacity: usize) -> u64 {
+    charge_sum(&[
+        std::mem::size_of::<T>() as u64,
+        capacity_charge::<U>(capacity),
+    ])
+}
+
+pub(crate) fn capacity_charge<T>(capacity: usize) -> u64 {
+    u64::try_from(capacity)
+        .ok()
+        .and_then(|capacity| capacity.checked_mul(std::mem::size_of::<T>() as u64))
+        .unwrap_or(u64::MAX)
+}
+
+pub(crate) fn string_owned_capacity_charge(value: &String) -> u64 {
+    u64::try_from(value.capacity()).unwrap_or(u64::MAX)
+}
+
+fn charge_sum(parts: &[u64]) -> u64 {
+    parts
+        .iter()
+        .try_fold(0u64, |total, part| total.checked_add(*part))
+        .unwrap_or(u64::MAX)
 }
 
 #[cfg(test)]
@@ -375,9 +727,14 @@ mod tests {
     // -----------------------------------------------------------------
 
     #[test]
-    fn new_records_exactly_one_cache_instance() {
+    fn new_records_exactly_one_cache_instance_and_the_documented_byte_cap() {
         let store = GeometryCacheStore::new();
         assert_eq!(store.telemetry().cache_instances, 1);
+        assert_eq!(
+            store.telemetry().cap_bytes,
+            56 * 1024 * 1024,
+            "the job-local geometry cache budget remains finite"
+        );
     }
 
     #[test]
@@ -396,7 +753,7 @@ mod tests {
     fn set_then_get_round_trips_the_value_and_records_a_store_and_new_entry() {
         let mut store = GeometryCacheStore::new();
         let cache_key = key("sheet-ifp-v1", &["a"]);
-        store.set(&cache_key, 42u32);
+        assert!(store.set(&cache_key, 42u32, 0));
         let counters = store.telemetry().namespace("sheet-ifp-v1");
         assert_eq!(counters.stores, 1);
         assert_eq!(counters.entries, 1);
@@ -424,7 +781,7 @@ mod tests {
     fn remove_records_a_stale_removal_and_decrements_entries() {
         let mut store = GeometryCacheStore::new();
         let cache_key = key("transform-collision-v1", &["a"]);
-        store.set(&cache_key, 7u32);
+        assert!(store.set(&cache_key, 7u32, 0));
         store.record_stale_detection("transform-collision-v1");
         store.remove(&cache_key);
 
@@ -441,7 +798,7 @@ mod tests {
     fn downcast_mismatch_is_reported_as_a_miss_not_a_panic() {
         let mut store = GeometryCacheStore::new();
         let cache_key = key("ns", &["a"]);
-        store.set(&cache_key, 1u32);
+        assert!(store.set(&cache_key, 1u32, 0));
         let result: Option<String> = store.get(&cache_key);
         assert_eq!(result, None);
     }
@@ -450,14 +807,192 @@ mod tests {
     fn clear_empties_the_store_and_zeroes_entry_counts_but_not_other_counters() {
         let mut store = GeometryCacheStore::new();
         let cache_key = key("ns", &["a"]);
-        store.set(&cache_key, 1u32);
+        assert!(store.set(&cache_key, 1u32, 0));
+        let peak_bytes = store.telemetry().peak_bytes;
         store.clear();
         let result: Option<u32> = store.get(&cache_key);
         assert_eq!(result, None);
         let counters = store.telemetry().namespace("ns");
+        assert_eq!(store.telemetry().current_bytes, 0);
+        assert_eq!(store.telemetry().peak_bytes, peak_bytes);
         assert_eq!(counters.entries, 0);
+        assert_eq!(counters.approx_bytes, 0);
         // clear() does not touch setCalls/getCalls-equivalent counters,
         // matching TS's clear() having no NfpIfpTelemetry call at all.
         assert_eq!(counters.stores, 1);
+    }
+
+    #[test]
+    fn valid_probe_borrows_a_hot_value_without_cloning_and_stale_probe_removes_it() {
+        use std::sync::{
+            atomic::{AtomicUsize, Ordering},
+            Arc,
+        };
+
+        #[derive(Debug)]
+        struct CloneCounted(Arc<AtomicUsize>);
+
+        impl Clone for CloneCounted {
+            fn clone(&self) -> Self {
+                self.0.fetch_add(1, Ordering::SeqCst);
+                Self(Arc::clone(&self.0))
+            }
+        }
+
+        let clones = Arc::new(AtomicUsize::new(0));
+        let cache_key = key("nfp", &["probe"]);
+        let mut store = GeometryCacheStore::new();
+        assert!(store.set(&cache_key, CloneCounted(Arc::clone(&clones)), 0));
+
+        assert_eq!(
+            store.probe_valid::<CloneCounted>(&cache_key, |_| true),
+            GeometryCacheProbe::HotValid
+        );
+        assert_eq!(clones.load(Ordering::SeqCst), 0);
+        assert!(store.get::<CloneCounted>(&cache_key).is_some());
+        assert_eq!(clones.load(Ordering::SeqCst), 1);
+
+        assert_eq!(
+            store.probe_valid::<CloneCounted>(&cache_key, |_| false),
+            GeometryCacheProbe::StaleRemoved
+        );
+        assert!(store.get::<CloneCounted>(&cache_key).is_none());
+        let counters = store.telemetry().namespace("nfp");
+        assert_eq!(counters.stale_detections, 1);
+        assert_eq!(counters.stale_removals, 1);
+    }
+
+    #[test]
+    fn entry_charge_includes_the_retained_namespace_copy() {
+        let cache_key = key("namespace-with-owned-capacity", &["part"]);
+        let serialized = serialize_geometry_cache_key(&cache_key);
+        let expected = (serialized.capacity() as u64)
+            .saturating_mul(2)
+            .saturating_add(cache_key.namespace.capacity() as u64)
+            .saturating_add(HASHMAP_ENTRY_OVERHEAD_BYTES)
+            .saturating_add(std::mem::size_of::<GeometryCacheEntry>() as u64)
+            .saturating_add(std::mem::size_of::<RecencyNode>() as u64);
+
+        assert_eq!(
+            conservative_entry_charge(&serialized, cache_key.namespace.capacity(), 0),
+            expected
+        );
+    }
+
+    #[test]
+    fn replacement_updates_bytes_and_counters_without_counting_an_eviction() {
+        let cache_key = key("nfp", &["replace"]);
+        let serialized = serialize_geometry_cache_key(&cache_key);
+        let large_charge =
+            conservative_entry_charge(&serialized, cache_key.namespace.capacity(), 80);
+        let mut store = GeometryCacheStore::new_with_byte_cap_for_test(large_charge);
+
+        assert!(store.set(&cache_key, 1u32, 20));
+        assert!(store.set(&cache_key, 2u32, 80));
+
+        assert_eq!(store.get::<u32>(&cache_key), Some(2));
+        assert_eq!(store.telemetry().current_bytes, large_charge);
+        assert_eq!(store.telemetry().peak_bytes, large_charge);
+        assert_eq!(store.telemetry().replacements, 1);
+        assert_eq!(store.telemetry().evictions, 0);
+        let counters = store.telemetry().namespace("nfp");
+        assert_eq!(counters.entries, 1);
+        assert_eq!(counters.approx_bytes, large_charge);
+        assert_eq!(counters.replacements, 1);
+        assert_eq!(counters.admissions, 2);
+    }
+
+    #[test]
+    fn charged_lru_evicts_the_least_recently_used_entry_at_a_tiny_cap() {
+        let first = key("nfp", &["one"]);
+        let second = key("nfp", &["two"]);
+        let third = key("nfp", &["tri"]);
+        let entry_charge = conservative_entry_charge(
+            &serialize_geometry_cache_key(&first),
+            first.namespace.capacity(),
+            40,
+        );
+        let mut store = GeometryCacheStore::new_with_byte_cap_for_test(entry_charge * 2);
+
+        assert!(store.set(&first, 1u32, 40));
+        assert!(store.set(&second, 2u32, 40));
+        assert_eq!(store.get::<u32>(&first), Some(1));
+        assert!(store.set(&third, 3u32, 40));
+
+        assert_eq!(store.get::<u32>(&second), None);
+        assert_eq!(store.get::<u32>(&first), Some(1));
+        assert_eq!(store.get::<u32>(&third), Some(3));
+        let counters = store.telemetry().namespace("nfp");
+        assert_eq!(counters.cap_bytes, entry_charge * 2);
+        assert_eq!(counters.approx_bytes, entry_charge * 2);
+        assert_eq!(counters.peak_bytes, entry_charge * 2);
+        assert_eq!(counters.evictions, 1);
+        assert_eq!(counters.evicted_bytes, entry_charge);
+        assert_eq!(counters.admissions, 3);
+        assert_eq!(
+            store.recency_nodes.iter().flatten().count(),
+            store.entries.len(),
+            "every admitted entry must retain exactly one LRU node"
+        );
+    }
+
+    #[test]
+    fn repeated_stale_removal_compacts_retained_recency_and_hash_capacity() {
+        let mut store = GeometryCacheStore::new_with_byte_cap_for_test(20_000);
+        let keys: Vec<_> = (0..64)
+            .map(|index| key("nfp", &[&format!("stale-{index}")]))
+            .collect();
+        for (index, cache_key) in keys.iter().enumerate() {
+            assert!(store.set(cache_key, index, 0));
+        }
+        let entries_capacity_before = store.entries.capacity();
+
+        for cache_key in keys.iter().take(44) {
+            store.record_stale_detection("nfp");
+            store.remove(cache_key);
+        }
+
+        assert_eq!(store.recency_nodes.len(), store.entries.len());
+        assert!(store.free_recency_nodes.is_empty());
+        assert!(store.entries.capacity() < entries_capacity_before);
+    }
+
+    #[test]
+    fn multi_eviction_compacts_retained_recency_and_hash_capacity() {
+        let mut store = GeometryCacheStore::new_with_byte_cap_for_test(20_000);
+        for index in 0..64 {
+            let cache_key = key("nfp", &[&format!("small-{index}")]);
+            assert!(store.set(&cache_key, index, 0));
+        }
+        let entries_capacity_before = store.entries.capacity();
+        let large = key("nfp", &["large"]);
+
+        assert!(store.set(&large, 999u32, 15_000));
+        assert!(store.telemetry().evictions > 1);
+        assert_eq!(store.recency_nodes.len(), store.entries.len());
+        assert!(store.free_recency_nodes.is_empty());
+        assert!(store.entries.capacity() < entries_capacity_before);
+    }
+
+    #[test]
+    fn charged_lru_rejects_an_oversized_entry_without_evicting_a_hot_entry() {
+        let retained = key("nfp", &["retained"]);
+        let oversized = key("nfp", &["oversized"]);
+        let retained_charge = conservative_entry_charge(
+            &serialize_geometry_cache_key(&retained),
+            retained.namespace.capacity(),
+            60,
+        );
+        let mut store = GeometryCacheStore::new_with_byte_cap_for_test(retained_charge);
+        assert!(store.set(&retained, 7u32, 60));
+
+        assert!(!store.set(&oversized, 9u32, retained_charge));
+        assert_eq!(store.get::<u32>(&retained), Some(7));
+        assert_eq!(store.get::<u32>(&oversized), None);
+        let counters = store.telemetry().namespace("nfp");
+        assert_eq!(counters.entries, 1);
+        assert_eq!(counters.approx_bytes, retained_charge);
+        assert_eq!(counters.oversized_rejections, 1);
+        assert_eq!(counters.evictions, 0);
     }
 }

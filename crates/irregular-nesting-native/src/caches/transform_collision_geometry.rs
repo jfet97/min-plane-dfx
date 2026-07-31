@@ -61,7 +61,7 @@ use super::geometry_cache_identity::{
     make_transform_collision_geometry_cache_key, same_transform,
     TransformCollisionGeometryKeyInput, TRANSFORM_GEOMETRY_CACHE_NAMESPACE,
 };
-use super::store::{GeometryCacheKey, GeometryCacheStore};
+use super::store::{charge_transformed_collision_geometry, GeometryCacheKey, GeometryCacheStore};
 
 /// TS: `transformCollisionGeometryCore.ts:18-25`
 /// `CoreTransformCollisionSuccess<TPieceId, TTransform>`.
@@ -165,7 +165,11 @@ where
 
     let computed = compute_transformed_collision_geometry(input)?;
     let value = materialize(computed);
-    cache.set(&key, value.clone());
+    let _admitted = cache.set(
+        &key,
+        value.clone(),
+        charge_transformed_collision_geometry(&value),
+    );
     Ok(TransformCollisionSuccess { value, key })
 }
 
@@ -460,7 +464,8 @@ mod tests {
             polygon: square(4.0),
             bounds: IrregularBounds::new(0.0, 0.0, 4.0, 4.0),
         };
-        cache.set(&key, stale_value);
+        let stale_charge = charge_transformed_collision_geometry(&stale_value);
+        assert!(cache.set(&key, stale_value, stale_charge));
 
         let mut materialize_calls = 0u32;
         let result =

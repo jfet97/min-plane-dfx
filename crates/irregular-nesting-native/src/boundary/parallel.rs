@@ -328,12 +328,12 @@ mod tests {
     }
 
     #[test]
-    fn sequential_jobs_leave_no_pool_threads_running_after_their_guard_drops() {
-        // Migration-prompt §14.4's "prove clean shutdown and no pool leak
-        // across repeated jobs": construct and tear down N jobs
-        // sequentially: after each guard drops (and the `JobPool`/`Arc` is
-        // dropped alongside it), `with_job_pool` must fall back to inline
-        // execution again -- i.e. nothing is still installed.
+    fn sequential_jobs_clear_the_installed_pool_slot_after_each_guard_drops() {
+        /*
+        Construct and tear down jobs sequentially. After each guard drops,
+        `with_job_pool` must fall back to inline execution because the
+        coordinator thread-local slot no longer retains the pool.
+        */
         for _ in 0..5 {
             let job_pool = JobPool::new(Some(2));
             {

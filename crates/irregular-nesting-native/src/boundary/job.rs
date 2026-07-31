@@ -287,19 +287,19 @@ impl Task for RunIrregularJobTask {
             "runIrregularJob",
             std::panic::AssertUnwindSafe(|| {
                 let mut cancellation_reason = || cancellation_lease.reason();
-                let (envelope, geometry_cache, thread_count_used) = run_job_from_json(
-                    &request_json,
-                    &mut sink,
-                    Some(&mut cancellation_reason),
-                    None,
-                );
+                let (envelope, cache_telemetry, free_material_cache_telemetry, thread_count_used) =
+                    run_job_from_json(
+                        &request_json,
+                        &mut sink,
+                        Some(&mut cancellation_reason),
+                        None,
+                    );
                 record_last_job_diagnostics(JobDiagnostics {
                     backend_version: env!("CARGO_PKG_VERSION").to_string(),
                     thread_count_used: thread_count_used as u32,
                     wall_clock_ms: started_at.elapsed().as_secs_f64() * 1000.0,
-                    cache_telemetry: geometry_cache
-                        .map(|cache| cache.telemetry().clone())
-                        .unwrap_or_default(),
+                    cache_telemetry,
+                    free_material_cache_telemetry,
                 });
                 Ok(envelope)
             }),

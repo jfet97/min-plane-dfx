@@ -15,8 +15,8 @@
 //! owned by `geometry::convex` (imported, never re-implemented).
 
 use crate::caches::{
-    make_inner_fit_bounds_cache_key, GeometryCacheKey, GeometryCacheStore, InnerFitBoundsKeyInput,
-    IFP_GEOMETRY_CACHE_NAMESPACE,
+    charge_ifp_bounds, make_inner_fit_bounds_cache_key, GeometryCacheKey, GeometryCacheStore,
+    InnerFitBoundsKeyInput, IFP_GEOMETRY_CACHE_NAMESPACE,
 };
 use crate::domain::{IrregularBounds, IrregularIfpBounds};
 use crate::geometry::convex::{
@@ -91,7 +91,7 @@ pub fn resolve_ifp_bounds(
     }
 
     let computed = compute_ifp_bounds(input)?;
-    cache.set(&key, computed.clone());
+    let _admitted = cache.set(&key, computed.clone(), charge_ifp_bounds(&computed));
     Ok(CoreIfpBoundsSuccess {
         value: computed,
         key,
@@ -296,14 +296,12 @@ mod tests {
         let key = make_inner_fit_bounds_cache_key(&input);
         // Publish a stale value under the correct key (as if the moving
         // polygon had previously been a different shape).
-        cache.set(
-            &key,
-            IrregularIfpBounds {
-                sheet: sheet_spec.clone(),
-                moving_piece_id: PieceId::new("moving-piece"),
-                bounds: IrregularBounds::new(-100.0, -100.0, 100.0, 100.0),
-            },
-        );
+        let stale_value = IrregularIfpBounds {
+            sheet: sheet_spec.clone(),
+            moving_piece_id: PieceId::new("moving-piece"),
+            bounds: IrregularBounds::new(-100.0, -100.0, 100.0, 100.0),
+        };
+        assert!(cache.set(&key, stale_value.clone(), charge_ifp_bounds(&stale_value)));
 
         let result = resolve_ifp_bounds(&input, &mut cache).expect("recompute succeeds");
         assert_eq!(

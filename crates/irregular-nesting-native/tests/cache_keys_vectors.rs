@@ -452,7 +452,7 @@ fn geometry_cache_store_scenarios_match_ts_production_oracle_hit_miss_and_clear_
                 "set" => {
                     let (key, _) = decode_encoded_key(&result["key"]);
                     let value = result["value"].clone();
-                    store.set(&key, value);
+                    assert!(store.set(&key, value, 0));
                 }
                 "remove" => {
                     let (key, _) = decode_encoded_key(&result["key"]);

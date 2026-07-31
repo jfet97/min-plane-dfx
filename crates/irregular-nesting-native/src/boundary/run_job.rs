@@ -47,7 +47,7 @@
 //! `"legacy-portfolio-unsupported"` envelope remains defense-in-depth for
 //! direct boundary calls that bypass worker preflight.
 
-use crate::caches::GeometryCacheStore;
+use crate::caches::{CacheTelemetrySnapshot, GeometryCacheStore};
 use crate::nfp_ifp::NfpIfpAbortReason;
 use crate::result::coordinator::{compute_irregular_nesting, ComputeIrregularNestingOptions};
 use crate::result::progress::IrregularComputeEventSink;
@@ -72,12 +72,13 @@ pub fn decode_and_route(request_json: &str) -> Result<PreparedRequest, BoundaryE
 
 /// The single entry point `boundary::job::RunIrregularJobTask::compute` calls.
 /// Always returns a JSON envelope string (see this module's top doc); the
-/// second tuple element is `None` only when decoding/routing failed before a
-/// job-local `GeometryCacheStore` was ever constructed (nothing to report
-/// cache telemetry for). The third element is the Rayon thread count this
-/// job's job-owned pool actually resolved to (`boundary::parallel`,
-/// diagnostics-only per that module's doc); `1` when decoding/routing failed
-/// before a pool was ever constructed.
+/// second tuple element is the post-cleanup geometry-cache telemetry snapshot.
+/// Decoding and routing failures return the default zero-usage snapshot because
+/// no job-local cache was constructed. The third element is the post-cleanup
+/// free-material cache telemetry snapshot. The fourth element is the Rayon
+/// thread count this job's job-owned pool actually resolved to
+/// (`boundary::parallel`, diagnostics-only per that module's doc); `1` when
+/// decoding or routing failed before a pool was constructed.
 /// `thread_count_override`, when `Some`, wins over the
 /// `MIN_PLANE_IRREGULAR_NATIVE_THREADS` environment variable (see
 /// `boundary::parallel::resolve_thread_count`); the real N-API entry point
@@ -89,20 +90,58 @@ pub fn run_job_from_json<'a>(
     event_sink: &'a mut dyn IrregularComputeEventSink,
     cancellation_reason: Option<&'a mut (dyn FnMut() -> Option<NfpIfpAbortReason> + 'a)>,
     thread_count_override: Option<usize>,
-) -> (String, Option<GeometryCacheStore>, usize) {
+) -> (
+    String,
+    CacheTelemetrySnapshot,
+    crate::search::layout_scorer::FreeMaterialCacheTelemetry,
+    usize,
+) {
+    run_job_from_json_with_cache_caps_for_test(
+        request_json,
+        event_sink,
+        cancellation_reason,
+        thread_count_override,
+        None,
+    )
+}
+
+/// Per-call cache budgets for deterministic cache-pressure tests. Production
+/// callers omit this override and continue to use the finite defaults.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct CacheCapOverrides {
+    pub geometry_bytes: u64,
+    pub free_material_bytes: u64,
+}
+
+/// Non-semantic test seam that avoids process-global environment overrides.
+pub(crate) fn run_job_from_json_with_cache_caps_for_test<'a>(
+    request_json: &str,
+    event_sink: &'a mut dyn IrregularComputeEventSink,
+    cancellation_reason: Option<&'a mut (dyn FnMut() -> Option<NfpIfpAbortReason> + 'a)>,
+    thread_count_override: Option<usize>,
+    cache_caps: Option<CacheCapOverrides>,
+) -> (
+    String,
+    CacheTelemetrySnapshot,
+    crate::search::layout_scorer::FreeMaterialCacheTelemetry,
+    usize,
+) {
     match decode_and_route(request_json) {
-        Ok(prepared) => {
-            let (envelope, cache, thread_count) = run_job(
-                prepared,
-                event_sink,
-                cancellation_reason,
-                thread_count_override,
-            );
-            (envelope, Some(cache), thread_count)
-        }
+        Ok(prepared) => run_job_with_cache_caps(
+            prepared,
+            event_sink,
+            cancellation_reason,
+            thread_count_override,
+            cache_caps,
+        ),
         Err(error) => {
             let envelope = format!(r#"{{"ok":false,"error":{}}}"#, error.to_json());
-            (envelope, None, 1)
+            (
+                envelope,
+                CacheTelemetrySnapshot::default(),
+                crate::search::layout_scorer::FreeMaterialCacheTelemetry::default(),
+                1,
+            )
         }
     }
 }
@@ -112,10 +151,11 @@ pub fn run_job_from_json<'a>(
 /// from `Task::compute`'s libuv worker thread, never the JS thread). Always
 /// returns a JSON envelope string: `{"ok":true,"result":{...}}` or
 /// `{"ok":false,"error":{"category",...}}` -- see this module's top doc for
-/// why this is not a Rust `Result`. The third element is the resolved Rayon
-/// thread count (`boundary::parallel`), for the caller to forward into the
-/// diagnostics sidecar; see `run_job_from_json`'s doc for
-/// `thread_count_override`.
+/// why this is not a Rust `Result`. The second and third elements are
+/// post-cleanup geometry and free-material cache telemetry snapshots. The
+/// fourth element is the resolved Rayon thread count (`boundary::parallel`),
+/// for the caller to forward into the diagnostics sidecar; see
+/// `run_job_from_json`'s doc for `thread_count_override`.
 ///
 /// Constructs and installs this job's own `rayon::ThreadPool`
 /// (`boundary::parallel::JobPool`) for the duration of the
@@ -131,9 +171,39 @@ pub fn run_job<'a>(
     event_sink: &'a mut dyn IrregularComputeEventSink,
     cancellation_reason: Option<&'a mut (dyn FnMut() -> Option<NfpIfpAbortReason> + 'a)>,
     thread_count_override: Option<usize>,
-) -> (String, GeometryCacheStore, usize) {
-    let mut geometry_cache = GeometryCacheStore::new();
-    let mut free_material_cache = FreeMaterialCache::new();
+) -> (
+    String,
+    CacheTelemetrySnapshot,
+    crate::search::layout_scorer::FreeMaterialCacheTelemetry,
+    usize,
+) {
+    run_job_with_cache_caps(
+        prepared,
+        event_sink,
+        cancellation_reason,
+        thread_count_override,
+        None,
+    )
+}
+
+fn run_job_with_cache_caps<'a>(
+    prepared: PreparedRequest,
+    event_sink: &'a mut dyn IrregularComputeEventSink,
+    cancellation_reason: Option<&'a mut (dyn FnMut() -> Option<NfpIfpAbortReason> + 'a)>,
+    thread_count_override: Option<usize>,
+    cache_caps: Option<CacheCapOverrides>,
+) -> (
+    String,
+    CacheTelemetrySnapshot,
+    crate::search::layout_scorer::FreeMaterialCacheTelemetry,
+    usize,
+) {
+    let mut geometry_cache = cache_caps.map_or_else(GeometryCacheStore::new, |caps| {
+        GeometryCacheStore::with_byte_cap(caps.geometry_bytes)
+    });
+    let mut free_material_cache = cache_caps.map_or_else(FreeMaterialCache::new, |caps| {
+        FreeMaterialCache::with_byte_cap(caps.free_material_bytes)
+    });
     let mut options = ComputeIrregularNestingOptions {
         event_sink: Some(event_sink),
         cancellation_reason,
@@ -163,7 +233,16 @@ pub fn run_job<'a>(
             format!(r#"{{"ok":false,"error":{}}}"#, boundary_error.to_json())
         }
     };
-    (json, geometry_cache, thread_count)
+    free_material_cache.clear_and_shrink();
+    geometry_cache.clear_and_shrink();
+    let geometry_cache_telemetry = geometry_cache.telemetry().clone();
+    let free_material_telemetry = free_material_cache.telemetry().clone();
+    (
+        json,
+        geometry_cache_telemetry,
+        free_material_telemetry,
+        thread_count,
+    )
 }
 
 #[cfg(test)]
@@ -236,12 +315,49 @@ mod tests {
         })
     }
 
+    const TIMING_ONLY_FIELD_NAMES: &[&str] = &[
+        "runtimeMs",
+        "elapsedMs",
+        "preflightRuntimeMs",
+        "completeArchiveRuntimeMs",
+        "prefixTerminalizationMs",
+        "coldSearchMs",
+        "topologyMeasurementMs",
+        "contactMeasurementMs",
+        "serializedTraceBytes",
+        "peakRssDeltaBytes",
+    ];
+
+    fn normalize_timing_only_fields(value: &serde_json::Value) -> serde_json::Value {
+        match value {
+            serde_json::Value::Array(items) => {
+                serde_json::Value::Array(items.iter().map(normalize_timing_only_fields).collect())
+            }
+            serde_json::Value::Object(fields) => {
+                let mut normalized = serde_json::Map::with_capacity(fields.len());
+                for (key, field_value) in fields {
+                    if TIMING_ONLY_FIELD_NAMES.contains(&key.as_str()) {
+                        normalized.insert(
+                            key.clone(),
+                            serde_json::Value::String("<timing: present>".to_string()),
+                        );
+                    } else {
+                        normalized.insert(key.clone(), normalize_timing_only_fields(field_value));
+                    }
+                }
+                serde_json::Value::Object(normalized)
+            }
+            other => other.clone(),
+        }
+    }
+
     #[test]
     fn run_job_returns_an_ok_envelope_for_a_real_one_piece_request() {
         let json = mixed61_like_request_json().to_string();
         let prepared = decode_and_route(&json).expect("request decodes and routes");
         let mut sink = NullEventSink;
-        let (envelope, _cache, _threads) = run_job(prepared, &mut sink, None, None);
+        let (envelope, _cache, _free_material_telemetry, _threads) =
+            run_job(prepared, &mut sink, None, None);
         let parsed: serde_json::Value = serde_json::from_str(&envelope).expect("envelope is JSON");
         assert_eq!(parsed["ok"], serde_json::json!(true));
         assert!(parsed["result"]["placedCollisionGeometries"].is_array());
@@ -263,7 +379,15 @@ mod tests {
         json["sourcePieces"] = serde_json::json!([]);
         let prepared = decode_and_route(&json.to_string()).expect("request decodes and routes");
         let mut sink = NullEventSink;
-        let (envelope, _cache, _threads) = run_job(prepared, &mut sink, None, None);
+        let (envelope, cache_telemetry, free_material_telemetry, _threads) =
+            run_job(prepared, &mut sink, None, None);
+        assert_eq!(cache_telemetry.current_bytes, 0);
+        assert!(cache_telemetry
+            .namespaces
+            .values()
+            .all(|counters| counters.entries == 0 && counters.approx_bytes == 0));
+        assert_eq!(free_material_telemetry.entries, 0);
+        assert_eq!(free_material_telemetry.current_bytes, 0);
         let parsed: serde_json::Value = serde_json::from_str(&envelope).expect("envelope is JSON");
         assert_eq!(parsed["ok"], serde_json::json!(false));
         assert_eq!(
@@ -286,7 +410,7 @@ mod tests {
             let prepared = decode_and_route(&json).expect("request decodes and routes");
             let mut sink = NullEventSink;
             let mut cancellation_reason = || Some(reason);
-            let (envelope, _cache, _threads) =
+            let (envelope, _cache, _free_material_telemetry, _threads) =
                 run_job(prepared, &mut sink, Some(&mut cancellation_reason), None);
             let parsed: serde_json::Value =
                 serde_json::from_str(&envelope).expect("envelope is JSON");
@@ -308,8 +432,13 @@ mod tests {
     #[test]
     fn run_job_from_json_resolves_an_err_envelope_for_malformed_json() {
         let mut sink = NullEventSink;
-        let (envelope, cache, _threads) = run_job_from_json("not json", &mut sink, None, None);
-        assert!(cache.is_none());
+        let (envelope, cache_telemetry, free_material_telemetry, _threads) =
+            run_job_from_json("not json", &mut sink, None, None);
+        assert_eq!(cache_telemetry, CacheTelemetrySnapshot::default());
+        assert_eq!(
+            free_material_telemetry,
+            crate::search::layout_scorer::FreeMaterialCacheTelemetry::default()
+        );
         let parsed: serde_json::Value = serde_json::from_str(&envelope).expect("envelope is JSON");
         assert_eq!(parsed["ok"], serde_json::json!(false));
         assert_eq!(
@@ -324,9 +453,11 @@ mod tests {
         json["options"]["irregularSettings"]["optimizer"]["intrinsicSharedArchiveEnabled"] =
             serde_json::json!(false);
         let mut sink = NullEventSink;
-        let (envelope, cache, _threads) =
+        let (envelope, cache_telemetry, free_material_telemetry, _threads) =
             run_job_from_json(&json.to_string(), &mut sink, None, None);
-        assert!(cache.is_none());
+        assert_eq!(cache_telemetry, CacheTelemetrySnapshot::default());
+        assert_eq!(free_material_telemetry.entries, 0);
+        assert_eq!(free_material_telemetry.current_bytes, 0);
         let parsed: serde_json::Value = serde_json::from_str(&envelope).expect("envelope is JSON");
         assert_eq!(parsed["ok"], serde_json::json!(false));
         assert_eq!(
@@ -340,11 +471,195 @@ mod tests {
     }
 
     #[test]
-    fn run_job_from_json_resolves_an_ok_envelope_and_a_populated_cache_for_a_real_request() {
+    fn cache_caps_and_thread_counts_preserve_result_error_order_and_hash_bytes() {
+        let path = format!(
+            "{}/tests/vectors/thread-equality-mixed61-20-piece-request.json",
+            env!("CARGO_MANIFEST_DIR")
+        );
+        let request_json = std::fs::read_to_string(&path)
+            .unwrap_or_else(|error| panic!("failed to read fixture {path}: {error}"));
+        let cap_cases = [
+            ("default", None),
+            (
+                "effectively-unlimited",
+                Some(CacheCapOverrides {
+                    geometry_bytes: u64::MAX,
+                    free_material_bytes: u64::MAX,
+                }),
+            ),
+            (
+                "tight",
+                Some(CacheCapOverrides {
+                    geometry_bytes: 256 * 1024,
+                    free_material_bytes: 128 * 1024,
+                }),
+            ),
+            (
+                "zero",
+                Some(CacheCapOverrides {
+                    geometry_bytes: 0,
+                    free_material_bytes: 0,
+                }),
+            ),
+        ];
+        let mut baseline: Option<(String, Vec<u8>)> = None;
+        let mut tight_evictions = 0;
+        let mut zero_cap_rejections = 0;
+
+        for (cap_name, caps) in cap_cases {
+            for thread_count in [1, 2] {
+                let mut sink = NullEventSink;
+                let (envelope, geometry, free_material, resolved_threads) =
+                    run_job_from_json_with_cache_caps_for_test(
+                        &request_json,
+                        &mut sink,
+                        None,
+                        Some(thread_count),
+                        caps,
+                    );
+                assert_eq!(resolved_threads, thread_count);
+                let parsed: serde_json::Value =
+                    serde_json::from_str(&envelope).expect("envelope must be valid JSON");
+                assert_eq!(parsed["ok"], serde_json::json!(true));
+                let normalized = normalize_timing_only_fields(&parsed);
+                let bytes = serde_json::to_vec(&normalized)
+                    .expect("the timing-normalized envelope always serializes");
+                if let Some((baseline_name, baseline_bytes)) = &baseline {
+                    assert_eq!(
+                        &bytes, baseline_bytes,
+                        "cap={cap_name} threads={thread_count} changed result/error/order/hash bytes from {baseline_name}"
+                    );
+                } else {
+                    baseline = Some((format!("cap={cap_name} threads={thread_count}"), bytes));
+                }
+                if cap_name == "tight" {
+                    assert_eq!(geometry.oversized_rejections, 0);
+                    tight_evictions += geometry.evictions + free_material.evictions;
+                }
+                if cap_name == "zero" {
+                    zero_cap_rejections +=
+                        geometry.oversized_rejections + free_material.oversized_rejections;
+                }
+            }
+        }
+        assert!(
+            tight_evictions > 0,
+            "tight caps must force deterministic recomputation"
+        );
+        assert!(
+            zero_cap_rejections > 0,
+            "zero cache caps must reject cache publications without changing semantics"
+        );
+    }
+
+    fn profile_mixed61(cache_caps: Option<CacheCapOverrides>) {
+        let path = format!(
+            "{}/tests/vectors/mixed61-2000x2700-compact-request.json",
+            env!("CARGO_MANIFEST_DIR")
+        );
+        let fixture_json = std::fs::read_to_string(&path)
+            .unwrap_or_else(|error| panic!("failed to read fixture {path}: {error}"));
+        let fixture: serde_json::Value =
+            serde_json::from_str(&fixture_json).expect("profile fixture must be JSON");
+        let coordinator_request = &fixture["request"];
+        let boundary_request = serde_json::json!({
+            "version": 1,
+            "jobId": "profile-mixed61-2000x2700",
+            "sheet": coordinator_request["sheet"],
+            "padding": coordinator_request["padding"],
+            "pieces": coordinator_request["pieces"],
+            "sourcePieces": coordinator_request["sourcePieces"],
+            "options": {
+                "allowGlobalRotation": coordinator_request["allowGlobalRotation"],
+                "allowGlobalMirror": coordinator_request["allowGlobalMirror"],
+                "timeoutMs": 180000,
+                "workerMode": "irregular-convex-v2",
+                "historyMode": coordinator_request["historyMode"],
+                "historyScope": "winning_path",
+                "strategySelectionMode": "all_configured",
+                "strategyIds": ["short-fill-bottom-left-then-short-side-fit"],
+                "layoutSelectionStrategyId": "compact-first",
+                "finalSelectionMode": "manual",
+                "topN": 3,
+                "irregularSettings": coordinator_request["settings"],
+            }
+        });
+        let request_json = serde_json::to_string(&boundary_request)
+            .expect("profile fixture request always serializes");
+        let started = std::time::Instant::now();
+        let mut sink = NullEventSink;
+        let (envelope, geometry, free_material, threads) =
+            run_job_from_json_with_cache_caps_for_test(
+                &request_json,
+                &mut sink,
+                None,
+                Some(1),
+                cache_caps,
+            );
+        let elapsed_ms = started.elapsed().as_secs_f64() * 1000.0;
+        let parsed: serde_json::Value =
+            serde_json::from_str(&envelope).expect("profile envelope must be JSON");
+        assert_eq!(parsed["ok"], serde_json::json!(true));
+        let normalized = normalize_timing_only_fields(&parsed);
+        let normalized_json =
+            serde_json::to_string(&normalized).expect("normalized JSON serializes");
+        let namespace_hits: u64 = geometry.namespaces.values().map(|item| item.hits).sum();
+        let namespace_misses: u64 = geometry.namespaces.values().map(|item| item.misses).sum();
+        let cloning_hits: u64 = geometry
+            .namespaces
+            .values()
+            .map(|item| item.cloning_hits)
+            .sum();
+        println!(
+            "PROFILE {}",
+            serde_json::json!({
+                "threads": threads,
+                "elapsedMs": elapsed_ms,
+                "normalizedEnvelopeSha256": crate::geometry::hash::sha256_hex(&normalized_json),
+                "geometry": {
+                    "capBytes": geometry.cap_bytes,
+                    "peakBytes": geometry.peak_bytes,
+                    "hits": namespace_hits,
+                    "misses": namespace_misses,
+                    "cloningHits": cloning_hits,
+                    "evictions": geometry.evictions,
+                    "oversizedRejections": geometry.oversized_rejections,
+                },
+                "freeMaterial": free_material,
+            })
+        );
+    }
+
+    #[test]
+    #[ignore = "serial Mixed-61 profiling evidence"]
+    fn profile_mixed61_default_cache_caps() {
+        profile_mixed61(None);
+    }
+
+    #[test]
+    #[ignore = "serial Mixed-61 profiling evidence"]
+    fn profile_mixed61_effectively_unlimited_cache_caps() {
+        profile_mixed61(Some(CacheCapOverrides {
+            geometry_bytes: u64::MAX,
+            free_material_bytes: u64::MAX,
+        }));
+    }
+
+    #[test]
+    fn run_job_from_json_reports_cleaned_cache_snapshots_for_a_real_request() {
         let json = mixed61_like_request_json().to_string();
         let mut sink = NullEventSink;
-        let (envelope, cache, _threads) = run_job_from_json(&json, &mut sink, None, None);
-        assert!(cache.is_some());
+        let (envelope, cache_telemetry, free_material_telemetry, _threads) =
+            run_job_from_json(&json, &mut sink, None, None);
+        assert_eq!(cache_telemetry.current_bytes, 0);
+        assert!(cache_telemetry.peak_bytes > 0);
+        assert!(cache_telemetry.admissions > 0);
+        assert!(cache_telemetry
+            .namespaces
+            .values()
+            .all(|counters| counters.entries == 0 && counters.approx_bytes == 0));
+        assert_eq!(free_material_telemetry.entries, 0);
+        assert_eq!(free_material_telemetry.current_bytes, 0);
         let parsed: serde_json::Value = serde_json::from_str(&envelope).expect("envelope is JSON");
         assert_eq!(parsed["ok"], serde_json::json!(true));
     }

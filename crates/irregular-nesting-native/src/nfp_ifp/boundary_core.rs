@@ -36,8 +36,8 @@ use std::collections::HashSet;
 use rayon::prelude::*;
 
 use crate::caches::{
-    make_pairwise_nfp_cache_key, serialize_geometry_cache_key, GeometryCacheKey,
-    GeometryCacheStore, NfpConstructionAlgorithm, PairwiseNfpKeyInput,
+    charge_nfp_polygon, make_pairwise_nfp_cache_key, serialize_geometry_cache_key,
+    GeometryCacheKey, GeometryCacheStore, NfpConstructionAlgorithm, PairwiseNfpKeyInput,
     NFP_GEOMETRY_CACHE_NAMESPACE,
 };
 use crate::domain::{
@@ -149,7 +149,7 @@ pub fn resolve_nfp_boundary(
             &input.moving.polygon.points,
             construction_algorithm,
         )?;
-        cache.set(&key, computed.clone());
+        let _admitted = cache.set(&key, computed.clone(), charge_nfp_polygon(&computed));
         computed
     };
 
@@ -259,8 +259,12 @@ pub fn precompute_missing_relative_nfp_boundaries(
         if !seen_keys.insert(serialize_geometry_cache_key(&key)) {
             continue;
         }
-        let cached: Option<IrregularPolygon> = cache.get(&key);
-        if is_valid_cached_nfp_boundary(cached.as_ref()) {
+        if matches!(
+            cache.probe_valid::<IrregularPolygon>(&key, |cached| {
+                is_valid_cached_nfp_boundary(Some(cached))
+            }),
+            crate::caches::GeometryCacheProbe::HotValid
+        ) {
             continue;
         }
         misses.push((key, placed_piece.collision_geometry.polygon.points.clone()));
@@ -287,7 +291,8 @@ pub fn precompute_missing_relative_nfp_boundaries(
     // keys were first encountered in Phase 1.
     for ((key, _), boundary) in misses.into_iter().zip(computed) {
         if let Some(boundary) = boundary {
-            cache.set(&key, boundary);
+            let charge = charge_nfp_polygon(&boundary);
+            let _admitted = cache.set(&key, boundary, charge);
         }
     }
 }
@@ -866,6 +871,74 @@ mod tests {
         assert_eq!(counters.hits, 1);
         assert_eq!(counters.stores, 1);
         assert_eq!(first.boundary.points, second.boundary.points);
+    }
+
+    #[test]
+    fn hot_prepass_borrows_the_cached_nfp_before_the_normal_resolver_clones_once() {
+        let fixed = std::sync::Arc::new(fixed_piece(square(0.0, 4.0), 10.0, 20.0));
+        let moving = moving_geometry(square(0.0, 2.0));
+        let settings = settings();
+        let mut cache = GeometryCacheStore::new();
+        let input = CoreNfpInput {
+            fixed: &fixed,
+            moving: &moving,
+            settings: &settings,
+        };
+
+        resolve_nfp_boundary(&input, &mut cache, NfpConstructionAlgorithm::VertexPairHull)
+            .expect("cold resolution seeds the cache");
+        precompute_missing_relative_nfp_boundaries(
+            &[std::sync::Arc::clone(&fixed)],
+            &moving,
+            &settings,
+            &mut cache,
+            NfpConstructionAlgorithm::VertexPairHull,
+        );
+        resolve_nfp_boundary(&input, &mut cache, NfpConstructionAlgorithm::VertexPairHull)
+            .expect("normal resolver serves the hot candidate");
+
+        let counters = cache.telemetry().namespace(NFP_GEOMETRY_CACHE_NAMESPACE);
+        assert_eq!(
+            counters.cloning_hits, 1,
+            "the prepass must not clone the hot value before resolution"
+        );
+        assert_eq!(counters.stale_detections, 0);
+    }
+
+    #[test]
+    fn stale_prepass_probe_removes_the_entry_before_stable_republication() {
+        let fixed = std::sync::Arc::new(fixed_piece(square(0.0, 4.0), 10.0, 20.0));
+        let moving = moving_geometry(square(0.0, 2.0));
+        let settings = settings();
+        let mut cache = GeometryCacheStore::new();
+        let input = CoreNfpInput {
+            fixed: &fixed,
+            moving: &moving,
+            settings: &settings,
+        };
+        let cold =
+            resolve_nfp_boundary(&input, &mut cache, NfpConstructionAlgorithm::VertexPairHull)
+                .expect("cold resolution seeds the cache");
+        let invalid = IrregularPolygon::new(vec![p(0.0, 0.0), p(1.0, 1.0)]);
+        assert!(cache.set(&cold.key, invalid.clone(), charge_nfp_polygon(&invalid)));
+
+        precompute_missing_relative_nfp_boundaries(
+            &[std::sync::Arc::clone(&fixed)],
+            &moving,
+            &settings,
+            &mut cache,
+            NfpConstructionAlgorithm::VertexPairHull,
+        );
+        let resolved =
+            resolve_nfp_boundary(&input, &mut cache, NfpConstructionAlgorithm::VertexPairHull)
+                .expect("the prepass republishes the valid boundary");
+
+        assert_eq!(resolved.boundary.points, cold.boundary.points);
+        let counters = cache.telemetry().namespace(NFP_GEOMETRY_CACHE_NAMESPACE);
+        assert_eq!(counters.stale_detections, 1);
+        assert_eq!(counters.stale_removals, 1);
+        assert_eq!(counters.entries, 1);
+        assert_eq!(counters.cloning_hits, 1);
     }
 
     #[test]

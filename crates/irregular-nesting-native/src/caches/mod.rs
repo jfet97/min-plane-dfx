@@ -70,7 +70,10 @@ pub use nfp_cache_key::{
     PairwiseNfpKeyInput, DEFAULT_NFP_CONSTRUCTION_ALGORITHM, NFP_CONSTRUCTION_ALGORITHMS,
     NFP_GEOMETRY_CACHE_NAMESPACE,
 };
-pub use store::{serialize_geometry_cache_key, GeometryCacheKey, GeometryCacheStore};
+pub use store::{
+    charge_ifp_bounds, charge_nfp_polygon, charge_transformed_collision_geometry,
+    serialize_geometry_cache_key, GeometryCacheKey, GeometryCacheProbe, GeometryCacheStore,
+};
 pub use telemetry::{CacheNamespaceTelemetry, CacheTelemetrySnapshot};
 pub use transform_collision_geometry::{
     compute_transformed_collision_geometry, is_valid_cached_transformed_collision_geometry,

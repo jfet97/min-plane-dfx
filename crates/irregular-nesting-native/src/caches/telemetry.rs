@@ -1,32 +1,24 @@
-//! Non-semantic diagnostic sidecar for the geometry-cache cluster (prompt
-//! §13.7, §17). Never read by control flow inside this crate. Never part of
-//! the job result DTO (`architecture.md` §4.5); returned only through the
-//! diagnostic channel that section establishes as structurally separate from
-//! `boundary::run_job`'s result.
-//!
-//! Struct shapes below are copied verbatim (field-for-field) from
-//! `docs/planning/rust-irregular-backend/cache-concurrency-design.md` §6,
-//! the required design artifact for this crate's cache cluster. This module
-//! is **Stage 2 scope only**: every counter is a plain `u64` (no
-//! `AtomicU64`), since this crate is still single-threaded (no Rayon
-//! dependency yet, per that document's own "matching TS's own documented...
-//! zero-overhead-when-disabled design" note and the Stage 3/4 note attached
-//! to the `AtomicU64` mention in §6 — "where cross-thread, per Stage 4").
-//! Fields whose only purpose is to observe concurrency (`duplicate_computations`,
-//! `single_flight_waits`, `shard_lock_wait_nanos`,
-//! `shard_lock_contended_acquisitions`, `front_cache_hits`) are always `0` in
-//! this stage, exactly as the design doc's own field docs anticipate ("always
-//! 0 under strict single-flight with no policy bug" / "architecture 3 only").
-//!
-//! TS counterpart this struct's fields are cross-referenced against:
-//! `src/workers/irregular/nfpIfpTelemetry.ts` (`NfpIfpCacheNamespaceCounters`/
-//! `NfpIfpTelemetrySnapshot`). The Rust shape is intentionally **richer**
-//! than the TS one (design doc §6: "Rust separates 'present' into `hits` +
-//! `stale_detections` deliberately... because TS's `getPresent` conflates
-//! them") — this is not a byte-parity target, it is a new diagnostic
-//! contract for this port, so no differential-vector test pins these counts
-//! against a TS oracle; see `store.rs` for how each field is populated from
-//! this cluster's own exact access-sequence contract instead.
+/*!
+Non-semantic diagnostic sidecar for the geometry-cache cluster (prompt §13.7
+and §17). Control flow never reads these values, and they are not part of the
+job result DTO. They are returned only through the diagnostic channel defined
+by `architecture.md` §4.5.
+
+The coordinator owns and mutates the job-local geometry cache. Rayon workers
+perform pure geometry computation and do not update cache state or telemetry,
+so plain `u64` counters are sufficient. The backing store uses a deterministic
+charged LRU with a finite cap. Its diagnostics include current and peak charged
+bytes, admissions, replacements, size evictions, evicted bytes, oversized-entry
+rejections, and cloning hits. Explicit normal-completion cleanup clears and
+shrinks retained cache storage before the final snapshot; cumulative and peak
+counters remain available while current bytes and entries become zero.
+
+The TypeScript counterpart is
+`src/workers/irregular/nfpIfpTelemetry.ts`. The Rust shape is intentionally
+richer and is not a byte-parity target. Differential tests compare semantic
+output, while these counters provide implementation and performance evidence.
+See `store.rs` for the exact access, charging, eviction, and cleanup contract.
+*/
 
 use std::collections::BTreeMap;
 
@@ -45,14 +37,11 @@ use serde::Serialize;
 pub struct CacheNamespaceTelemetry {
     /// Every `get` call, hit or miss (TS: `getCalls`).
     pub lookups: u64,
-    /// Lookups that resolved to a valid, immediately-usable published value
-    /// without waiting on an in-flight computation (a strict subset of TS's
-    /// `getPresent`, which also counts stale hits about to be evicted; Rust
-    /// separates "present" into `hits` + `stale_detections` deliberately —
-    /// see field docs below — because TS's `getPresent` conflates them).
+    /// Lookups that resolved to a valid published value. Rust separates the
+    /// TypeScript `getPresent` count into valid `hits` and
+    /// `stale_detections`.
     pub hits: u64,
-    /// Lookups that found no entry and no in-flight computation (must start
-    /// a fresh computation).
+    /// Lookups that found no usable entry and require fresh computation.
     pub misses: u64,
     /// Successful publications (TS: `setCalls`).
     pub stores: u64,
@@ -63,50 +52,46 @@ pub struct CacheNamespaceTelemetry {
     /// `removeCalls`; equals `stale_detections` in a correct implementation,
     /// tracked separately to catch a design bug if they ever diverge).
     pub stale_removals: u64,
-    /// A computation ran to completion for a key that was already published
-    /// or already being computed by another thread by the time this
-    /// computation finished (architecture 3/duplicate-computation policies
-    /// only; always 0 under strict single-flight with no policy bug).
+    /// Reserved diagnostic from the evaluated concurrent-cache designs.
+    /// Always `0` under coordinator-only cache mutation.
     pub duplicate_computations: u64,
-    /// Times a thread blocked waiting for another thread's in-flight
-    /// single-flight computation of the same key (architecture 3 only).
+    /// Reserved single-flight diagnostic. Always `0` because the implemented
+    /// cache has no in-flight markers or waiters.
     pub single_flight_waits: u64,
-    /// Approximate cumulative time spent by all threads waiting on a shard
-    /// lock for this namespace, in nanoseconds. Coarse-grained and
-    /// low-overhead by construction (prompt §13.7: "low-overhead integer
-    /// telemetry, disabled or sampling-free by default if necessary").
+    /// Reserved shard-lock timing. Always `0` because the implemented cache
+    /// has no shard locks.
     pub shard_lock_wait_nanos: u64,
-    /// Count of shard-lock acquisitions that were contended (had to wait at
-    /// all), independent of the wait-time sum above.
+    /// Reserved shard-lock contention count. Always `0`.
     pub shard_lock_contended_acquisitions: u64,
-    /// Front-cache hits, if a thread-local front cache is in use for this
-    /// namespace (§3.2's optional Stage 4 refinement); 0 if not applicable.
+    /// Reserved front-cache count. Always `0` because no front cache exists.
     pub front_cache_hits: u64,
-    /// Hits served by the shared backing store (as opposed to a front
-    /// cache); equals `hits` when no front cache is in use.
+    /// Hits served by the coordinator-owned geometry backing store.
     pub backing_cache_hits: u64,
+    /// Typed cache hits where the normal resolver cloned the value to supply
+    /// its candidate. The NFP prepass must leave this counter unchanged.
+    pub cloning_hits: u64,
+    /// Finite charged-byte capacity for this namespace's backing store.
+    pub cap_bytes: u64,
+    /// Entries admitted after their retained charge fit the finite budget.
+    pub admissions: u64,
+    /// Successful publications that replaced an existing key.
+    pub replacements: u64,
     /// Entries evicted for a reason other than staleness (size-based
-    /// eviction, §5); always 0 unless a future stage adds size-based
-    /// eviction as an explicit new capability.
+    /// eviction, §5).
     pub evictions: u64,
+    /// Charged bytes released by size-based evictions.
+    pub evicted_bytes: u64,
+    /// Publications rejected because one entry alone exceeds the finite cap.
+    pub oversized_rejections: u64,
     /// Current entry count for this namespace at the moment of snapshot.
     pub entries: u64,
-    /// Approximate current bytes for this namespace at the moment of
-    /// snapshot (§5's per-entry byte estimate, summed). Always `0` in Stage
-    /// 2 — no byte-size estimator exists yet; deferred to whichever stage
-    /// implements §5's memory-tracking policy.
+    /// Current conservatively charged bytes for this namespace.
     pub approx_bytes: u64,
-    /// Peak approximate bytes for this namespace observed at any point
-    /// during the job (§5), never decreasing within one job's lifetime.
-    /// Always `0` in Stage 2 alongside `approx_bytes`.
+    /// Peak conservatively charged bytes for this namespace observed at any
+    /// point during the job. It never decreases within one job's lifetime.
     pub peak_bytes: u64,
-    /// Cumulative wall time spent inside this namespace's pure compute
-    /// function (e.g. `computeRelativeNfpBoundary`'s Rust equivalent),
-    /// across every computation (single-flight winners and, under a
-    /// duplicate-computation policy, every duplicate), in nanoseconds.
-    /// Always `0` in Stage 2 — no caller in this module clocks its own
-    /// compute step yet; a future stage may add timing at the resolver call
-    /// site without changing this struct's shape.
+    /// Reserved pure-compute timing in nanoseconds. Currently `0`: cache
+    /// callers do not clock resolver work into this sidecar.
     pub computation_time_nanos: u64,
 }
 
@@ -120,6 +105,22 @@ pub struct CacheNamespaceTelemetry {
 #[serde(rename_all = "camelCase")]
 pub struct CacheTelemetrySnapshot {
     pub namespaces: BTreeMap<String, CacheNamespaceTelemetry>,
+    /// Finite charged-byte cap for the shared geometry backing store.
+    pub cap_bytes: u64,
+    /// Current charged bytes across every geometry namespace.
+    pub current_bytes: u64,
+    /// Highest charged-byte total reached during this job.
+    pub peak_bytes: u64,
+    /// Cumulative cache publications admitted into the backing store.
+    pub admissions: u64,
+    /// Cumulative publications that replaced an existing key.
+    pub replacements: u64,
+    /// Cumulative size-based evictions across all namespaces.
+    pub evictions: u64,
+    /// Cumulative charged bytes released by size-based evictions.
+    pub evicted_bytes: u64,
+    /// Cumulative single-entry rejections for exceeding the cap.
+    pub oversized_rejections: u64,
     /// Number of distinct `GeometryCacheStore`-equivalent instances
     /// constructed during this process's lifetime that this snapshot
     /// aggregates over. In production this is always 1 per job (design doc

@@ -19,6 +19,7 @@ use std::sync::{Mutex, OnceLock};
 use serde::Serialize;
 
 use crate::caches::CacheTelemetrySnapshot;
+use crate::search::layout_scorer::FreeMaterialCacheTelemetry;
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -32,6 +33,7 @@ pub struct JobDiagnostics {
     pub thread_count_used: u32,
     pub wall_clock_ms: f64,
     pub cache_telemetry: CacheTelemetrySnapshot,
+    pub free_material_cache_telemetry: FreeMaterialCacheTelemetry,
 }
 
 #[derive(Debug, Clone, Copy, Serialize)]
@@ -111,6 +113,7 @@ mod tests {
             thread_count_used: 1,
             wall_clock_ms: 12.5,
             cache_telemetry: CacheTelemetrySnapshot::default(),
+            free_material_cache_telemetry: FreeMaterialCacheTelemetry::default(),
         });
         let json = last_job_diagnostics_json();
         let parsed: serde_json::Value = serde_json::from_str(&json).expect("valid JSON");
