@@ -2,12 +2,12 @@
 
 **Date:** 2026-07-31
 
-**Branch:** `rust-irregular-backend` at `0fa19255e4c01bf5e7c113ed6779a6dc4eac2e7c`, with uncommitted changes.
+**Branch:** `rust-irregular-backend` at `a334118c54687f3065dce753beea7014f0b653ed`, with uncommitted changes.
 
 ## Current verification update
 
 - Release Rust suite: 590 library tests plus all integration and documentation tests passed. Thread equality passed 6/6.
-- Native package tests passed 31/31. The focused native/worker TypeScript suite passed 74/74. The full Electron suite passed 95 files with 970 passed and 17 skipped.
+- Native package tests passed 32/32, including checkout-attribute coverage that preserves legal-asset bytes on Windows. The focused native/worker TypeScript suite passed 74/74. The full Electron suite passed 95 files with 970 passed and 17 skipped.
 - Typecheck, ESLint, changed-file Prettier, `cargo fmt`, and strict Clippy passed.
 - Required differential rows passed 16/16. Strict full required rows passed 16/16, and exploratory rows passed 8/8.
 - Compact Mixed-61: collision SHA `3839e80d26be257381f1962816765a886d4b7e3c3d78120892e4a6a943dfa742`, fitted SHA `ef2b783ae12491d2a80a12ef94d1bb2801c13cbd43aeb6e2c1cc00d86828fd3b`, 61 placed, 0 unplaced, 30826 ms.
