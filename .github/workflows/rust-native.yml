@@ -116,8 +116,8 @@ jobs:
             const addon = require('./crates/irregular-nesting-native/npm/index.cjs');
             const capability = addon.nativeCapability();
             console.log('nativeCapability():', JSON.stringify(capability));
-            if (capability.apiVersion !== 2) {
-              throw new Error('native addon API mismatch: expected apiVersion 2, received ' + capability.apiVersion);
+            if (capability.apiVersion !== 3) {
+              throw new Error('native addon API mismatch: expected apiVersion 3, received ' + capability.apiVersion);
             }
           "
       # The fixture directly requires the staged addon and throws if it is
@@ -137,8 +137,8 @@ jobs:
             const addon = require('./crates/irregular-nesting-native/npm/index.cjs');
             const capability = addon.nativeCapability();
             console.log('nativeCapability() under Electron-as-node:', JSON.stringify(capability));
-            if (capability.apiVersion !== 2) {
-              throw new Error('native addon API mismatch: expected apiVersion 2, received ' + capability.apiVersion);
+            if (capability.apiVersion !== 3) {
+              throw new Error('native addon API mismatch: expected apiVersion 3, received ' + capability.apiVersion);
             }
           "
       - name: Worker terminal barrier and cleanup proof (Electron-as-node)
