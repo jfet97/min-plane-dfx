@@ -13,7 +13,7 @@ exhaustively re-specified — those belong to their own cluster's characterizati
 `intrinsicCapacityMode.ts` for the capacity/partial archive, `irregularBeamState.ts` for
 geometry-state transforms, `canonicalLayoutGeometry.ts` for canonical identity/legality).
 
-Supporting context read: `docs/prompts/fable5-rust-irregular-nesting-implementation.md`
+Supporting context read: `docs/history/prompts/fable5-rust-irregular-nesting-implementation.md`
 (§2, §8, §9, §13, §14), `docs/research/intrinsic-anytime-portfolio.md`,
 `docs/architecture/compact-architecture-explained.md`.
 

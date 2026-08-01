@@ -1,7 +1,7 @@
 # Checkpoint Compatibility Design — Rust Irregular Nesting Backend
 
 Status: Stage 0 design document, per the governing migration prompt
-(`docs/prompts/fable5-rust-irregular-nesting-implementation.md`, §11, §22
+(`docs/history/prompts/fable5-rust-irregular-nesting-implementation.md`, §11, §22
 item 6). This document specifies **how** the Rust port must reproduce the
 TypeScript resumable-checkpoint contract; it does not authorize any
 behavior change. Every rule below is grounded in current source

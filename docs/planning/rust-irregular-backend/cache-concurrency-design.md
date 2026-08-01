@@ -9,7 +9,7 @@ remain coordinator-only while Rayon workers perform pure deterministic
 geometry computation.
 
 Governing specifications are
-`docs/prompts/fable5-rust-irregular-nesting-implementation.md` §13 and §14,
+`docs/history/prompts/fable5-rust-irregular-nesting-implementation.md` §13 and §14,
 `PR27-REMEDIATION-PLAN.md` Sections 9 and 10, and `architecture.md` §3.10 and
 §4.2. Characterization sources remain
 `docs/planning/rust-irregular-backend/characterization/geometry-caches.md` and

@@ -7,7 +7,7 @@ Cluster files (read completely, line-numbered as of this writing):
 - `src/workers/algorithm/irregular/intrinsicCapacityEndpoint.ts` (369 lines)
 - `src/workers/algorithm/irregular/intrinsicCapacityMode.ts` (1430 lines)
 
-This document is a specification extracted from the current TypeScript source. Per the governing migration prompt (`docs/prompts/fable5-rust-irregular-nesting-implementation.md`, sections 2, 8, 9, 13, 14), the TypeScript behavior below — including anything that looks unusual — IS the contract for the Rust port. Nothing here is a recommendation to change behavior.
+This document is a specification extracted from the current TypeScript source. Per the governing migration prompt (`docs/history/prompts/fable5-rust-irregular-nesting-implementation.md`, sections 2, 8, 9, 13, 14), the TypeScript behavior below — including anything that looks unusual — IS the contract for the Rust port. Nothing here is a recommendation to change behavior.
 
 **Note on the migration prompt's own map:** the prompt (section 5) instructs starting from `knowledge/INDEX.md` and lists numerous `knowledge/*.md` pages. No `knowledge/` directory exists anywhere in this repository checkout (`git ls-files | grep '^knowledge/'` returns nothing). This is recorded as an open question in section 15; this document relies entirely on direct source tracing instead.
 

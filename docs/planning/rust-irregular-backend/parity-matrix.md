@@ -6,7 +6,7 @@ existing tests/gates that currently pin its behavior, (b) planned **new**
 Rust unit tests, (c) planned differential (TS-vs-Rust) tests, (d) planned
 concurrency-determinism tests, and (e) planned property/fuzz targets. It does
 not itself add any test; it is the plan required by the governing migration
-prompt (`docs/prompts/fable5-rust-irregular-nesting-implementation.md`,
+prompt (`docs/history/prompts/fable5-rust-irregular-nesting-implementation.md`,
 hereafter "the prompt") §6 Stage 0 item 7 and is grounded exclusively in the
 Stage 0 characterization corpus under
 `docs/planning/rust-irregular-backend/characterization/` plus

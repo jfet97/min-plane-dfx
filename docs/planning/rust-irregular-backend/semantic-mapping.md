@@ -2,7 +2,7 @@
 
 Status: **Stage 0 design document.** No production Rust code exists yet. This
 is the file-by-file mapping a Stage 1+ implementer follows; it is not a status
-report. Governing spec: `docs/prompts/fable5-rust-irregular-nesting-implementation.md`
+report. Governing spec: `docs/history/prompts/fable5-rust-irregular-nesting-implementation.md`
 ("the migration prompt"), especially §2 (semantic preservation), §8 (numeric
 semantics), §9 (keys/ordering/serialization), §13 (cache architecture), §14
 (parallelization boundaries). Every row below is sourced from one or more of

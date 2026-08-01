@@ -8,7 +8,7 @@ by the 13 sibling cluster docs in this directory). Every nontrivial claim below
 was verified by reading the named file(s) in full and, where a script writes a
 provenance artifact, by inspecting the checked-in artifact JSON.
 
-Governing spec: `docs/prompts/fable5-rust-irregular-nesting-implementation.md`
+Governing spec: `docs/history/prompts/fable5-rust-irregular-nesting-implementation.md`
 §§2, 3, 8, 9, 13, 14, 18 (read in full for this document). §3 is the operative
 rule for this cluster: **the existing tests and gate scripts are immutable**;
 the Rust port must pass them unmodified, and any apparent inconsistency must be

@@ -27,7 +27,7 @@ this cluster directly touches them): `src/shared/domain/nesting.ts`,
 `src/renderer/utils/irregularSettingsUi.ts`,
 `docs/operations/irregular-production-gates.md`.
 
-**Note on the migration prompt's knowledge map.** `docs/prompts/fable5-rust-irregular-nesting-implementation.md`
+**Note on the migration prompt's knowledge map.** `docs/history/prompts/fable5-rust-irregular-nesting-implementation.md`
 section 5 directs the implementer to start from `knowledge/INDEX.md` and a
 list of `knowledge/*.md` pages. **No `knowledge/` directory exists in this
 checkout** (`find` from repo root confirms it). The equivalent living

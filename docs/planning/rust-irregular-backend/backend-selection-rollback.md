@@ -1,6 +1,6 @@
 # Backend Selection, Fallback, and Rollback — Design
 
-Stage 0 design document for `docs/prompts/fable5-rust-irregular-nesting-implementation.md`
+Stage 0 design document for `docs/history/prompts/fable5-rust-irregular-nesting-implementation.md`
 §17 ("Backend selection, fallback, and rollback") and the related mandates in
 §7 (native capability query), §16 (error mapping table), and §18.1/18.3/18.6
 (test forcing, differential mode, "did a requested Rust run silently fall
@@ -9,7 +9,7 @@ backend-selection, differential, and rollback contract. The native Rust backend
 exists in this checkout. Statements in this document describe current behavior
 unless a paragraph is explicitly marked as future rollout work.
 
-Primary sources read for this document: `docs/prompts/fable5-rust-irregular-nesting-implementation.md`
+Primary sources read for this document: `docs/history/prompts/fable5-rust-irregular-nesting-implementation.md`
 §§2, 4, 7, 16, 17, 18; `docs/planning/rust-irregular-backend/characterization/worker-coordination.md`
 (full); `docs/planning/rust-irregular-backend/characterization/errors-protocol.md`
 (full); `docs/planning/rust-irregular-backend/characterization/tests-gates-inventory.md`

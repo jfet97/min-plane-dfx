@@ -36,7 +36,7 @@ This cluster implements **`intrinsic-capacity-v1`**, the empty-start
 depth-synchronized beam search that produces the best-known exact **partial**
 (subset) placement when the requested sheet cannot hold every prepared piece.
 It is the "capacity" side of the archive-only Compact production authority
-described in the migration prompt (`docs/prompts/fable5-rust-irregular-nesting-implementation.md`
+described in the migration prompt (`docs/history/prompts/fable5-rust-irregular-nesting-implementation.md`
 §10-§11).
 
 - `intrinsicCapacitySearch.ts` — the search engine itself

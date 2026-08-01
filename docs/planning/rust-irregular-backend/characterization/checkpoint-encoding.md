@@ -2,7 +2,7 @@
 
 This document is a specification extracted from the current TypeScript source,
 not a design proposal. Per the governing migration prompt
-(`docs/prompts/fable5-rust-irregular-nesting-implementation.md`, sections 2, 8,
+(`docs/history/prompts/fable5-rust-irregular-nesting-implementation.md`, sections 2, 8,
 9, 13, 14), the TypeScript behavior below — including anything that looks
 unusual, redundant, or historically ordered — IS the contract for the Rust
 port.

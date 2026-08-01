@@ -276,7 +276,7 @@ prior value (`true` unless a prior spec in the same call already hit a deadline)
 `tests/unit/intrinsicReconstructionPortfolio.test.ts:343-344`: a run that hits the evaluation cap
 still reports `candidateEvaluationAccountingComplete === true`. This is intentional-looking but
 counter-intuitive naming; **preserve exactly, do not "fix"** per the governing prompt's semantic
-freeze rule (§2 of `docs/prompts/fable5-rust-irregular-nesting-implementation.md`).
+freeze rule (§2 of `docs/history/prompts/fable5-rust-irregular-nesting-implementation.md`).
 
 ### 3.3 `runIntrinsicPlaceDeferCompleteShadow` input (`RunIntrinsicPlaceDeferInput`, `:111-117`)
 
@@ -1046,7 +1046,7 @@ request shapes.
    is a parameter supplied by the sole production caller
    (`computeIrregularNesting.ts:846-847`, `maximumCandidateEvaluationsPerDecode: 12_000,
    maximumTotalCandidateEvaluations: 12_000`). The migration prompt's own summary of "production
-   values" (§11 of `docs/prompts/fable5-rust-irregular-nesting-implementation.md`) lists capacity
+   values" (§11 of `docs/history/prompts/fable5-rust-irregular-nesting-implementation.md`) lists capacity
    constants (beam width 16, quota 4,096, etc.) but does not mention this reconstruction cap at
    all — **the orchestrator should confirm where this constant is intended to live in the Rust
    port** (co-located with the orchestrator call site, as in TS, versus promoted into the

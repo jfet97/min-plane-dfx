@@ -8,7 +8,7 @@ Cluster files (read completely, line-numbered as of this writing):
 - `src/workers/irregular/convexPolygonContact.ts` (319 lines)
 - `src/workers/irregular/freeMaterialService.ts` (501 lines)
 
-This document is a specification extracted from the current TypeScript source. Per the governing migration prompt (`docs/prompts/fable5-rust-irregular-nesting-implementation.md`, sections 2, 8, 9, 13, 14), the TypeScript behavior below — including anything that looks unusual, redundant, or imprecise — IS the contract for the Rust port. Nothing here is a recommendation to change behavior.
+This document is a specification extracted from the current TypeScript source. Per the governing migration prompt (`docs/history/prompts/fable5-rust-irregular-nesting-implementation.md`, sections 2, 8, 9, 13, 14), the TypeScript behavior below — including anything that looks unusual, redundant, or imprecise — IS the contract for the Rust port. Nothing here is a recommendation to change behavior.
 
 This cluster is the numeric/geometric bedrock the migration prompt calls out by name in §8.2–8.3 ("canonical-grid contact terms", "Clipper2 owns canonical integer Boolean geometry", "canonical comparisons are exact"). Every other cluster that computes canonical identity, legality, cavities, envelope, or contact ultimately calls into these five files.
 

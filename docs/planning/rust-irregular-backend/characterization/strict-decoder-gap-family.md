@@ -9,7 +9,7 @@ Cluster files (read completely, line-cited below):
 This document is a port specification, not a summary. Every nontrivial claim is
 anchored to a `file:line`. Where TypeScript behavior looks unusual, that is
 intentional per the governing prompt
-(`docs/prompts/fable5-rust-irregular-nesting-implementation.md` §2): the
+(`docs/history/prompts/fable5-rust-irregular-nesting-implementation.md` §2): the
 existing behavior is the spec.
 
 ---

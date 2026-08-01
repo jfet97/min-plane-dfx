@@ -66,7 +66,7 @@ complete. Where the crate already contains scaffolding (`crates/irregular-nestin
 committed at `dbcfec2`), this document describes that scaffolding as it is
 today and states explicitly what is still design, not status.
 
-Governing spec: `docs/prompts/fable5-rust-irregular-nesting-implementation.md`
+Governing spec: `docs/history/prompts/fable5-rust-irregular-nesting-implementation.md`
 (hereafter "the migration prompt"), primarily §1 (non-negotiable objective),
 §4 (scope boundaries), §21 (code quality / module boundaries), and the
 cross-cutting rules in §2 (absolute semantic preservation), §8–9 (numeric and

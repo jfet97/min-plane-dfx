@@ -1,7 +1,7 @@
 # Characterization: search-scoring cluster
 
 Stage 0 characterization for the Rust irregular-nesting port. Governing spec:
-`docs/prompts/fable5-rust-irregular-nesting-implementation.md` (hereafter "the
+`docs/history/prompts/fable5-rust-irregular-nesting-implementation.md` (hereafter "the
 migration prompt"). This document is exhaustive and normative for the five
 files below; a Rust implementer should be able to port from it without
 re-reading the TypeScript, and a parity reviewer should be able to verify

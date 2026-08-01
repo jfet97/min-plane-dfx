@@ -34,7 +34,7 @@ here — they belong to other clusters):
 - `node_modules/.pnpm/clipper2-ts@2.0.1-18/.../dist/Clipper.js`,
   `Core.js` (pinned external dependency, version `2.0.1-18`, referenced
   because prompt section 8.3 requires reproducing its exact operations)
-- `docs/prompts/fable5-rust-irregular-nesting-implementation.md`
+- `docs/history/prompts/fable5-rust-irregular-nesting-implementation.md`
   (sections 2, 8, 9, 13, 14, and others read in full)
 - `docs/research/adaptive-compact-transform-policy.md` (read in full)
 

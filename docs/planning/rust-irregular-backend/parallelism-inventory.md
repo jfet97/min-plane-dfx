@@ -2,7 +2,7 @@
 
 Status: Stage 0 design artifact. Required implementation artifact #5 of migration-prompt
 §22 ("a deterministic parallelism inventory listing every Rayon site"). Governed by
-`docs/prompts/fable5-rust-irregular-nesting-implementation.md` §14 ("Safe and unsafe
+`docs/history/prompts/fable5-rust-irregular-nesting-implementation.md` §14 ("Safe and unsafe
 parallelization boundaries"), read together with §13 ("Cache architecture for true
 multithreading") and §19 (the preregistered performance contract). This document does
 not authorize any Rayon code today — no `rayon` dependency exists in

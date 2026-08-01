@@ -26,7 +26,7 @@ mechanics from the worker's point of view. This document resolves an open questi
 `worker-coordination.md`'s findings with a previously-undocumented dead-computation fact
 (§1, §15).
 
-Supporting context read: `docs/prompts/fable5-rust-irregular-nesting-implementation.md`
+Supporting context read: `docs/history/prompts/fable5-rust-irregular-nesting-implementation.md`
 (§2, §8, §9, §13, §14), and the sibling docs `worker-coordination.md` and `search-scoring.md`
 for cross-reference (both consulted, neither modified).
 

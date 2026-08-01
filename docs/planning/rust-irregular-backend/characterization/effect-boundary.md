@@ -54,7 +54,7 @@ load-bearing for liveness, seam, and cache-sharing claims):
 - `src/main/services/WorkerSupervisor.ts` (relevant part: the RPC client call
   site that proves bytes actually cross a worker-thread boundary)
 - `docs/architecture/schema-models.md` (full)
-- `docs/prompts/fable5-rust-irregular-nesting-implementation.md` (sections 2,
+- `docs/history/prompts/fable5-rust-irregular-nesting-implementation.md` (sections 2,
   7, 8, 9, 13, 14 read in full; skimmed elsewhere)
 - Tests: `tests/unit/irregularGeometryKernel.test.ts`,
   `tests/unit/irregularGeometryCache.test.ts`,

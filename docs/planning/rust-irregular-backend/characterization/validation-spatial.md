@@ -47,7 +47,7 @@ specification, but load-bearing for sections 1, 2, 9, 10, 13):
   `TransformedCollisionGeometry`, `IrregularPlacement`, `IrregularPlacedPiece`)
 - `node_modules/robust-predicates/README.md` (confirms the y-down sign
   convention that `geometryPredicates.ts` inverts)
-- `docs/prompts/fable5-rust-irregular-nesting-implementation.md` (sections 2,
+- `docs/history/prompts/fable5-rust-irregular-nesting-implementation.md` (sections 2,
   8, 9, 13, 14, plus 10–12 and 16 for cross-referencing constants and the
   error-mapping table)
 - `docs/artifacts/linear-ring-topology/README.md` (historical performance
