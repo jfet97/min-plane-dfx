@@ -103,8 +103,10 @@ use std::sync::{Arc, LazyLock};
 use std::time::Instant;
 
 use num_bigint::BigInt;
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
+use crate::boundary::parallel::{has_job_pool, with_job_pool};
 use crate::caches::{
     resolve_transformed_collision_geometry, CandidateDomain, GeometryCacheStore,
     NfpCandidatePruningMode, TransformCollisionGeometryKeyInput,
@@ -814,6 +816,175 @@ impl ScoredCandidate {
             moving_collision_doubled_area_grid2: Some(
                 self.moving_collision_doubled_area_grid2.clone(),
             ),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum StrictScoringMode {
+    Serial,
+    Parallel,
+}
+
+fn strict_scoring_mode(
+    capture_phase_timings: bool,
+    timing_now_injected: bool,
+) -> StrictScoringMode {
+    if capture_phase_timings || timing_now_injected {
+        StrictScoringMode::Serial
+    } else {
+        StrictScoringMode::Parallel
+    }
+}
+
+fn admitted_scoring_count(
+    legal_candidate_count: usize,
+    maximum_candidate_evaluation_count: Option<f64>,
+    candidate_evaluation_count: f64,
+) -> usize {
+    match maximum_candidate_evaluation_count {
+        None => legal_candidate_count,
+        Some(cap) => (0..legal_candidate_count)
+            .take_while(|source_ordinal| {
+                matches!(
+                    (candidate_evaluation_count + *source_ordinal as f64).partial_cmp(&cap),
+                    Some(Ordering::Less) | None
+                )
+            })
+            .count(),
+    }
+}
+
+#[derive(Debug)]
+struct IndexedScoringOutcome<T, E> {
+    source_ordinal: usize,
+    outcome: Result<T, E>,
+}
+
+fn replay_indexed_scoring_outcomes<T, E>(
+    mut outcomes: Vec<IndexedScoringOutcome<T, E>>,
+) -> Result<Vec<T>, E> {
+    outcomes.sort_unstable_by_key(|outcome| outcome.source_ordinal);
+    outcomes
+        .into_iter()
+        .map(|outcome| outcome.outcome)
+        .collect()
+}
+
+const STRICT_SCORING_CHUNK_SIZE: usize = 32;
+
+fn replay_admitted_scoring_inputs<Input, Output, Error, Score, Replay>(
+    inputs: impl IntoIterator<Item = (usize, Input)>,
+    score: Score,
+    mut replay: Replay,
+) -> Result<(), Error>
+where
+    Input: Send,
+    Output: Send,
+    Error: Send,
+    Score: Fn(Input) -> Result<Output, Error> + Sync,
+    Replay: FnMut(Output),
+{
+    let mut inputs = inputs.into_iter();
+    loop {
+        let chunk: Vec<(usize, Input)> = inputs.by_ref().take(STRICT_SCORING_CHUNK_SIZE).collect();
+        if chunk.is_empty() {
+            break;
+        }
+        let outcomes = if has_job_pool() {
+            with_job_pool(|| {
+                chunk
+                    .into_par_iter()
+                    .map(|(source_ordinal, input)| IndexedScoringOutcome {
+                        source_ordinal,
+                        outcome: score(input),
+                    })
+                    .collect()
+            })
+        } else {
+            chunk
+                .into_iter()
+                .map(|(source_ordinal, input)| IndexedScoringOutcome {
+                    source_ordinal,
+                    outcome: score(input),
+                })
+                .collect()
+        };
+        for output in replay_indexed_scoring_outcomes(outcomes)? {
+            replay(output);
+        }
+    }
+    Ok(())
+}
+
+struct StrictScoringInput {
+    state: Arc<IrregularBeamState>,
+    piece: Arc<IrregularPreparedPiece>,
+    moving: Arc<TransformedCollisionGeometry>,
+    candidate: IrregularPlacementCandidate,
+    remaining_prepared_pieces: Vec<Arc<IrregularPreparedPiece>>,
+    transform_family: String,
+    moving_collision_area_mm2: f64,
+    moving_collision_doubled_area_grid2: String,
+    gap_regions: Option<Arc<Vec<CanonicalIntrinsicGapRegion>>>,
+}
+
+impl StrictScoringInput {
+    fn score(self) -> Result<Option<ScoredCandidate>, IntrinsicStrictDecoderFailure> {
+        Ok(score_candidate(
+            &self.state,
+            &self.piece,
+            &self.moving,
+            &self.candidate,
+            self.remaining_prepared_pieces,
+            &self.transform_family,
+            self.moving_collision_area_mm2,
+            &self.moving_collision_doubled_area_grid2,
+            self.gap_regions.as_ref().map(|regions| regions.as_slice()),
+            None,
+            &default_timing_now,
+        ))
+    }
+}
+
+fn replay_scored_candidate(
+    scored: ScoredCandidate,
+    family: &str,
+    candidates_by_family: &mut Vec<(String, ScoredCandidate)>,
+    contained_candidates_by_family: &mut Vec<(String, ScoredCandidate)>,
+) {
+    let incumbent = candidates_by_family
+        .iter()
+        .position(|(key, _)| key == family);
+    let should_replace = match incumbent {
+        None => true,
+        Some(index) => {
+            compare_local_scores(&scored.score, &candidates_by_family[index].1.score)
+                == Ordering::Less
+        }
+    };
+    if should_replace {
+        match incumbent {
+            Some(index) => candidates_by_family[index].1 = scored.clone(),
+            None => candidates_by_family.push((family.to_string(), scored.clone())),
+        }
+    }
+    if scored.containing_gap.is_some() {
+        let contained_incumbent = contained_candidates_by_family
+            .iter()
+            .position(|(key, _)| key == family);
+        let should_replace_contained = match contained_incumbent {
+            None => true,
+            Some(index) => {
+                compare_gap_contained_candidates(&scored, &contained_candidates_by_family[index].1)
+                    == Ordering::Less
+            }
+        };
+        if should_replace_contained {
+            match contained_incumbent {
+                Some(index) => contained_candidates_by_family[index].1 = scored.clone(),
+                None => contained_candidates_by_family.push((family.to_string(), scored)),
+            }
         }
     }
 }
@@ -3098,6 +3269,7 @@ pub fn construct_intrinsic_strict_state(
     let checkpointing_enabled =
         maximum_completed_piece_boundaries.is_some() || input.checkpoint.is_some();
     let capture_phase_timings = input.capture_phase_timings;
+    let scoring_mode = strict_scoring_mode(capture_phase_timings, input.timing_now.is_some());
 
     if let Some(message) = validate_seed_partition(&input) {
         return Err(decoder_error("seedPartition", message));
@@ -3236,13 +3408,14 @@ pub fn construct_intrinsic_strict_state(
             input.remaining_prepared_pieces[(piece_index + 1)..].to_vec();
         let mut candidates_by_family: Vec<(String, ScoredCandidate)> = Vec::new();
         let mut contained_candidates_by_family: Vec<(String, ScoredCandidate)> = Vec::new();
-        let gap_regions: Option<Vec<CanonicalIntrinsicGapRegion>> = if matches!(
+        let gap_regions: Option<Arc<Vec<CanonicalIntrinsicGapRegion>>> = if matches!(
             input.candidate_mode,
             IntrinsicStrictCandidateMode::GapContained
         ) {
             derive_canonical_intrinsic_gap_regions(&cloned_placed(
                 &state.placed_collision_geometries,
             ))
+            .map(Arc::new)
         } else {
             None
         };
@@ -3346,86 +3519,107 @@ pub fn construct_intrinsic_strict_state(
                 0.0
             };
 
-            for candidate in &legal_candidates {
-                if let Some(cap) = maximum_candidate_evaluation_count {
-                    if candidate_evaluation_count >= cap {
-                        truncation_reason = Some(TruncationReason::MaximumCandidateEvaluations);
-                        if capture_phase_timings {
-                            candidate_state_scoring_ms +=
-                                timing_now() - candidate_state_scoring_started_at;
+            match scoring_mode {
+                StrictScoringMode::Serial => {
+                    for candidate in &legal_candidates {
+                        if let Some(cap) = maximum_candidate_evaluation_count {
+                            if candidate_evaluation_count >= cap {
+                                truncation_reason =
+                                    Some(TruncationReason::MaximumCandidateEvaluations);
+                                if capture_phase_timings {
+                                    candidate_state_scoring_ms +=
+                                        timing_now() - candidate_state_scoring_started_at;
+                                }
+                                break 'piece_loop;
+                            }
                         }
+                        if capture_candidate_evaluation_count {
+                            candidate_evaluation_count += 1.0;
+                        }
+                        let scored = score_candidate(
+                            &state,
+                            piece,
+                            &moving,
+                            candidate,
+                            remaining_prepared_pieces.clone(),
+                            &family,
+                            moving_collision_area_mm2,
+                            &moving_collision_doubled_area_grid2,
+                            gap_regions.as_ref().map(|regions| regions.as_slice()),
+                            if capture_phase_timings {
+                                Some(&mut candidate_state_phase_timings)
+                            } else {
+                                None
+                            },
+                            timing_now,
+                        );
+                        let scored = match scored {
+                            Some(scored) => scored,
+                            None => continue,
+                        };
+                        let candidate_selection_started_at = if capture_phase_timings {
+                            timing_now()
+                        } else {
+                            0.0
+                        };
+                        replay_scored_candidate(
+                            scored,
+                            &family,
+                            &mut candidates_by_family,
+                            &mut contained_candidates_by_family,
+                        );
+                        if capture_phase_timings {
+                            candidate_state_phase_timings.candidate_selection_ms +=
+                                timing_now() - candidate_selection_started_at;
+                        }
+                    }
+                }
+                StrictScoringMode::Parallel => {
+                    let legal_candidate_count = legal_candidates.len();
+                    let admitted_count = admitted_scoring_count(
+                        legal_candidate_count,
+                        maximum_candidate_evaluation_count,
+                        candidate_evaluation_count,
+                    );
+                    if capture_candidate_evaluation_count {
+                        candidate_evaluation_count += admitted_count as f64;
+                    }
+                    let moving = Arc::new(moving);
+                    let inputs = legal_candidates
+                        .into_iter()
+                        .take(admitted_count)
+                        .enumerate()
+                        .map(|(source_ordinal, candidate)| {
+                            (
+                                source_ordinal,
+                                StrictScoringInput {
+                                    state: Arc::clone(&state),
+                                    piece: Arc::clone(piece),
+                                    moving: Arc::clone(&moving),
+                                    candidate,
+                                    remaining_prepared_pieces: remaining_prepared_pieces.clone(),
+                                    transform_family: family.clone(),
+                                    moving_collision_area_mm2,
+                                    moving_collision_doubled_area_grid2:
+                                        moving_collision_doubled_area_grid2.clone(),
+                                    gap_regions: gap_regions.as_ref().map(Arc::clone),
+                                },
+                            )
+                        });
+                    replay_admitted_scoring_inputs(inputs, StrictScoringInput::score, |scored| {
+                        if let Some(scored) = scored {
+                            replay_scored_candidate(
+                                scored,
+                                &family,
+                                &mut candidates_by_family,
+                                &mut contained_candidates_by_family,
+                            );
+                        }
+                    })?;
+                    if admitted_count < legal_candidate_count {
+                        truncation_reason = Some(TruncationReason::MaximumCandidateEvaluations);
                         break 'piece_loop;
                     }
-                }
-                if capture_candidate_evaluation_count {
-                    candidate_evaluation_count += 1.0;
-                }
-                let scored = score_candidate(
-                    &state,
-                    piece,
-                    &moving,
-                    candidate,
-                    remaining_prepared_pieces.clone(),
-                    &family,
-                    moving_collision_area_mm2,
-                    &moving_collision_doubled_area_grid2,
-                    gap_regions.as_deref(),
-                    if capture_phase_timings {
-                        Some(&mut candidate_state_phase_timings)
-                    } else {
-                        None
-                    },
-                    timing_now,
-                );
-                let scored = match scored {
-                    Some(scored) => scored,
-                    None => continue,
-                };
-                let candidate_selection_started_at = if capture_phase_timings {
-                    timing_now()
-                } else {
-                    0.0
-                };
-                let incumbent = candidates_by_family
-                    .iter()
-                    .position(|(key, _)| key == &family);
-                let should_replace = match incumbent {
-                    None => true,
-                    Some(index) => {
-                        compare_local_scores(&scored.score, &candidates_by_family[index].1.score)
-                            == Ordering::Less
-                    }
-                };
-                if should_replace {
-                    match incumbent {
-                        Some(index) => candidates_by_family[index].1 = scored.clone(),
-                        None => candidates_by_family.push((family.clone(), scored.clone())),
-                    }
-                }
-                if scored.containing_gap.is_some() {
-                    let contained_incumbent = contained_candidates_by_family
-                        .iter()
-                        .position(|(key, _)| key == &family);
-                    let should_replace_contained = match contained_incumbent {
-                        None => true,
-                        Some(index) => {
-                            compare_gap_contained_candidates(
-                                &scored,
-                                &contained_candidates_by_family[index].1,
-                            ) == Ordering::Less
-                        }
-                    };
-                    if should_replace_contained {
-                        match contained_incumbent {
-                            Some(index) => contained_candidates_by_family[index].1 = scored.clone(),
-                            None => contained_candidates_by_family
-                                .push((family.clone(), scored.clone())),
-                        }
-                    }
-                }
-                if capture_phase_timings {
-                    candidate_state_phase_timings.candidate_selection_ms +=
-                        timing_now() - candidate_selection_started_at;
                 }
             }
             if capture_phase_timings {
@@ -3662,4 +3856,249 @@ pub fn decode_intrinsic_strict_priority_order(
     let runtime_ms = js_math::max(0.0, default_timing_now() - started_at);
     finalize_intrinsic_strict_state(final_sheet, constructed, runtime_ms)
         .map_err(IntrinsicStrictDecoderFailure::Decoder)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use std::cell::Cell;
+
+    use crate::boundary::parallel::JobPool;
+    use crate::canonical_grid::CanonicalGridPoint;
+    use crate::domain::IrregularPlacementCandidate;
+
+    fn strict_scoring_worker_indexes() -> Vec<(usize, Option<usize>)> {
+        let mut observations = Vec::new();
+        replay_admitted_scoring_inputs(
+            (0..(STRICT_SCORING_CHUNK_SIZE * 2))
+                .map(|source_ordinal| (source_ordinal, source_ordinal)),
+            |source_ordinal| Ok::<_, ()>((source_ordinal, rayon::current_thread_index())),
+            |observation| observations.push(observation),
+        )
+        .expect("strict scoring worker-index map succeeds");
+        observations
+    }
+
+    fn test_score(key: &str, shared_boundary_length_mm: f64) -> IntrinsicStrictLocalScore {
+        IntrinsicStrictLocalScore {
+            maximum_side_mm: 10.0,
+            envelope_area_mm2: 100.0,
+            envelope_span_mm: 20.0,
+            shared_boundary_length_mm,
+            canonical_combined_geometry_key: key.to_string(),
+            exact: Some(IntrinsicStrictLocalScoreExact {
+                maximum_side_grid: 10_000.0,
+                envelope_area_grid2: "100000000".to_string(),
+                envelope_span_grid: 20_000.0,
+            }),
+        }
+    }
+
+    fn test_gap(area_grid2: &str) -> CanonicalIntrinsicGapRegion {
+        CanonicalIntrinsicGapRegion {
+            kind: super::super::gap_regions::CanonicalIntrinsicGapRegionKind::HullOpenGap,
+            boundary: vec![
+                CanonicalGridPoint::new(0.0, 0.0),
+                CanonicalGridPoint::new(1.0, 0.0),
+                CanonicalGridPoint::new(0.0, 1.0),
+            ],
+            holes: Vec::new(),
+            area_mm2: 1.0,
+            doubled_area_grid2: area_grid2.to_string(),
+            aabb: super::super::gap_regions::CanonicalIntrinsicGapRegionAabb {
+                min_x: 0.0,
+                min_y: 0.0,
+                max_x: 1.0,
+                max_y: 1.0,
+            },
+            canonical_key: format!("gap:{area_grid2}"),
+        }
+    }
+
+    fn test_scored_candidate(
+        family: &str,
+        key: &str,
+        gap_area_grid2: Option<&str>,
+    ) -> ScoredCandidate {
+        let piece_id = PieceId::new(family);
+        let candidate = IrregularPlacementCandidate {
+            piece_id: piece_id.clone(),
+            transform: IrregularTransformCandidate {
+                index: 0.0,
+                rotation_deg: 0.0,
+                mirrored: false,
+                reason: IrregularTransformReason::Configured,
+            },
+            point: IrregularPoint::new(0.0, 0.0),
+            diagnostics: Vec::new(),
+        };
+        ScoredCandidate {
+            state: IrregularBeamState::empty(Vec::new()),
+            score: test_score(key, 1.0),
+            transform_family: family.to_string(),
+            candidate,
+            moving_collision_area_mm2: 1.0,
+            moving_collision_doubled_area_grid2: "2".to_string(),
+            containing_gap: gap_area_grid2.map(test_gap),
+        }
+    }
+
+    #[test]
+    fn strict_scoring_admits_exact_serial_prefix_for_zero_full_mid_slice_and_nan_caps() {
+        assert_eq!(admitted_scoring_count(0, Some(7.0), 0.0), 0);
+        assert_eq!(admitted_scoring_count(7, Some(0.0), 0.0), 0);
+        assert_eq!(admitted_scoring_count(3, Some(10.0), 0.0), 3);
+        assert_eq!(admitted_scoring_count(10, Some(3.0), 0.0), 3);
+        assert_eq!(admitted_scoring_count(10, Some(10.0), 0.0), 10);
+        assert_eq!(admitted_scoring_count(7, Some(f64::NAN), 0.0), 7);
+        assert_eq!(admitted_scoring_count(7, Some(f64::INFINITY), 0.0), 7);
+        assert_eq!(admitted_scoring_count(7, None, 0.0), 7);
+    }
+
+    #[test]
+    fn strict_scoring_replays_each_bounded_chunk_before_dispatching_the_next() {
+        use std::sync::atomic::{AtomicUsize, Ordering as AtomicOrdering};
+
+        let replayed = AtomicUsize::new(0);
+        replay_admitted_scoring_inputs(
+            (0..(STRICT_SCORING_CHUNK_SIZE * 2 + 1))
+                .map(|source_ordinal| (source_ordinal, source_ordinal)),
+            |source_ordinal| {
+                if source_ordinal >= STRICT_SCORING_CHUNK_SIZE {
+                    assert!(
+                        replayed.load(AtomicOrdering::SeqCst) >= STRICT_SCORING_CHUNK_SIZE,
+                        "the next chunk started before the coordinator replayed the previous chunk"
+                    );
+                }
+                Ok::<_, ()>(source_ordinal)
+            },
+            |source_ordinal| {
+                let expected = replayed.fetch_add(1, AtomicOrdering::SeqCst);
+                assert_eq!(source_ordinal, expected, "replay order changed");
+            },
+        )
+        .expect("strict scoring chunk replay succeeds");
+        assert_eq!(
+            replayed.load(AtomicOrdering::SeqCst),
+            STRICT_SCORING_CHUNK_SIZE * 2 + 1
+        );
+    }
+
+    #[test]
+    fn strict_scoring_mode_falls_back_to_serial_for_phase_capture_or_injected_clock() {
+        assert_eq!(
+            strict_scoring_mode(false, false),
+            StrictScoringMode::Parallel
+        );
+        assert_eq!(strict_scoring_mode(true, false), StrictScoringMode::Serial);
+        assert_eq!(strict_scoring_mode(false, true), StrictScoringMode::Serial);
+        assert_eq!(strict_scoring_mode(true, true), StrictScoringMode::Serial);
+
+        let calls = Cell::new(0usize);
+        let timing_now = || {
+            calls.set(calls.get() + 1);
+            calls.get() as f64
+        };
+        let _ = timing_now();
+        assert_eq!(
+            calls.get(),
+            1,
+            "the injected clock callback chronology remains explicit"
+        );
+    }
+
+    #[test]
+    fn indexed_scoring_replay_restores_source_order_including_none_scores() {
+        let outcomes: Vec<IndexedScoringOutcome<Option<&str>, ()>> = vec![
+            IndexedScoringOutcome {
+                source_ordinal: 2,
+                outcome: Ok(Some("third")),
+            },
+            IndexedScoringOutcome {
+                source_ordinal: 0,
+                outcome: Ok(None),
+            },
+            IndexedScoringOutcome {
+                source_ordinal: 1,
+                outcome: Ok(Some("second")),
+            },
+        ];
+        assert_eq!(
+            replay_indexed_scoring_outcomes(outcomes).expect("all outcomes succeed"),
+            vec![None, Some("second"), Some("third")]
+        );
+    }
+
+    #[test]
+    fn indexed_scoring_replay_selects_the_lowest_source_ordinal_error() {
+        let outcomes: Vec<IndexedScoringOutcome<Option<()>, &str>> = vec![
+            IndexedScoringOutcome {
+                source_ordinal: 4,
+                outcome: Err("ordinal-4"),
+            },
+            IndexedScoringOutcome {
+                source_ordinal: 1,
+                outcome: Err("ordinal-1"),
+            },
+            IndexedScoringOutcome {
+                source_ordinal: 3,
+                outcome: Ok(None),
+            },
+        ];
+        assert_eq!(
+            replay_indexed_scoring_outcomes(outcomes).unwrap_err(),
+            "ordinal-1"
+        );
+    }
+
+    #[test]
+    fn family_and_gap_replay_preserve_existing_serial_tie_behavior() {
+        let first = test_scored_candidate("family-a", "same-key", Some("2"));
+        let second = test_scored_candidate("family-b", "same-key", Some("2"));
+
+        let family_candidates = [first.clone(), second.clone()];
+        let family_winner = select_intrinsic_strict_family_winner(
+            &family_candidates,
+            IntrinsicStrictComparatorMode::PureGrowth,
+        )
+        .expect("family winner");
+        assert_eq!(family_winner.transform_family, "family-a");
+
+        let gap_candidates = [first, second];
+        let gap_winner = select_gap_contained_winner(&gap_candidates).expect("gap winner");
+        assert_eq!(gap_winner.transform_family, "family-a");
+    }
+
+    #[test]
+    fn strict_scoring_map_runs_serially_without_an_installed_job_pool() {
+        let observations = strict_scoring_worker_indexes();
+        assert_eq!(
+            observations
+                .iter()
+                .map(|(source_ordinal, _)| *source_ordinal)
+                .collect::<Vec<_>>(),
+            (0..(STRICT_SCORING_CHUNK_SIZE * 2)).collect::<Vec<_>>(),
+            "strict scoring replay keeps source ordinals stable"
+        );
+        assert!(
+            observations
+                .iter()
+                .all(|(_, worker_index)| worker_index.is_none()),
+            "strict scoring without a job pool must run serially, not on Rayon's global pool"
+        );
+    }
+
+    #[test]
+    fn strict_scoring_map_dispatches_to_an_installed_job_pool() {
+        let job_pool = JobPool::new(Some(4));
+        let _guard = job_pool.install();
+        let observations = strict_scoring_worker_indexes();
+        assert!(
+            observations
+                .iter()
+                .all(|(_, worker_index)| worker_index.is_some()),
+            "strict scoring must dispatch its map closure through the installed job pool"
+        );
+    }
 }

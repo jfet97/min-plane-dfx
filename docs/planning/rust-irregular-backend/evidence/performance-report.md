@@ -14,6 +14,41 @@ The follow-up policy in `../quality-acceptance.md` explicitly supersedes PR27's 
 
 Current macOS correctness runs completed Mixed-61 Compact in 30826 ms and Short Side in 31300 ms. The Compact production gate passed at `32061.670542` ms with area `391605.85017399996` and zero cavities. These are gate-completion observations, not new P1 through P7 comparative samples.
 
+### 2026-08-01 strict-scoring parallelism follow-up
+
+The retained follow-up parallelizes only the serially admitted prefix of strict-decoder candidate scoring. Admission uses the original partial-order comparison semantics, so finite caps preserve the exact prefix while NaN and positive infinity admit every legal candidate as before. The job-owned Rayon pool scores bounded 32-candidate chunks with stable source ordinals. The coordinator replays each chunk completely in source order before dispatching the next, bounding live scoring outcomes and retained beam states to one chunk. Candidate evaluation accounting, family and gap-contained comparator behavior, failure selection, checkpoint chronology, trace publication, cache mutation, and final output publication remain coordinator-owned. Phase-timing capture and injected clocks keep the original serial scoring path. Threads without an installed job-owned pool use ordinary serial iteration, never Rayon's global pool.
+
+The local macOS evidence is diagnostic and non-authoritative. Each cell used the real packaged N-API entry point for Mixed-61 Compact `2000x2700`, one discarded warm-up, and five measured samples. Every measured sample placed 61 pieces with zero unplaced pieces and reproduced collision identity `3839e80d26be257381f1962816765a886d4b7e3c3d78120892e4a6a943dfa742` and fitted canonical identity `ef2b783ae12491d2a80a12ef94d1bb2801c13cbd43aeb6e2c1cc00d86828fd3b`. Native diagnostics also reported the requested thread count for every sample.
+
+| Threads | Baseline median (ms) | Candidate batch 1 median (ms) | Batch 1 improvement | Candidate batch 2 median (ms) | Batch 2 improvement |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 30693 | 31352 | -2.15% | 31514 | -2.67% |
+| 2 | 30805 | 28990 | 5.89% | 28889 | 6.22% |
+| 4 | 30915 | 26432 | 14.50% | 26386 | 14.65% |
+| 8 | 31014 | 26214 | 15.48% | 26235 | 15.41% |
+
+Median peak RSS stayed comparable to baseline. Across both batches, candidate median peak RSS was 0.59% to 1.75% above the corresponding baseline cell. The largest candidate median was 518,897,664 bytes, well inside the existing P6 bound.
+
+The four-thread and eight-thread improvements repeated in both independent batches and substantially exceeded each cell's run-to-run spread. The compiled default remains one thread, so the repeated 2.15% to 2.67% C1 one-thread slowdown also applies to default execution. The thread policy is unchanged, and this cost remains below the existing 5% material-regression screen. The implementation is retained because explicit two-thread, four-thread, and eight-thread execution produced repeatable end-to-end gains while semantic and memory checks remained green.
+
+The final diagnostic C5, C6, and C7 aggregate matrix used three measured Rust samples per suite and thread setting, with matching TypeScript samples interleaved by the maintained runner. All 72 measured samples were valid, passed their built-in quality checks, and executed the requested backend without a thread-count mismatch.
+
+| Suite | TypeScript median (ms) | Rust 1 thread (ms) | Rust 2 threads (ms) | Rust default (ms) | Rust 8 threads (ms) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| C5 Compact nine-layout suite | 58122.87 | 56724.47 | 52932.50 | 56884.84 | 49419.90 |
+| C6 production-capacity suite | 96797.29 | 90993.73 | 83670.61 | 90224.01 | 79238.31 |
+| C7 Short Side nine-layout suite | 63838.64 | 57974.00 | 53435.53 | 58089.39 | 50548.71 |
+
+Explicit two-thread and eight-thread execution improved every aggregate suite relative to one-thread execution. Default execution remained one-thread and close to the explicit one-thread cells. This local matrix is diagnostic only: the runner classified the host as blocked and non-authoritative because controlled Linux was unavailable. Its historical strict P5 thresholds remain failed for C5 and C6 and are not rewritten by this follow-up.
+
+Durable local evidence:
+
+- exact dirty-source provenance, source hashes, build hash, raw samples, `/usr/bin/time -l` output, and aggregate evidence: `/private/tmp/min-plane-provenance/native-hotspot-parallelism-20260801-final-candidate/`
+- portable accepted summaries: `docs/artifacts/native-hotspot-parallelism/`
+- immutable baseline raw evidence, provenance, summary, and hashes: `/private/tmp/min-plane-provenance/native-hotspot-parallelism-20260801-final-candidate/baseline/`
+
+The provenance directory records the base commit, complete binary-capable working-tree patch, patch SHA-256, changed-file list, environment, benchmark-runner hashes, release-addon hash, exact command metadata, and SHA-256 hashes for every raw sample artifact.
+
 ### Docker/Linux P5 runner availability
 
 Task 187 adds a reproducible container wrapper for the existing aggregate

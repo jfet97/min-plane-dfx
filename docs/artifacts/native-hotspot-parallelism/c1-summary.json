@@ -1,0 +1,316 @@
+{
+  "classification": "diagnostic and non-authoritative local macOS evidence",
+  "sourceProvenance": "/private/tmp/min-plane-provenance/native-hotspot-parallelism-20260801-final-candidate/source",
+  "baselineSummary": "/private/tmp/min-plane-provenance/native-hotspot-parallelism-20260801-final-candidate/baseline/stage1-summary.json",
+  "contract": {
+    "fixture": "mixed-61",
+    "profile": "compact",
+    "sheet": "2000x2700",
+    "warmupsDiscardedPerBatchAndThread": 1,
+    "measuredSamplesPerBatchAndThread": 5,
+    "threads": [
+      1,
+      2,
+      4,
+      8
+    ],
+    "expectedCollisionIdentitySha256": "3839e80d26be257381f1962816765a886d4b7e3c3d78120892e4a6a943dfa742",
+    "expectedFittedCanonicalSha256": "ef2b783ae12491d2a80a12ef94d1bb2801c13cbd43aeb6e2c1cc00d86828fd3b"
+  },
+  "batches": {
+    "1": {
+      "1": {
+        "elapsedMs": {
+          "samples": [
+            31279,
+            31352,
+            31338,
+            31410,
+            31379
+          ],
+          "median": 31352,
+          "minimum": 31279,
+          "maximum": 31410,
+          "firstQuartile": 31338,
+          "thirdQuartile": 31379,
+          "iqr": 41
+        },
+        "peakRssBytes": {
+          "samples": [
+            517505024,
+            516521984,
+            507854848,
+            510115840,
+            519045120
+          ],
+          "median": 516521984,
+          "minimum": 507854848,
+          "maximum": 519045120,
+          "firstQuartile": 510115840,
+          "thirdQuartile": 517505024,
+          "iqr": 7389184
+        },
+        "baselineElapsedMedianMs": 30693,
+        "improvementPercent": -2.1470693643501777,
+        "baselinePeakRssMedianBytes": 508542976,
+        "peakRssChangePercent": 1.5689938464512387
+      },
+      "2": {
+        "elapsedMs": {
+          "samples": [
+            28717,
+            29078,
+            28776,
+            28990,
+            29041
+          ],
+          "median": 28990,
+          "minimum": 28717,
+          "maximum": 29078,
+          "firstQuartile": 28776,
+          "thirdQuartile": 29041,
+          "iqr": 265
+        },
+        "peakRssBytes": {
+          "samples": [
+            513540096,
+            515899392,
+            515637248,
+            516718592,
+            519929856
+          ],
+          "median": 515899392,
+          "minimum": 513540096,
+          "maximum": 519929856,
+          "firstQuartile": 515637248,
+          "thirdQuartile": 516718592,
+          "iqr": 1081344
+        },
+        "baselineElapsedMedianMs": 30805,
+        "improvementPercent": 5.891900665476384,
+        "baselinePeakRssMedianBytes": 507199488,
+        "peakRssChangePercent": 1.7152824886132376
+      },
+      "4": {
+        "elapsedMs": {
+          "samples": [
+            26283,
+            26432,
+            26352,
+            26559,
+            26508
+          ],
+          "median": 26432,
+          "minimum": 26283,
+          "maximum": 26559,
+          "firstQuartile": 26352,
+          "thirdQuartile": 26508,
+          "iqr": 156
+        },
+        "peakRssBytes": {
+          "samples": [
+            517865472,
+            519045120,
+            516767744,
+            516653056,
+            515375104
+          ],
+          "median": 516767744,
+          "minimum": 515375104,
+          "maximum": 519045120,
+          "firstQuartile": 516653056,
+          "thirdQuartile": 517865472,
+          "iqr": 1212416
+        },
+        "baselineElapsedMedianMs": 30915,
+        "improvementPercent": 14.50105126961022,
+        "baselinePeakRssMedianBytes": 509149184,
+        "peakRssChangePercent": 1.4963315742051744
+      },
+      "8": {
+        "elapsedMs": {
+          "samples": [
+            26064,
+            26020,
+            26311,
+            26214,
+            26221
+          ],
+          "median": 26214,
+          "minimum": 26020,
+          "maximum": 26311,
+          "firstQuartile": 26064,
+          "thirdQuartile": 26221,
+          "iqr": 157
+        },
+        "peakRssBytes": {
+          "samples": [
+            481296384,
+            520224768,
+            518897664,
+            519290880,
+            482066432
+          ],
+          "median": 518897664,
+          "minimum": 481296384,
+          "maximum": 520224768,
+          "firstQuartile": 482066432,
+          "thirdQuartile": 519290880,
+          "iqr": 37224448
+        },
+        "baselineElapsedMedianMs": 31014,
+        "improvementPercent": 15.47688140839621,
+        "baselinePeakRssMedianBytes": 512409600,
+        "peakRssChangePercent": 1.2661870503597124
+      }
+    },
+    "2": {
+      "1": {
+        "elapsedMs": {
+          "samples": [
+            31738,
+            31322,
+            31328,
+            31514,
+            31575
+          ],
+          "median": 31514,
+          "minimum": 31322,
+          "maximum": 31738,
+          "firstQuartile": 31328,
+          "thirdQuartile": 31575,
+          "iqr": 247
+        },
+        "peakRssBytes": {
+          "samples": [
+            515588096,
+            514965504,
+            515653632,
+            516407296,
+            515637248
+          ],
+          "median": 515637248,
+          "minimum": 514965504,
+          "maximum": 516407296,
+          "firstQuartile": 515588096,
+          "thirdQuartile": 515653632,
+          "iqr": 65536
+        },
+        "baselineElapsedMedianMs": 30693,
+        "improvementPercent": -2.674877007786792,
+        "baselinePeakRssMedianBytes": 508542976,
+        "peakRssChangePercent": 1.3950191694320049
+      },
+      "2": {
+        "elapsedMs": {
+          "samples": [
+            28752,
+            29114,
+            28775,
+            29063,
+            28889
+          ],
+          "median": 28889,
+          "minimum": 28752,
+          "maximum": 29114,
+          "firstQuartile": 28775,
+          "thirdQuartile": 29063,
+          "iqr": 288
+        },
+        "peakRssBytes": {
+          "samples": [
+            516997120,
+            516096000,
+            515850240,
+            518766592,
+            513474560
+          ],
+          "median": 516096000,
+          "minimum": 513474560,
+          "maximum": 518766592,
+          "firstQuartile": 515850240,
+          "thirdQuartile": 516997120,
+          "iqr": 1146880
+        },
+        "baselineElapsedMedianMs": 30805,
+        "improvementPercent": 6.2197695179354,
+        "baselinePeakRssMedianBytes": 507199488,
+        "peakRssChangePercent": 1.7540459346835933
+      },
+      "4": {
+        "elapsedMs": {
+          "samples": [
+            26478,
+            26365,
+            26386,
+            26689,
+            26229
+          ],
+          "median": 26386,
+          "minimum": 26229,
+          "maximum": 26689,
+          "firstQuartile": 26365,
+          "thirdQuartile": 26478,
+          "iqr": 113
+        },
+        "peakRssBytes": {
+          "samples": [
+            512983040,
+            517832704,
+            519208960,
+            484868096,
+            516816896
+          ],
+          "median": 516816896,
+          "minimum": 484868096,
+          "maximum": 519208960,
+          "firstQuartile": 512983040,
+          "thirdQuartile": 517832704,
+          "iqr": 4849664
+        },
+        "baselineElapsedMedianMs": 30915,
+        "improvementPercent": 14.64984635290312,
+        "baselinePeakRssMedianBytes": 509149184,
+        "peakRssChangePercent": 1.5059853262968208
+      },
+      "8": {
+        "elapsedMs": {
+          "samples": [
+            26162,
+            26235,
+            26366,
+            26512,
+            26147
+          ],
+          "median": 26235,
+          "minimum": 26147,
+          "maximum": 26512,
+          "firstQuartile": 26162,
+          "thirdQuartile": 26366,
+          "iqr": 204
+        },
+        "peakRssBytes": {
+          "samples": [
+            520667136,
+            518291456,
+            515407872,
+            514211840,
+            512901120
+          ],
+          "median": 515407872,
+          "minimum": 512901120,
+          "maximum": 520667136,
+          "firstQuartile": 514211840,
+          "thirdQuartile": 518291456,
+          "iqr": 4079616
+        },
+        "baselineElapsedMedianMs": 31014,
+        "improvementPercent": 15.409170052234474,
+        "baselinePeakRssMedianBytes": 512409600,
+        "peakRssChangePercent": 0.5851318944844125
+      }
+    }
+  },
+  "baselineProvenance": "/private/tmp/min-plane-provenance/native-hotspot-parallelism-20260801-final-candidate/baseline",
+  "baselineHashes": "/private/tmp/min-plane-provenance/native-hotspot-parallelism-20260801-final-candidate/baseline/SHA256SUMS"
+}

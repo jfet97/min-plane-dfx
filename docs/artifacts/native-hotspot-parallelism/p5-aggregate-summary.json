@@ -1,0 +1,397 @@
+{
+  "classification": "diagnostic and non-authoritative local macOS evidence",
+  "sourceProvenancePath": "/private/tmp/min-plane-provenance/native-hotspot-parallelism-20260801-final-candidate/source",
+  "rawEvidencePath": "/private/tmp/min-plane-provenance/native-hotspot-parallelism-20260801-final-candidate/aggregate/p5-aggregate-evidence.json",
+  "metadata": {
+    "exactCommand": "/nix/store/hnksp0i3h476mak0x1np8x2nqnajhv4f-nodejs-slim-24.16.0/bin/node /Users/andreasimonecosta/Documents/Work/min-plane-dfx/.claude/worktrees/standard-hypot/scripts/rust-parity/measure-p5-aggregate.ts --rust-threads matrix --samples 3 --output /private/tmp/min-plane-provenance/native-hotspot-parallelism-20260801-final-candidate/aggregate/p5-aggregate-evidence.json",
+    "commit": "4d40bc6c36672973b75efdf5ad076dd070204189",
+    "dirty": true,
+    "nodeVersion": "v24.16.0",
+    "pnpmVersion": "11.8.0",
+    "rustcVersion": "1.95.0 (59807616e 2026-04-14) (built from a source tarball)",
+    "targetTriple": "aarch64-apple-darwin",
+    "kernel": "darwin 25.5.0",
+    "cpu": "Apple M4 Max",
+    "cpuCount": 16,
+    "memoryBytes": 68719476736,
+    "nativeApiVersion": 3,
+    "nativeCrateVersion": "0.1.0",
+    "advertisedNativeProfiles": [
+      "compact",
+      "compact-short-side"
+    ],
+    "actualThreadCount": 8,
+    "cachePolicy": "production-defaults; TypeScript-only diagnostics and shadows excluded",
+    "backendExecuted": "rust"
+  },
+  "validation": {
+    "measuredSampleCount": 72,
+    "invalidSampleCount": 0,
+    "qualityFailureCount": 0,
+    "backendMismatchCount": 0
+  },
+  "statistics": [
+    {
+      "key": "C5:rust-default",
+      "suite": "C5",
+      "backend": "typescript",
+      "rustThreads": "default",
+      "sampleCount": 12,
+      "validSampleCount": 12,
+      "statistics": {
+        "median": 58122.871626500055,
+        "minimum": 57871.45483200019,
+        "maximum": 59056.455333999984,
+        "firstQuartile": 58006.80570899998,
+        "thirdQuartile": 58313.72408299992,
+        "iqr": 306.91837399994256,
+        "rawSamples": [
+          59056.455333999984,
+          58123.630334000016,
+          58229.85424899997,
+          58187.55424900004,
+          58441.76287600002,
+          58397.593916999875,
+          58122.112919000094,
+          58014.36445900006,
+          58012.950041000266,
+          58000.66137699969,
+          57871.45483200019,
+          57911.25583299971
+        ]
+      }
+    },
+    {
+      "key": "C5:rust-1",
+      "suite": "C5",
+      "backend": "rust",
+      "rustThreads": 1,
+      "sampleCount": 3,
+      "validSampleCount": 3,
+      "statistics": {
+        "median": 56724.4698319998,
+        "minimum": 56709.440623,
+        "maximum": 56749.032665999955,
+        "firstQuartile": 56709.440623,
+        "thirdQuartile": 56749.032665999955,
+        "iqr": 39.592042999953264,
+        "rawSamples": [
+          56709.440623,
+          56749.032665999955,
+          56724.4698319998
+        ]
+      }
+    },
+    {
+      "key": "C5:rust-2",
+      "suite": "C5",
+      "backend": "rust",
+      "rustThreads": 2,
+      "sampleCount": 3,
+      "validSampleCount": 3,
+      "statistics": {
+        "median": 52932.49754000001,
+        "minimum": 52923.17091600003,
+        "maximum": 52980.56841499987,
+        "firstQuartile": 52923.17091600003,
+        "thirdQuartile": 52980.56841499987,
+        "iqr": 57.39749899983872,
+        "rawSamples": [
+          52932.49754000001,
+          52980.56841499987,
+          52923.17091600003
+        ]
+      }
+    },
+    {
+      "key": "C5:rust-default",
+      "suite": "C5",
+      "backend": "rust",
+      "rustThreads": "default",
+      "sampleCount": 3,
+      "validSampleCount": 3,
+      "statistics": {
+        "median": 56884.84320799983,
+        "minimum": 56859.01175199961,
+        "maximum": 56888.463831999805,
+        "firstQuartile": 56859.01175199961,
+        "thirdQuartile": 56888.463831999805,
+        "iqr": 29.452080000191927,
+        "rawSamples": [
+          56888.463831999805,
+          56859.01175199961,
+          56884.84320799983
+        ]
+      }
+    },
+    {
+      "key": "C5:rust-8",
+      "suite": "C5",
+      "backend": "rust",
+      "rustThreads": 8,
+      "sampleCount": 3,
+      "validSampleCount": 3,
+      "statistics": {
+        "median": 49419.90212799958,
+        "minimum": 49368.05908199982,
+        "maximum": 49491.077123000054,
+        "firstQuartile": 49368.05908199982,
+        "thirdQuartile": 49491.077123000054,
+        "iqr": 123.01804100023583,
+        "rawSamples": [
+          49419.90212799958,
+          49491.077123000054,
+          49368.05908199982
+        ]
+      }
+    },
+    {
+      "key": "C6:rust-default",
+      "suite": "C6",
+      "backend": "typescript",
+      "rustThreads": "default",
+      "sampleCount": 12,
+      "validSampleCount": 12,
+      "statistics": {
+        "median": 96797.2867720006,
+        "minimum": 96568.17324799998,
+        "maximum": 98617.59683300066,
+        "firstQuartile": 96627.6052080011,
+        "thirdQuartile": 98039.69858350069,
+        "iqr": 1412.093375499593,
+        "rawSamples": [
+          98617.59683300066,
+          98264.65791600011,
+          98152.02787600085,
+          96670.13087700075,
+          96860.28679300006,
+          97734.54087399971,
+          96568.17324799998,
+          97927.36929100053,
+          96591.3242099993,
+          96734.28675100114,
+          96616.30837400071,
+          96638.90204200149
+        ]
+      }
+    },
+    {
+      "key": "C6:rust-1",
+      "suite": "C6",
+      "backend": "rust",
+      "rustThreads": 1,
+      "sampleCount": 3,
+      "validSampleCount": 3,
+      "statistics": {
+        "median": 90993.72612399957,
+        "minimum": 90939.76308400044,
+        "maximum": 91164.36945899995,
+        "firstQuartile": 90939.76308400044,
+        "thirdQuartile": 91164.36945899995,
+        "iqr": 224.60637499950826,
+        "rawSamples": [
+          90993.72612399957,
+          91164.36945899995,
+          90939.76308400044
+        ]
+      }
+    },
+    {
+      "key": "C6:rust-2",
+      "suite": "C6",
+      "backend": "rust",
+      "rustThreads": 2,
+      "sampleCount": 3,
+      "validSampleCount": 3,
+      "statistics": {
+        "median": 83670.61404099967,
+        "minimum": 83641.863167,
+        "maximum": 83736.97704100097,
+        "firstQuartile": 83641.863167,
+        "thirdQuartile": 83736.97704100097,
+        "iqr": 95.11387400096282,
+        "rawSamples": [
+          83736.97704100097,
+          83641.863167,
+          83670.61404099967
+        ]
+      }
+    },
+    {
+      "key": "C6:rust-default",
+      "suite": "C6",
+      "backend": "rust",
+      "rustThreads": "default",
+      "sampleCount": 3,
+      "validSampleCount": 3,
+      "statistics": {
+        "median": 90224.01499999966,
+        "minimum": 90110.06979299895,
+        "maximum": 90379.9187920005,
+        "firstQuartile": 90110.06979299895,
+        "thirdQuartile": 90379.9187920005,
+        "iqr": 269.8489990015514,
+        "rawSamples": [
+          90379.9187920005,
+          90224.01499999966,
+          90110.06979299895
+        ]
+      }
+    },
+    {
+      "key": "C6:rust-8",
+      "suite": "C6",
+      "backend": "rust",
+      "rustThreads": 8,
+      "sampleCount": 3,
+      "validSampleCount": 3,
+      "statistics": {
+        "median": 79238.3081269972,
+        "minimum": 79235.61933299992,
+        "maximum": 79542.31829099916,
+        "firstQuartile": 79235.61933299992,
+        "thirdQuartile": 79542.31829099916,
+        "iqr": 306.6989579992369,
+        "rawSamples": [
+          79238.3081269972,
+          79235.61933299992,
+          79542.31829099916
+        ]
+      }
+    },
+    {
+      "key": "C7:rust-default",
+      "suite": "C7",
+      "backend": "typescript",
+      "rustThreads": "default",
+      "sampleCount": 12,
+      "validSampleCount": 12,
+      "statistics": {
+        "median": 63838.63504200056,
+        "minimum": 63704.94933400117,
+        "maximum": 63896.38887599949,
+        "firstQuartile": 63741.591958000325,
+        "thirdQuartile": 63855.72806350095,
+        "iqr": 114.13610550062731,
+        "rawSamples": [
+          63859.737418000586,
+          63722.55333299935,
+          63851.71870900132,
+          63760.555292001925,
+          63879.16770899948,
+          63896.38887599949,
+          63793.61474899948,
+          63704.94933400117,
+          63722.628623998724,
+          63839.869249000214,
+          63837.40083500091,
+          63847.588125999086
+        ]
+      }
+    },
+    {
+      "key": "C7:rust-1",
+      "suite": "C7",
+      "backend": "rust",
+      "rustThreads": 1,
+      "sampleCount": 3,
+      "validSampleCount": 3,
+      "statistics": {
+        "median": 57973.997707,
+        "minimum": 57956.541333000176,
+        "maximum": 57974.58604100067,
+        "firstQuartile": 57956.541333000176,
+        "thirdQuartile": 57974.58604100067,
+        "iqr": 18.04470800049603,
+        "rawSamples": [
+          57974.58604100067,
+          57973.997707,
+          57956.541333000176
+        ]
+      }
+    },
+    {
+      "key": "C7:rust-2",
+      "suite": "C7",
+      "backend": "rust",
+      "rustThreads": 2,
+      "sampleCount": 3,
+      "validSampleCount": 3,
+      "statistics": {
+        "median": 53435.53095799964,
+        "minimum": 53426.93708400149,
+        "maximum": 53439.910332000814,
+        "firstQuartile": 53426.93708400149,
+        "thirdQuartile": 53439.910332000814,
+        "iqr": 12.973247999325395,
+        "rawSamples": [
+          53439.910332000814,
+          53426.93708400149,
+          53435.53095799964
+        ]
+      }
+    },
+    {
+      "key": "C7:rust-default",
+      "suite": "C7",
+      "backend": "rust",
+      "rustThreads": "default",
+      "sampleCount": 3,
+      "validSampleCount": 3,
+      "statistics": {
+        "median": 58089.391250000335,
+        "minimum": 58044.25258399919,
+        "maximum": 58089.794498001225,
+        "firstQuartile": 58044.25258399919,
+        "thirdQuartile": 58089.794498001225,
+        "iqr": 45.54191400203854,
+        "rawSamples": [
+          58044.25258399919,
+          58089.794498001225,
+          58089.391250000335
+        ]
+      }
+    },
+    {
+      "key": "C7:rust-8",
+      "suite": "C7",
+      "backend": "rust",
+      "rustThreads": 8,
+      "sampleCount": 3,
+      "validSampleCount": 3,
+      "statistics": {
+        "median": 50548.706917001866,
+        "minimum": 50532.38666800037,
+        "maximum": 50596.69891699869,
+        "firstQuartile": 50532.38666800037,
+        "thirdQuartile": 50596.69891699869,
+        "iqr": 64.31224899832159,
+        "rawSamples": [
+          50532.38666800037,
+          50548.706917001866,
+          50596.69891699869
+        ]
+      }
+    }
+  ],
+  "thresholds": {
+    "C5": {
+      "oneThreadRatio": 0.9759405935156397,
+      "defaultThreadRatio": 0.9786998063953921,
+      "oneThreadPassed": false,
+      "defaultThreadPassed": false
+    },
+    "C6": {
+      "oneThreadRatio": 0.9400441805598237,
+      "defaultThreadRatio": 0.9320923964792129,
+      "oneThreadPassed": false,
+      "defaultThreadPassed": false
+    }
+  },
+  "host": {
+    "authoritative": false,
+    "status": "blocked",
+    "reason": "controlled-linux-unavailable"
+  },
+  "verdict": "blocked"
+}
