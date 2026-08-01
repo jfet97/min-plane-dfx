@@ -28,6 +28,7 @@
 use std::fs;
 use std::sync::Arc;
 
+use irregular_nesting_native::boundary::parallel::JobPool;
 use irregular_nesting_native::caches::GeometryCacheStore;
 use irregular_nesting_native::domain::{
     CollisionGeometry, DxfGeometryEntityType, DxfGeometrySummary, ImportedPiece, IrregularBounds,
@@ -750,8 +751,8 @@ fn metric_rounding_cases_match_ts() {
 // Section B: full decode runs.
 // ===========================================================================
 #[allow(clippy::too_many_arguments)]
-fn run_construct<'a>(
-    pieces: &'a [Arc<IrregularPreparedPiece>],
+fn run_construct(
+    pieces: &[Arc<IrregularPreparedPiece>],
     candidate_mode: IntrinsicStrictCandidateMode,
     maximum_runtime_ms: f64,
     maximum_candidate_evaluation_count: Option<f64>,
@@ -760,7 +761,7 @@ fn run_construct<'a>(
     checkpoint: Option<
         irregular_nesting_native::search::strict_decoder::IntrinsicStrictDirectCheckpoint,
     >,
-    timing_now: &'a TimingNowFn,
+    timing_now: &TimingNowFn,
     settings: &IrregularNestingSettings,
     cache: &mut GeometryCacheStore,
 ) -> Result<
@@ -783,6 +784,390 @@ fn run_construct<'a>(
         control: None,
     };
     construct_intrinsic_strict_state(input, settings, cache)
+}
+
+/** Runs strict construction without injecting a timing callback. This is the
+production-shaped path required to exercise the no-timing scoring dispatch.
+Timing vectors continue to use `run_construct` above as the serial authority. */
+#[allow(clippy::too_many_arguments)]
+fn run_construct_no_timing(
+    pieces: &[Arc<IrregularPreparedPiece>],
+    candidate_mode: IntrinsicStrictCandidateMode,
+    maximum_runtime_ms: f64,
+    maximum_candidate_evaluation_count: Option<f64>,
+    maximum_completed_piece_boundaries: Option<f64>,
+    capture_phase_timings: bool,
+    checkpoint: Option<
+        irregular_nesting_native::search::strict_decoder::IntrinsicStrictDirectCheckpoint,
+    >,
+    settings: &IrregularNestingSettings,
+    cache: &mut GeometryCacheStore,
+) -> Result<
+    irregular_nesting_native::search::strict_decoder::IntrinsicStrictConstructResult,
+    IntrinsicStrictDecoderFailure,
+> {
+    let input = ConstructIntrinsicStrictStateInput {
+        all_prepared_pieces: pieces,
+        remaining_prepared_pieces: pieces,
+        frozen_placed: &[],
+        candidate_mode,
+        maximum_runtime_ms: Some(maximum_runtime_ms),
+        maximum_candidate_evaluation_count,
+        capture_candidate_evaluation_count: true,
+        capture_phase_timings,
+        timing_now: None,
+        producer_role: None,
+        checkpoint,
+        maximum_completed_piece_boundaries,
+        control: None,
+    };
+    construct_intrinsic_strict_state(input, settings, cache)
+}
+
+fn assert_construct_semantics_equal(
+    actual: &irregular_nesting_native::search::strict_decoder::IntrinsicStrictConstructResult,
+    expected: &irregular_nesting_native::search::strict_decoder::IntrinsicStrictConstructResult,
+    label: &str,
+) {
+    assert_eq!(
+        actual.state.placement_order, expected.state.placement_order,
+        "{label}: placement order"
+    );
+    assert_eq!(
+        actual.state.unplaced_piece_ids, expected.state.unplaced_piece_ids,
+        "{label}: unplaced ids"
+    );
+    assert_eq!(
+        actual.state.canonical_occupied_geometry_key,
+        expected.state.canonical_occupied_geometry_key,
+        "{label}: canonical occupied identity"
+    );
+    assert_eq!(
+        actual.step_trace, expected.step_trace,
+        "{label}: step trace"
+    );
+    assert_eq!(
+        actual.gap_fill_evidence, expected.gap_fill_evidence,
+        "{label}: gap evidence"
+    );
+    assert_eq!(
+        actual.candidate_evaluation_count, expected.candidate_evaluation_count,
+        "{label}: candidate evaluation accounting"
+    );
+    assert_eq!(
+        actual.truncation_reason, expected.truncation_reason,
+        "{label}: truncation outcome"
+    );
+    assert_eq!(
+        actual.pause_reason, expected.pause_reason,
+        "{label}: pause outcome"
+    );
+    match (&actual.checkpoint, &expected.checkpoint) {
+        (None, None) => {}
+        (Some(actual), Some(expected)) => {
+            assert_eq!(
+                actual.next_piece_index, expected.next_piece_index,
+                "{label}: checkpoint next piece"
+            );
+            assert_eq!(
+                actual.step_trace, expected.step_trace,
+                "{label}: checkpoint step trace"
+            );
+            assert_eq!(
+                actual.gap_fill_evidence, expected.gap_fill_evidence,
+                "{label}: checkpoint gap evidence"
+            );
+            assert_eq!(
+                actual.candidate_evaluation_count, expected.candidate_evaluation_count,
+                "{label}: checkpoint candidate accounting"
+            );
+            assert_eq!(
+                actual.state.placement_order, expected.state.placement_order,
+                "{label}: checkpoint placement order"
+            );
+            assert_eq!(
+                actual.state.canonical_occupied_geometry_key,
+                expected.state.canonical_occupied_geometry_key,
+                "{label}: checkpoint canonical occupied identity"
+            );
+        }
+        other => panic!("{label}: checkpoint presence mismatch: {other:?}"),
+    }
+}
+
+#[test]
+fn no_timing_strict_scoring_fixture_is_semantically_equal_at_one_two_four_and_eight_threads() {
+    let vectors = load_vectors();
+    let nesting_settings = settings(&vectors);
+    let case = &vectors["decodeCases"][0];
+    let pieces = decode_prepared_pieces(&case["pieces"]);
+    let candidate_mode = candidate_mode_from_label(get_str(case, "candidateMode"));
+    let maximum_runtime_ms = get_f64(case, "maximumRuntimeMs");
+
+    let run = |thread_count: usize| {
+        let job_pool = JobPool::new(Some(thread_count));
+        let _guard = job_pool.install();
+        let mut cache = GeometryCacheStore::new();
+        run_construct_no_timing(
+            &pieces,
+            candidate_mode,
+            maximum_runtime_ms,
+            None,
+            None,
+            false,
+            None,
+            &nesting_settings,
+            &mut cache,
+        )
+        .unwrap_or_else(|error| panic!("no-timing strict fixture failed: {error:?}"))
+    };
+
+    let baseline = run(1);
+    for thread_count in [2, 4, 8] {
+        let actual = run(thread_count);
+        assert_eq!(
+            actual.state.placement_order, baseline.state.placement_order,
+            "placement order changed at {thread_count} threads"
+        );
+        assert_eq!(
+            actual.state.unplaced_piece_ids, baseline.state.unplaced_piece_ids,
+            "unplaced ids changed at {thread_count} threads"
+        );
+        assert_eq!(
+            actual.state.canonical_occupied_geometry_key,
+            baseline.state.canonical_occupied_geometry_key,
+            "canonical occupied identity changed at {thread_count} threads"
+        );
+        assert_eq!(
+            actual.step_trace, baseline.step_trace,
+            "strict step trace changed at {thread_count} threads"
+        );
+        assert_eq!(
+            actual.gap_fill_evidence, baseline.gap_fill_evidence,
+            "gap evidence changed at {thread_count} threads"
+        );
+        assert_eq!(
+            actual.candidate_evaluation_count, baseline.candidate_evaluation_count,
+            "candidate evaluation accounting changed at {thread_count} threads"
+        );
+        assert_eq!(
+            actual.truncation_reason, baseline.truncation_reason,
+            "truncation outcome changed at {thread_count} threads"
+        );
+    }
+}
+
+#[test]
+fn no_timing_parallel_scoring_matches_the_serial_authority_for_every_decoder_mode() {
+    let vectors = load_vectors();
+    let nesting_settings = settings(&vectors);
+    let cases = vectors["decodeCases"]
+        .as_array()
+        .expect("decodeCases present");
+
+    for case in cases {
+        let label = get_str(case, "caseLabel");
+        let pieces = decode_prepared_pieces(&case["pieces"]);
+        let candidate_mode = candidate_mode_from_label(get_str(case, "candidateMode"));
+        let maximum_runtime_ms = get_f64(case, "maximumRuntimeMs");
+        let clock = make_clock();
+        let mut serial_cache = GeometryCacheStore::new();
+        let serial = run_construct(
+            &pieces,
+            candidate_mode,
+            maximum_runtime_ms,
+            None,
+            None,
+            false,
+            None,
+            &clock,
+            &nesting_settings,
+            &mut serial_cache,
+        )
+        .unwrap_or_else(|error| panic!("{label}: serial authority failed: {error:?}"));
+        for thread_count in [1, 2, 4, 8] {
+            let job_pool = JobPool::new(Some(thread_count));
+            let _guard = job_pool.install();
+            let mut parallel_cache = GeometryCacheStore::new();
+            let parallel = run_construct_no_timing(
+                &pieces,
+                candidate_mode,
+                maximum_runtime_ms,
+                None,
+                None,
+                false,
+                None,
+                &nesting_settings,
+                &mut parallel_cache,
+            )
+            .unwrap_or_else(|error| {
+                panic!("{label}: parallel scoring failed at {thread_count} threads: {error:?}")
+            });
+            assert_construct_semantics_equal(
+                &parallel,
+                &serial,
+                &format!("{label}: {thread_count} threads"),
+            );
+        }
+    }
+}
+
+#[test]
+fn no_timing_parallel_scoring_preserves_cap_and_checkpoint_boundaries() {
+    let vectors = load_vectors();
+    let nesting_settings = settings(&vectors);
+
+    for case in vectors["budgetCapCases"]
+        .as_array()
+        .expect("budgetCapCases present")
+    {
+        let label = get_str(case, "caseLabel");
+        let pieces = decode_prepared_pieces(&case["pieces"]);
+        let candidate_mode = candidate_mode_from_label(get_str(case, "candidateMode"));
+        let cap = get_f64(case, "maximumCandidateEvaluationCount");
+        let clock = make_clock();
+        let mut serial_cache = GeometryCacheStore::new();
+        let serial = run_construct(
+            &pieces,
+            candidate_mode,
+            120_000.0,
+            Some(cap),
+            None,
+            false,
+            None,
+            &clock,
+            &nesting_settings,
+            &mut serial_cache,
+        )
+        .unwrap_or_else(|error| panic!("{label}: serial cap authority failed: {error:?}"));
+        for thread_count in [1, 2, 4, 8] {
+            let job_pool = JobPool::new(Some(thread_count));
+            let _guard = job_pool.install();
+            let mut parallel_cache = GeometryCacheStore::new();
+            let parallel = run_construct_no_timing(
+                &pieces,
+                candidate_mode,
+                120_000.0,
+                Some(cap),
+                None,
+                false,
+                None,
+                &nesting_settings,
+                &mut parallel_cache,
+            )
+            .unwrap_or_else(|error| {
+                panic!("{label}: parallel cap scoring failed at {thread_count} threads: {error:?}")
+            });
+            assert_construct_semantics_equal(
+                &parallel,
+                &serial,
+                &format!("{label}: {thread_count} threads"),
+            );
+        }
+    }
+
+    for case in vectors["checkpointCases"]
+        .as_array()
+        .expect("checkpointCases present")
+    {
+        let label = get_str(case, "caseLabel");
+        let pieces = decode_prepared_pieces(&case["pieces"]);
+        let candidate_mode = candidate_mode_from_label(get_str(case, "candidateMode"));
+        let capture_phase_timings = case["capturePhaseTimings"]
+            .as_bool()
+            .expect("capturePhaseTimings present");
+        if capture_phase_timings {
+            continue;
+        }
+        let boundary = get_f64(case, "maximumCompletedPieceBoundaries");
+        let clock = make_clock();
+        let mut serial_cache = GeometryCacheStore::new();
+        let serial = run_construct(
+            &pieces,
+            candidate_mode,
+            120_000.0,
+            None,
+            Some(boundary),
+            false,
+            None,
+            &clock,
+            &nesting_settings,
+            &mut serial_cache,
+        )
+        .unwrap_or_else(|error| panic!("{label}: serial checkpoint authority failed: {error:?}"));
+        let serial_checkpoint = serial
+            .checkpoint
+            .clone()
+            .unwrap_or_else(|| panic!("{label}: serial checkpoint missing"));
+        for thread_count in [1, 2, 4, 8] {
+            let job_pool = JobPool::new(Some(thread_count));
+            let _guard = job_pool.install();
+            let mut parallel_cache = GeometryCacheStore::new();
+            let parallel = run_construct_no_timing(
+                &pieces,
+                candidate_mode,
+                120_000.0,
+                None,
+                Some(boundary),
+                false,
+                None,
+                &nesting_settings,
+                &mut parallel_cache,
+            )
+            .unwrap_or_else(|error| {
+                panic!(
+                    "{label}: parallel checkpoint scoring failed at {thread_count} threads: {error:?}"
+                )
+            });
+            assert_construct_semantics_equal(
+                &parallel,
+                &serial,
+                &format!("{label}: {thread_count} threads"),
+            );
+
+            let parallel_checkpoint = parallel
+                .checkpoint
+                .clone()
+                .unwrap_or_else(|| panic!("{label}: parallel checkpoint missing"));
+            let resume_clock = make_clock();
+            let mut serial_resume_cache = GeometryCacheStore::new();
+            let serial_resumed = run_construct(
+                &pieces,
+                candidate_mode,
+                120_000.0,
+                None,
+                None,
+                false,
+                Some(serial_checkpoint.clone()),
+                &resume_clock,
+                &nesting_settings,
+                &mut serial_resume_cache,
+            )
+            .unwrap_or_else(|error| panic!("{label}: serial checkpoint resume failed: {error:?}"));
+            let mut parallel_resume_cache = GeometryCacheStore::new();
+            let parallel_resumed = run_construct_no_timing(
+                &pieces,
+                candidate_mode,
+                120_000.0,
+                None,
+                None,
+                false,
+                Some(parallel_checkpoint),
+                &nesting_settings,
+                &mut parallel_resume_cache,
+            )
+            .unwrap_or_else(|error| {
+                panic!(
+                    "{label}: parallel checkpoint resume failed at {thread_count} threads: {error:?}"
+                )
+            });
+            assert_construct_semantics_equal(
+                &parallel_resumed,
+                &serial_resumed,
+                &format!("{label}: resumed at {thread_count} threads"),
+            );
+        }
+    }
 }
 
 #[test]

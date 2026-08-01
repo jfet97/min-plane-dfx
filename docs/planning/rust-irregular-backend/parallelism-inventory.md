@@ -1052,6 +1052,21 @@ Priority: HIGH (14.4% search/decoders share).
 - Target Rust module: proposed `complete` (see §7 — no exact skeleton match today).
 - Verdict: **SAFE-CANDIDATE** (conditions: serial fold is sole evaluation-count authority;
   co-designed with Stage 3 cache architecture).
+- Implementation status (2026-08-01): **RETAINED**. The Rust strict decoder computes the
+  exact admitted prefix serially with the original partial-order cap semantics, including NaN
+  and positive infinity, then assigns stable source ordinals and scores through the installed
+  job-owned Rayon pool in bounded 32-candidate chunks. The coordinator replays each complete
+  chunk in source order before dispatching the next, so only one bounded result chunk and its
+  retained beam states remain live. No installed pool means ordinary serial iteration rather
+  than a global-Rayon fallback. Timing capture and injected clocks also retain the original
+  serial path. Tests compare the injected-clock serial authority against no-timing execution at
+  threads 1, 2, 4, and 8 for every recorded decoder mode, finite cap boundaries, checkpoint
+  chronology, evaluation counts, truncation, trace, gap-fill evidence, and canonical occupied
+  geometry. A focused chronology test also proves the next scoring chunk cannot start before
+  coordinator replay finishes for the current chunk. Two independent real N-API Mixed-61
+  batches measured repeatable multi-thread improvement with comparable peak RSS. See
+  `evidence/performance-report.md` for the exact final samples, durable provenance, diagnostic
+  local evidence, and authority limits.
 
 **PAR-STRICT-02 — `deriveCanonicalIntrinsicGapRegions` per-piece invocation.** Priority: LOW.
 - Description: reads a fixed `state.placedCollisionGeometries` snapshot, produces a

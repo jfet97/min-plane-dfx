@@ -1,0 +1,50 @@
+{
+  "classification": "diagnostic and non-authoritative local macOS evidence",
+  "baseCommit": "4d40bc6c36672973b75efdf5ad076dd070204189",
+  "branch": "feat/native-hotspot-parallelism",
+  "sourcePatchSha256": "c4da664e12e892d06ab3b71c4d2631f2776da2845b5fff4c636c5c74972a0c86",
+  "nativeAddonSha256": "ae86de5ee217893f0bcb7fb176ef1f260ce13a4d3ba3364e97b5b322cca4dc15",
+  "sourceProvenancePath": "/private/tmp/min-plane-provenance/native-hotspot-parallelism-20260801-final-candidate/source",
+  "rawEvidencePath": "/private/tmp/min-plane-provenance/native-hotspot-parallelism-20260801-final-candidate",
+  "environment": {
+    "operatingSystem": "Darwin 25.5.0 arm64",
+    "cpu": "Apple M4 Max",
+    "logicalCpuCount": 16,
+    "physicalCpuCount": 16,
+    "memoryBytes": 68719476736,
+    "node": "v24.16.0",
+    "pnpm": "11.8.0",
+    "rustc": "1.95.0",
+    "rustTarget": "aarch64-apple-darwin"
+  },
+  "c1": {
+    "fixture": "mixed-61",
+    "profile": "compact",
+    "sheet": "2000x2700",
+    "requestedThreads": [
+      1,
+      2,
+      4,
+      8
+    ],
+    "independentBatches": 2,
+    "warmupsDiscardedPerBatchAndThread": 1,
+    "measuredSamplesPerBatchAndThread": 5,
+    "command": "zsh /tmp/run-native-hotspot-candidate-chunk.zsh /private/tmp/min-plane-provenance/native-hotspot-parallelism-20260801-final-candidate/c1 BATCH 0 5",
+    "summary": "c1-summary.json"
+  },
+  "aggregate": {
+    "suites": [
+      "C5",
+      "C6",
+      "C7"
+    ],
+    "rustThreads": "matrix",
+    "measuredSamples": 3,
+    "warmups": true,
+    "command": "pnpm exec tsx --tsconfig tsconfig.node.json scripts/rust-parity/measure-p5-aggregate.ts --rust-threads matrix --samples 3 --output /private/tmp/min-plane-provenance/native-hotspot-parallelism-20260801-final-candidate/aggregate/p5-aggregate-evidence.json",
+    "summary": "p5-aggregate-summary.json"
+  },
+  "baselineEvidencePath": "/private/tmp/min-plane-provenance/native-hotspot-parallelism-20260801-final-candidate/baseline",
+  "baselineHashes": "/private/tmp/min-plane-provenance/native-hotspot-parallelism-20260801-final-candidate/baseline/SHA256SUMS"
+}

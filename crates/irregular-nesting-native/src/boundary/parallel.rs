@@ -178,6 +178,11 @@ impl JobPool {
     }
 }
 
+/// Returns whether this OS thread has an installed job-owned pool.
+pub(crate) fn has_job_pool() -> bool {
+    JOB_POOL.with(|slot| slot.borrow().is_some())
+}
+
 /// Runs `body` on this OS thread's currently-installed job pool
 /// (`ThreadPool::install`), or inline on the calling thread if no pool is
 /// installed (see this module's top doc, third bullet). Every Rayon
