@@ -8,9 +8,11 @@ Read this entire prompt before changing any file.
 
 Improve end-to-end execution time for the existing native Rust irregular nesting backend by parallelizing one or more verified hotspots.
 
-This is a performance optimization task, not an algorithm redesign. Preserve every observable semantic contract. A change is accepted only when it is both correct and measurably faster through the real packaged N-API execution path.
+This is a performance optimization task, not an algorithm redesign. Preserve the current native Rust backend's complete semantic projection exactly across serial versus parallel execution and across thread counts. A change is accepted only when it is correct and measurably faster through the production TypeScript-to-staged-native-addon N-API boundary.
 
 The repository already contains a complete native Rust backend. Do not repeat the historical TypeScript-to-Rust port. Do not replace the algorithm. Do not change nesting quality. Begin from current code, current evidence, and current production behavior.
+
+Do not conflate native thread neutrality with cross-backend product acceptance. Native serial versus native parallel output must remain exact except for fields already designated non-semantic. TypeScript versus Rust comparison retains the existing two-lane policy: exact differential characterization remains diagnostic, while a legal deterministic Rust layout may differ from TypeScript when every unchanged quality and hard-invariant gate passes.
 
 The expected result is one of these:
 
@@ -25,7 +27,7 @@ Work autonomously from discovery through delivery. Ask the user only when a deci
 
 ### 2.1 Dynamic workflows are mandatory
 
-Use the `Workflow` tool for substantive delegated work. Do not perform broad exploration, architecture selection, benchmark interpretation, or final multi-dimensional review as one undifferentiated solo pass.
+Use the `Workflow` tool for substantive delegated work when it is available. Do not perform broad exploration, architecture selection, benchmark interpretation, or final multi-dimensional review as one undifferentiated solo pass. If the runtime genuinely does not expose `Workflow`, use an equivalent multi-agent pipeline with independent discovery lenses, a judge pass, adversarial verification, and a completeness critic. Tool absence may change the orchestration mechanism, not the required independence or review depth.
 
 Use dynamic workflows for at least:
 
@@ -48,8 +50,8 @@ Keep normal workflows under 15 agents unless the task clearly needs more. Use pi
 
 When model controls are available:
 
-- use `gpt-5.6-terra` and `gpt-5.6-luna` at `max` for difficult independent analysis or verification;
-- use ordinary `gpt-5.6-sol` workflow work at `medium`;
+- use `gpt-5.6-terra` at `xhigh` for difficult independent analysis or verification;
+- use `gpt-5.6-sol` at `low` or `medium` for bounded ordinary workflow work;
 - use persistent Codex Review Chat with `gpt-5.6-sol` at `xhigh` for the final external review;
 - do not request Opus.
 
@@ -144,13 +146,24 @@ Read:
 - `crates/irregular-nesting-native/src/boundary/run_job.rs`
 - every current `par_iter`, `into_par_iter`, `rayon::`, `with_job_pool`, and `has_job_pool` site
 - `docs/planning/rust-irregular-backend/parallelism-inventory.md`
-- `knowledge/strict-scoring-job-pool-parallelism.md`
+- `docs/planning/rust-irregular-backend/evidence/performance-report.md`
+- `docs/artifacts/native-hotspot-parallelism/`
+- `knowledge/native-job-parallelism.md`
+- `knowledge/native-cache-bounds.md`
 
 ### 4.1 Never use Rayon's global pool
 
 Every production parallel iterator must execute only inside the nesting job's installed pool.
 
 Do not rely on `with_job_pool` inline fallback around code that already starts a Rayon parallel iterator. If no job-owned pool is installed, use ordinary serial iteration. Add focused tests proving the no-pool path does not enter a Rayon worker.
+
+Current HEAD has pre-existing sites that need explicit audit before this contract can be treated as fully enforced:
+
+- `crates/irregular-nesting-native/src/nfp_ifp/boundary_core.rs` wraps an NFP-miss `par_iter` in `with_job_pool`;
+- `crates/irregular-nesting-native/src/result/coordinator.rs` wraps prepared-piece `par_iter` work in `with_job_pool`;
+- `with_job_pool` executes its closure inline when no job pool is installed, so a nested Rayon parallel iterator can select the ambient global pool.
+
+Production jobs normally install a pool, but tests, helpers, or future callers may not. Establish focused failing no-pool tests for these sites, then give each an explicit `has_job_pool` serial branch or an equally direct proven mechanism. Measure any resulting overhead or benefit. Audit every other site for the same shape. Do not add a new parallel site while knowingly leaving an untested ambient-global fallback in the retained sites.
 
 Do not create an independent global pool, a nested pool, Node worker threads, child processes, or parallel TypeScript backend cohorts.
 
@@ -186,11 +199,28 @@ The existing parallelism inventory contains safe candidates, measurement-depende
 
 Do not blindly implement the next listed item. Re-profile first. Current Rust cost distribution may differ substantially from historical TypeScript profiling and from earlier native measurements.
 
-## 5. Absolute semantic preservation
+### 4.4 Post-PR29 chronology and evidence gap
 
-The accepted current behavior is the specification, including unusual chronology and JavaScript-compatible edge cases.
+Treat this chronology as mandatory orientation, then verify it against Git and current files:
 
-Do not change:
+1. PR29 was merged by `80053bf`; its implementation commit is `c2bbd50`.
+2. PR29 retained bounded strict-decoder scoring parallelism and measured explicit 1, 2, 4, and 8-thread cells on local macOS.
+3. Its two independent C1 candidate batches showed a one-thread regression of about 2.15% to 2.67%, a two-thread gain of about 5.89% to 6.22%, a four-thread gain of about 14.50% to 14.65%, and an eight-thread gain of about 15.41% to 15.48%, with comparable RSS.
+4. Those measurements were diagnostic and non-authoritative. The then-current default was one thread.
+5. Commit `0212a20` later changed production automatic thread resolution to OS-visible logical CPUs minus one, clamped to one. On the 16-logical-CPU PR29 host, that policy would resolve to 15 workers.
+6. `0212a20` added mapping and parsing tests but no complete end-to-end performance matrix for the new automatic default.
+
+Therefore the first performance task is not another optimization. Establish current-HEAD evidence for the automatic default before attributing any additional gain or regression to a new seam. Compare explicit 1, 2, 4, and 8-thread cells, the automatic default, and the explicit count equal to that resolved default where useful. Include C1, representative C5 through C7 behavior, peak RSS, backend identity, actual pool size, and exact native semantic hashes.
+
+Do not assume current `threadCountUsed` proves actual worker count. `build_job_thread_pool` can fall back to a one-thread pool after a requested multi-thread build failure while `JobPool` retains the originally resolved count. Before accepting any benchmark batch, add focused failure-path coverage and make diagnostics expose the actual `ThreadPool::current_num_threads()` value. Preserve the resolved requested count separately if it remains useful. Benchmark validation must reject requested-versus-actual mismatches.
+
+If current automatic-default execution is slower, memory-heavy, unstable, or unprofitable relative to the measured plateau, treat worker-policy tuning as a candidate optimization in its own right. Do not preserve an ineffective default merely because it is newer, and do not change it from one workload alone.
+
+## 5. Native semantic preservation and cross-backend quality
+
+For native serial versus native parallel execution, the accepted current Rust behavior is the specification, including unusual chronology and JavaScript-compatible edge cases.
+
+Do not change the native backend's:
 
 - selected layouts;
 - placed and unplaced piece-ID partitions;
@@ -214,9 +244,11 @@ Do not change:
 - numeric tolerances or geometry legality;
 - backend routing and fallback policy unless separately authorized.
 
-A geometrically equivalent, visually identical, tolerance-close, or better-packed result is still wrong if it differs from the accepted output.
+A geometrically equivalent, visually identical, tolerance-close, or better-packed native parallel result is still wrong if it differs from the same-source native serial authority on an exact semantic field.
 
-Do not weaken tests or update expected artifacts to accept a new result.
+Cross-backend TypeScript versus Rust acceptance is different. Preserve the existing `exact-match` and `different-but-quality-accepted` lanes in `docs/planning/rust-irregular-backend/quality-acceptance.md`. Exact differential output remains valuable diagnostic evidence, but do not degrade Rust quality or force Rust to copy a TypeScript layout merely to erase an accepted cross-backend difference.
+
+Do not weaken tests, baselines, tolerances, quality floors, or hard invariants. Do not update expected artifacts merely to accept a parallelization-induced native change.
 
 ## 6. Parallel-boundary design rules
 
@@ -373,6 +405,8 @@ Record:
 
 - commit and branch;
 - merge base;
+- verified PR29 merge and implementation commits;
+- verified current automatic-worker commit;
 - dirty status and full patch hash;
 - Node, pnpm, Electron, Rust, and target versions;
 - host OS and architecture;
@@ -417,7 +451,7 @@ For each site, document:
 
 ### 8.4 Profile before selecting a seam
 
-Use production-shaped profiling and the real packaged N-API path. Do not infer the next hotspot from old source structure.
+Use production-shaped profiling and the production TypeScript-to-staged-native-addon N-API path. Do not infer the next hotspot from old source structure.
 
 Inspect and reuse current tools, including:
 
@@ -468,7 +502,7 @@ Use a judge panel to select the best seam. Prefer one meaningful parallel bounda
 
 Before production changes, build and measure an exact baseline from the selected base commit.
 
-Use the real packaged N-API backend. Assert that the requested Rust backend actually executed. A silent TypeScript fallback invalidates the sample.
+Use the production TypeScript-to-staged-native-addon N-API boundary exercised by `scripts/rust-parity/time-native-backend.ts`. Assert that the requested Rust backend actually executed and that diagnostics report the actual pool size. A silent TypeScript fallback or requested-versus-actual thread-count mismatch invalidates the sample. Treat packaged-Electron artifact loading as a separate packaging and CI verification surface rather than calling the timing runner a packaged application.
 
 Preserve:
 
@@ -509,13 +543,14 @@ Measure at least:
 - two threads;
 - four threads;
 - eight threads when the host supports it;
-- compiled default threads.
+- automatic default threads with `MIN_PLANE_IRREGULAR_NATIVE_THREADS` absent;
+- the explicit thread count equal to the resolved automatic default when useful to separate policy resolution from run variance.
 
-Do not change the compiled default merely because an explicit high thread count wins one workload. Change thread policy only with separate complete-suite evidence and explicit approval when required.
+Record the resolved requested count and actual pool size for every sample. The current automatic policy is OS-visible logical CPUs minus one, clamped to one. Do not change it merely because one explicit high thread count wins one workload. Retain or revise thread policy only from separate complete-suite evidence that includes heavy and small cases, C5 through C7, peak RSS, run-to-run dispersion, and whole-application oversubscription considerations.
 
 ### 9.5 Real end-to-end gate
 
-A microbenchmark may explain a seam, but it cannot retain it. Retention requires repeatable improvement through the complete packaged N-API job.
+A microbenchmark may explain a seam, but it cannot retain it. Retention requires repeatable improvement through the complete production N-API job. Separately verify staged package loading and packaged-Electron loading through their existing tests and hosted matrix.
 
 For the primary heavy case, require at least two independent candidate batches. A speedup must exceed normal run-to-run noise.
 
@@ -538,7 +573,7 @@ Local macOS measurements are diagnostic unless the performance contract explicit
 
 Do not claim controlled-Linux acceptance from local macOS results. Preserve historical controlled-host verdicts unless new evidence satisfies the documented controlled-host contract.
 
-If controlled Linux is required, follow the repository's fail-closed host, clean-tree, provenance, and scheduling requirements. Read `knowledge/docker-p5-controlled-host.md` and current P5 documentation.
+If controlled Linux is required, follow the repository's fail-closed host, clean-tree, provenance, and scheduling requirements. Read `docs/planning/rust-irregular-backend/performance-contract.md`, `docker/p5-controlled-host.contract.json`, and the current P5 runner documentation.
 
 ## 10. Test-driven implementation
 
@@ -603,9 +638,9 @@ Run relevant unit and integration tests in release mode. Important test areas in
 
 Discover exact current test names before invoking filters.
 
-### 11.2 Exact semantic projection
+### 11.2 Exact native semantic projection
 
-Compare, as applicable:
+Compare the same-source native serial authority against each parallel candidate and thread setting, as applicable:
 
 - placement order;
 - placed and unplaced IDs;
@@ -626,18 +661,24 @@ Compare, as applicable:
 
 Exclude only fields already designated non-semantic, such as real elapsed measurements or separate backend diagnostics. Never exclude a field merely because it differs.
 
+Run the maintained TypeScript-to-Rust exact differential comparator as characterization where applicable, but judge product acceptance through the unchanged quality lane. A cross-backend difference is not permission for a thread-dependent native difference, and a thread-neutral native optimization is not required to make Rust copy TypeScript's selected layout.
+
 ### 11.3 Known exact differential characterization
 
-Current Rust standard-library `f64::hypot` can produce bounded last-bit differences from JavaScript in `freeMaterialSliverMetric`. Read:
+Current Rust standard-library `f64::hypot` can produce bounded last-bit differences from JavaScript in `freeMaterialSliverMetric`. Verify the current implementation and tolerance directly in:
 
-- `knowledge/native-hypot-parity.md`
+- `crates/irregular-nesting-native/src/js_number/js_math.rs`
+- `crates/irregular-nesting-native/tests/js_hypot_vectors.rs`
+- `docs/planning/rust-irregular-backend/quality-acceptance.md`
 - current exact differential documentation and tests
 
-Do not rediscover or misreport this known characterization as a new regression. Do not weaken blocking quality acceptance because of it. Do not repeatedly run the full exact differential suite after the characterization is already established and unaffected by the change.
+`knowledge/native-hypot-parity.md` is stale if it still claims a custom Node/V8-compatible implementation and raw-bit equality. Do not use that stale claim as authority. Correct it during the eventual knowledge update before citing it as current behavior.
+
+Do not rediscover or misreport the bounded standard-library characterization as a new regression. Do not weaken blocking quality acceptance because of it. Do not repeatedly run the full exact differential suite after the characterization is already established and unaffected by the change.
 
 ### 11.4 Thread equality
 
-For every retained seam, compare exact semantics at 1, 2, 4, and 8 threads across representative modes and boundary cases. Repeat enough to expose ordering races. Where practical, perturb task completion order in a focused test rather than relying only on nondeterministic scheduling.
+For every retained seam, compare exact semantics at 1, 2, 4, and 8 threads plus the automatic default across representative modes and boundary cases. Repeat enough to expose ordering races. Where practical, perturb task completion order in a focused test rather than relying only on nondeterministic scheduling.
 
 ## 12. Quality, memory, and packaging gates
 
@@ -709,7 +750,13 @@ Evidence must be reproducible and reviewable after temporary directories disappe
 
 ### 13.1 Immutable experiment root
 
-Create a unique immutable experiment root outside the working tree for raw local artifacts. Include separate directories for:
+Create every immutable raw-evidence root under:
+
+```text
+/private/tmp/min-plane-provenance/
+```
+
+Use a unique experiment directory with separate subdirectories for:
 
 - source snapshot or patch;
 - baseline;
@@ -718,7 +765,15 @@ Create a unique immutable experiment root outside the working tree for raw local
 - memory measurements;
 - environment and commands.
 
-Never overwrite an earlier batch after source changes. A source change invalidates in-progress candidate measurements. Stop and rerun against the exact final source.
+Run competing placement, search, scoring, worker-policy, or scheduling hypotheses on dedicated branches and isolated worktrees. Create project worktrees only under:
+
+```text
+/Users/andreasimonecosta/Documents/Work/min-plane-dfx-worktrees/
+```
+
+Do not use `/tmp` or `/private/tmp` for working checkouts. Before changing an experiment that produced a result worth comparing, commit the exact implementation that produced it. Never overwrite an earlier batch after source changes. A source change invalidates in-progress candidate measurements. Stop and rerun against the exact final source.
+
+Before starting a materially different hypothesis, update the relevant `docs/history/`, `docs/research/`, active roadmap, parallelism inventory, and evidence report with accepted results, rejected hypotheses, regressions, and open questions. Keep rejected branches or their immutable manifests until their findings are documented.
 
 ### 13.2 Hashes
 
@@ -811,6 +866,8 @@ Resolve or technically rebut every finding. If Codex insists after a grounded re
 VERDICT: APPROVED
 ```
 
+Approval applies only to the exact reviewed diff and evidence. Any later source, test, workflow, benchmark-runner, evidence-summary, or material documentation change invalidates the verdict. Rerun every affected gate or measurement, return to the same persistent Codex thread with the final delta, and obtain a new `VERDICT: APPROVED` for the final commit.
+
 Keep the review log for audit.
 
 ## 15. Delivery
@@ -849,9 +906,9 @@ Report performance honestly, including one-thread overhead, explicit-thread gain
 
 ### 15.3 CI
 
-Monitor every hosted check. Inspect real logs for failures. Fix failures on the branch, rerun only affected local gates, push, and continue monitoring.
+Monitor every hosted check. Inspect real logs for failures. Fix failures on the branch, rerun every affected local gate or measurement, and return the changed final diff to the same Codex Review Chat before pushing the replacement commit. Obtain a renewed `VERDICT: APPROVED`, push, and continue monitoring.
 
-Do not merge while any required check is failing or pending.
+Do not merge while any required check is failing or pending, or while the final pushed commit lacks Codex approval.
 
 Repository auto-merge may be enabled, but use it only when the PR is approved and configured to merge after all required checks pass.
 
@@ -871,7 +928,14 @@ Do not repeat the complete expensive matrix post-merge when hosted CI and pre-me
 
 ## 16. Candidate seam guidance
 
-Fresh profiling decides priority. The following are investigation leads, not authorizations:
+Fresh profiling decides priority. Explore both categories rather than assuming the next win requires a brand-new Rayon site:
+
+1. Improve retained parallel machinery when measurements show avoidable overhead, poor grain size, excessive cloning, limited batch width, idle workers, oversubscription, or a bad automatic thread policy.
+2. Parallelize another profile-proven phase by isolating immutable pure computation from serial admission, mutation, publication, and chronology.
+
+For the retained strict-scoring site, investigate chunk-size sensitivity, candidate packet construction, `Arc` reuse, one-thread overhead, serial replay cost, worker utilization, nested caller grain, and whether a threshold should keep narrow batches serial. Do not change chunk size 32 or dispatch policy without focused chronology tests and full end-to-end evidence. For existing NFP precomputation, investigate whether broader serially deduplicated miss batches, reduced cloning, or improved phase placement can widen useful parallel work without moving cache ownership into workers.
+
+The following are investigation leads, not authorizations:
 
 - capacity candidate scoring after exact quota admission;
 - capacity endpoint materialization across a fixed frontier with serial dedup replay;
@@ -947,12 +1011,13 @@ When a mismatch occurs, create the smallest focused reproduction. Fix the root c
 
 ## 19. Definition of done
 
-The work is complete only when all of these are true:
+For a retained production optimization, the work is complete only when all of the following retained-path conditions are true. If every experiment is rejected, use the explicit negative-result completion path below instead of retaining unprofitable code.
 
 ### Discovery
 
-- Current native hotspots were measured through the real packaged N-API path.
-- Existing Rayon sites and job-pool ownership were inventoried.
+- Current automatic-default behavior was characterized before any new seam was selected.
+- Current native hotspots were measured through the production TypeScript-to-staged-native-addon N-API path.
+- Existing Rayon sites and job-pool ownership were inventoried, including opportunities to improve retained sites.
 - The selected seam has a documented semantic boundary and expected speedup ceiling.
 - Alternative seams were judged through a dynamic workflow.
 
@@ -965,8 +1030,8 @@ The work is complete only when all of these are true:
 - Coordinator replay preserves every mutation and comparator.
 - Error order is deterministic.
 - Cancellation, timing, checkpoint, trace, progress, cache, hash, and publication contracts are preserved.
-- Thread counts 1, 2, 4, and 8 produce identical semantic outputs.
-- The TypeScript oracle and blocking quality gates remain satisfied.
+- Thread counts 1, 2, 4, and 8 plus the automatic default produce identical semantic outputs.
+- The maintained TypeScript exact-differential characterization is reported honestly, and every blocking quality and hard-invariant gate remains satisfied.
 
 ### Parallelism
 
@@ -980,6 +1045,7 @@ The work is complete only when all of these are true:
 
 - The final exact source has at least two independent valid primary candidate batches.
 - Multi-thread improvement is repeatable and exceeds noise.
+- Automatic-default behavior is measured and the retained worker policy is justified across the maintained matrix.
 - One-thread overhead is reported.
 - Representative Compact, capacity, and Short Side suites do not materially regress.
 - Peak RSS remains within the approved bound.
@@ -998,6 +1064,22 @@ The work is complete only when all of these are true:
 - The parallelism inventory and performance report are updated.
 - Dynamic workflow review found no unresolved verified issue.
 - Persistent Codex Review Chat returns `VERDICT: APPROVED`.
+
+### Negative-result completion path
+
+If no experiment survives the retention gate:
+
+- remove every experiment-only production change and implementation-only abstraction;
+- keep focused characterization tests only when they strengthen an existing contract independently of the rejected implementation;
+- verify the reverted production source matches its intended baseline semantic behavior;
+- preserve immutable raw measurements, hashes, environment, commands, and rejection reasons;
+- update the parallelism inventory and performance report with every attempted seam, measured result, and why it was rejected;
+- run focused correctness checks, formatting, Clippy, typecheck, lint, and any gate affected by retained test or documentation changes;
+- run internal adversarial review and Codex Review Chat over the negative evidence and final diff;
+- commit and deliver the documentation, evidence, and independently valuable contract tests through the normal PR and CI flow;
+- state clearly that no new production parallelization was retained.
+
+Do not run retained-implementation-only package or performance matrices that cannot validate any remaining production change. Do not invent a production diff merely to satisfy the delivery checklist.
 
 ### Delivery
 
@@ -1020,19 +1102,20 @@ Execute these in order:
 4. Launch a dynamic discovery workflow over architecture, semantics, current Rayon sites, and performance tooling.
 5. Record exact environment and source provenance.
 6. Build the release addon and verify the real Rust backend executes.
-7. Establish a quiet-host baseline through the packaged N-API path.
-8. Profile current native execution.
-9. Generate and judge candidate seams with dynamic workflows.
-10. Write the selected seam contract and rollback plan.
-11. Add focused RED tests and observe them fail.
-12. Implement the minimum GREEN parallel boundary through the job-owned pool.
-13. Run focused correctness and thread-equality checks.
-14. Measure the exact candidate source end to end.
-15. Retain or revert based on the evidence.
-16. Run full serial verification for a retained seam.
-17. Update evidence, inventory, and knowledge.
-18. Run dynamic internal review.
-19. Obtain persistent Codex Sol xhigh approval.
-20. Commit, push, open the PR, monitor CI, merge, clean up, and smoke-test merged `main`.
+7. Make diagnostics distinguish resolved requested threads from actual pool size, test pool-build fallback, then establish a quiet-host current-HEAD baseline through the production TypeScript-to-staged-native-addon N-API path. Include explicit 1, 2, 4, and 8-thread cells, automatic default, requested and actual counts, RSS, and representative C5 through C7 evidence.
+8. Decide from that evidence whether automatic worker-policy tuning is itself the first optimization candidate.
+9. Profile current native execution only after the current default is characterized.
+10. Generate and judge candidate seams with dynamic workflows, including both improvements to retained sites and parallelization of other profile-proven phases.
+11. Write the selected seam contract and rollback plan.
+12. Add focused RED tests and observe them fail.
+13. Implement the minimum GREEN parallel boundary through the job-owned pool.
+14. Run focused correctness and thread-equality checks.
+15. Measure the exact candidate source end to end.
+16. Retain or revert based on the evidence.
+17. If a seam is retained, run its full serial verification. If every seam is rejected, restore production code and follow the negative-result completion path.
+18. Update evidence, inventory, and knowledge.
+19. Run dynamic internal review.
+20. Obtain persistent Codex Sol xhigh approval.
+21. Commit, push, open the PR, monitor CI, merge, clean up, and smoke-test merged `main`.
 
 Deliver only semantics-preserving, measured speed. If the best result is negative evidence, deliver that honestly rather than shipping unprofitable parallelism.
