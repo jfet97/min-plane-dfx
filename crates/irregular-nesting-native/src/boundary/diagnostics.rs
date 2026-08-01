@@ -25,11 +25,9 @@ use crate::search::layout_scorer::FreeMaterialCacheTelemetry;
 #[serde(rename_all = "camelCase")]
 pub struct JobDiagnostics {
     pub backend_version: String,
-    /// Rayon pool size this run used. Always `1` at this stage: this crate
-    /// has no Rayon dependency yet (Stage 3/4 concern, migration prompt
-    /// §14.4/§16.2) -- see `native_capability`'s `default_thread_count` for
-    /// the analogous "what the pool would use" capability-query field this
-    /// mirrors.
+    /// Rayon pool size this run used. The automatic default reserves one
+    /// OS-visible CPU outside the job-owned pool for the native coordinator
+    /// and Electron; an explicit override or environment setting may differ.
     pub thread_count_used: u32,
     pub wall_clock_ms: f64,
     pub cache_telemetry: CacheTelemetrySnapshot,

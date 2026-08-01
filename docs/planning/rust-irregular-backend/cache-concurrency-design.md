@@ -693,8 +693,9 @@ explicit Rust `run_job_from_json` test and profiling override used by unit and
 integration harnesses, but not exposed through N-API or persisted options; (2)
 the process-level environment variable
 `MIN_PLANE_IRREGULAR_NATIVE_THREADS` for controlled deployment tuning; (3) the
-compiled-in safe default of `1`. Invalid or non-positive environment values
-also fall back to `1`. The resolved thread
+automatic default derived at job start from `std::thread::available_parallelism()`:
+one fewer than the OS-visible logical CPU count, clamped to `1`. Invalid or
+non-positive environment values also fall back to that automatic default. The resolved thread
 count is echoed into the diagnostic channel (`native_capability()`-style,
 architecture.md §4.5) alongside backend identity, crate version, and cache
 policy identity — never into the result DTO, checkpoints, or any hashed
@@ -704,12 +705,16 @@ cap matrix separately compares timing-normalized serialized envelope bytes
 across cap and thread-count combinations. Neither test claims checkpoint
 serialization coverage.
 
-**Oversubscription avoidance with Electron's worker.** The compiled-in default
-is one Rayon worker. Deployments may opt into a higher count through
-`MIN_PLANE_IRREGULAR_NATIVE_THREADS` after measuring whole-application load, including
-the Node worker, Electron main process, renderers, and I/O activity. The cache
-contract does not prescribe a core-count formula. Any promoted default above
-one belongs in `performance-contract.md` with representative evidence.
+**Oversubscription avoidance with Electron's worker.** One native job owns `N`
+Rayon workers and has a separate libuv coordinator thread. The automatic
+default therefore leaves one OS-visible logical CPU outside the job-owned pool
+for the coordinator, Node, and Electron: `16 → 15`, `4 → 3`, and `1` or `2 → 1`.
+It uses the CPU availability reported by the operating system, so it respects
+affinity or quotas; it does not claim physical-core or performance-core
+pinning. Deployments may still override the count through
+`MIN_PLANE_IRREGULAR_NATIVE_THREADS` after measuring whole-application load.
+Any different default formula belongs in `performance-contract.md` with
+representative evidence.
 
 **Determinism rules.**
 

@@ -48,8 +48,10 @@
 //!    production callers always pass `None` here;
 //! 2. the `MIN_PLANE_IRREGULAR_NATIVE_THREADS` process environment
 //!    variable, parsed as a positive integer;
-//! 3. a compiled-in default of `1` -- this task's brief: "default = 1 for
-//!    now -- promotion flips the default later." Per prompt §14.4 and
+//! 3. one fewer than the OS-visible logical CPU count, clamped to `1`.
+//!    Rayon workers execute parallel work while the native job coordinator
+//!    runs on a separate libuv thread, so the automatic default leaves one
+//!    CPU available to the coordinator and Electron. Per prompt §14.4 and
 //!    `cache-concurrency-design.md` §7, this resolved value is
 //!    diagnostics-only: it is echoed into
 //!    `boundary::diagnostics::JobDiagnostics::thread_count_used` and never
@@ -86,9 +88,9 @@ thread_local! {
 /// when `Some`, wins unconditionally (used only by the determinism test
 /// suite -- see this module's top doc, priority (1)). A non-positive or
 /// unparseable environment value is treated the same as an absent one
-/// (falls through to the compiled-in default of `1`), matching this crate's
-/// established "malformed out-of-band configuration degrades to the safe
-/// default rather than failing the job" convention (mirrors the backend
+/// (falls through to the automatic CPU-derived default), matching this
+/// crate's established "malformed out-of-band configuration degrades to the
+/// safe default rather than failing the job" convention (mirrors the backend
 /// selector precedent `cache-concurrency-design.md` §7 cites).
 pub fn resolve_thread_count(override_count: Option<usize>) -> usize {
     if let Some(count) = override_count {
@@ -98,7 +100,17 @@ pub fn resolve_thread_count(override_count: Option<usize>) -> usize {
         .ok()
         .and_then(|value| value.trim().parse::<usize>().ok())
         .filter(|count| *count > 0)
+        .unwrap_or_else(automatic_thread_count)
+}
+
+fn automatic_thread_count() -> usize {
+    std::thread::available_parallelism()
+        .map(|available| default_thread_count_from_available(available.get()))
         .unwrap_or(1)
+}
+
+fn default_thread_count_from_available(available_cpu_count: usize) -> usize {
+    available_cpu_count.saturating_sub(1).max(1)
 }
 
 /// Builds a job-owned `rayon::ThreadPool` sized to `thread_count`. Falls
@@ -218,20 +230,28 @@ mod tests {
     }
 
     #[test]
-    fn resolve_thread_count_defaults_to_one_when_env_var_is_absent_or_invalid() {
+    fn thread_count_env_parsing_rejects_invalid_or_zero_values() {
         // Intentionally does not touch `env::set_var` for the real
         // `THREAD_COUNT_ENV_VAR`: this crate's tests run concurrently in
         // one process, and mutating real process environment state from a
         // unit test would race every other test that also resolves thread
         // count. The override parameter (already covered above) is this
         // module's designed seam for deterministic testing; this test only
-        // proves the pure parsing/fallback logic in isolation.
+        // proves the pure parsing logic in isolation.
         assert_eq!(
             "not-a-number".parse::<usize>().ok().filter(|n| *n > 0),
             None
         );
         assert_eq!("0".parse::<usize>().ok().filter(|n| *n > 0), None);
         assert_eq!("3".parse::<usize>().ok().filter(|n| *n > 0), Some(3));
+    }
+
+    #[test]
+    fn automatic_thread_count_reserves_one_cpu_without_dropping_below_one() {
+        assert_eq!(default_thread_count_from_available(1), 1);
+        assert_eq!(default_thread_count_from_available(2), 1);
+        assert_eq!(default_thread_count_from_available(4), 3);
+        assert_eq!(default_thread_count_from_available(16), 15);
     }
 
     #[test]
