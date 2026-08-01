@@ -284,6 +284,44 @@ async function main(): Promise<void> {
 
   const nativeDiagnosticsJson = loadNativeIrregularAddon().getLastJobDiagnostics()
   const nativeDiagnostics: unknown = JSON.parse(nativeDiagnosticsJson)
+
+  // Benchmark-sample validity: reject any run whose built Rayon pool size
+  // (threadCountUsed, the actual live worker count) diverged from the
+  // resolved requested count (threadCountRequested). A divergence means the
+  // native pool-build fallback fired and this sample's timing would be
+  // attributed to the wrong thread configuration. Also reject a sample whose
+  // resolved requested count ignored an explicit
+  // MIN_PLANE_IRREGULAR_NATIVE_THREADS setting (silent env-plumbing
+  // breakage would otherwise mislabel every cell of a thread matrix).
+  const diagnosticsRecord =
+    typeof nativeDiagnostics === 'object' && nativeDiagnostics !== null
+      ? (nativeDiagnostics as { readonly threadCountUsed?: unknown; readonly threadCountRequested?: unknown })
+      : undefined
+  const threadCountUsed =
+    typeof diagnosticsRecord?.threadCountUsed === 'number' ? diagnosticsRecord.threadCountUsed : undefined
+  const threadCountRequested =
+    typeof diagnosticsRecord?.threadCountRequested === 'number'
+      ? diagnosticsRecord.threadCountRequested
+      : undefined
+  if (threadCountUsed === undefined || threadCountRequested === undefined) {
+    throw new Error(
+      `[time-native-backend] invalid sample: native diagnostics did not report both threadCountUsed and threadCountRequested (got ${nativeDiagnosticsJson})`
+    )
+  }
+  if (threadCountUsed !== threadCountRequested) {
+    throw new Error(
+      `[time-native-backend] invalid sample: actual Rayon pool size ${threadCountUsed} diverged from resolved requested count ${threadCountRequested} (native pool-build fallback fired)`
+    )
+  }
+  const requestedFromEnv = process.env['MIN_PLANE_IRREGULAR_NATIVE_THREADS']?.trim()
+  if (requestedFromEnv !== undefined && requestedFromEnv !== '' && /^\d+$/.test(requestedFromEnv)) {
+    const parsedEnv = Number.parseInt(requestedFromEnv, 10)
+    if (parsedEnv > 0 && threadCountRequested !== parsedEnv) {
+      throw new Error(
+        `[time-native-backend] invalid sample: MIN_PLANE_IRREGULAR_NATIVE_THREADS=${parsedEnv} but the native backend resolved ${threadCountRequested} threads`
+      )
+    }
+  }
   const identity = canonicalCollisionLayoutIdentity(result.placedCollisionGeometries)
   const collisionIdentitySha256 =
     identity === undefined ? undefined : createHash('sha256').update(identity).digest('hex')

@@ -33,8 +33,6 @@
 
 use std::collections::HashSet;
 
-use rayon::prelude::*;
-
 use crate::caches::{
     charge_nfp_polygon, make_pairwise_nfp_cache_key, serialize_geometry_cache_key,
     GeometryCacheKey, GeometryCacheStore, NfpConstructionAlgorithm, PairwiseNfpKeyInput,
@@ -275,17 +273,15 @@ pub fn precompute_missing_relative_nfp_boundaries(
     }
 
     // Phase 2 (parallel): pure compute only -- no `cache` reference reaches
-    // any worker closure.
+    // any worker closure. `map_slice_with_job_pool` degrades to ordinary
+    // serial iteration when no job pool is installed (never Rayon's ambient
+    // global pool) and preserves `misses`'s first-encounter order either
+    // way.
     let moving_points = &moving.polygon.points;
-    let computed: Vec<Option<IrregularPolygon>> = crate::boundary::parallel::with_job_pool(|| {
-        misses
-            .par_iter()
-            .map(|(_, fixed_points)| {
-                compute_relative_nfp_boundary(fixed_points, moving_points, construction_algorithm)
-                    .ok()
-            })
-            .collect()
-    });
+    let computed: Vec<Option<IrregularPolygon>> =
+        crate::boundary::parallel::map_slice_with_job_pool(&misses, |(_, fixed_points)| {
+            compute_relative_nfp_boundary(fixed_points, moving_points, construction_algorithm).ok()
+        });
 
     // Phase 3 (serial): publish successes only, strictly in the order their
     // keys were first encountered in Phase 1.

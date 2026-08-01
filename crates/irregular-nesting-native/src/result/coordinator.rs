@@ -43,8 +43,6 @@
 use std::sync::Arc;
 use std::time::Instant;
 
-use rayon::prelude::*;
-
 use crate::archive::shared::{
     make_intrinsic_shared_archive_endpoint, retain_ranked_shared_archive,
     run_intrinsic_shared_archive_portfolio, select_fitting_shared_archive,
@@ -54,7 +52,7 @@ use crate::archive::shared::{
     SharedArchiveError, SharedArchivePhase,
 };
 use crate::archive::{periodic_family, reconstruction};
-use crate::boundary::parallel::with_job_pool;
+use crate::boundary::parallel::map_slice_with_job_pool;
 use crate::caches::GeometryCacheStore;
 use crate::capacity::mode::{
     run_intrinsic_capacity_mode, run_intrinsic_capacity_scheduler_cold_quantum,
@@ -383,19 +381,17 @@ pub fn compute_irregular_nesting(
     // PAR-GEOM-01 (parallelism-inventory.md §3.1): dispatch every prepared
     // piece's pure collision-geometry/transform computation across this
     // job's Rayon pool, ordinal-indexed by `sorted_pieces`'s own position
-    // (`par_iter().map(...).collect()` preserves input order in its output
-    // `Vec` regardless of completion order -- this *is* the ordinal
-    // scheme, not merely convenient). No cache/mutable-shared-state
-    // interaction happens inside `compute_prepared_piece`, so no
-    // publish-ordering hazard exists here (contrast with PAR-NFP-01/
-    // PAR-CACHE-01, which do touch `geometry_cache` and are not
-    // parallelized by this call).
+    // (`map_slice_with_job_pool` preserves input order in its output `Vec`
+    // regardless of completion order -- this *is* the ordinal scheme, not
+    // merely convenient -- and degrades to ordinary serial iteration when
+    // no job pool is installed, never Rayon's ambient global pool). No
+    // cache/mutable-shared-state interaction happens inside
+    // `compute_prepared_piece`, so no publish-ordering hazard exists here
+    // (contrast with PAR-NFP-01/PAR-CACHE-01, which do touch
+    // `geometry_cache` and are not parallelized by this call).
     let per_piece_results: Vec<Result<PreparedPieceComputation, IrregularComputeErrorType>> =
-        with_job_pool(|| {
-            sorted_pieces
-                .par_iter()
-                .map(|prepared| compute_prepared_piece(prepared, request, settings))
-                .collect()
+        map_slice_with_job_pool(&sorted_pieces, |prepared| {
+            compute_prepared_piece(prepared, request, settings)
         });
 
     let mut prepared_pieces: Vec<Arc<IrregularPreparedPiece>> =

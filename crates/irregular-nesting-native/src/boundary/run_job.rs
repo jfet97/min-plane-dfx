@@ -54,7 +54,7 @@ use crate::result::progress::IrregularComputeEventSink;
 use crate::search::layout_scorer::FreeMaterialCache;
 
 use super::error::BoundaryError;
-use super::parallel::JobPool;
+use super::parallel::{JobPool, JobThreadCounts};
 use super::request::{require_archive_eligible, PreparedRequest, RequestDto};
 use super::result::project_result;
 
@@ -75,10 +75,12 @@ pub fn decode_and_route(request_json: &str) -> Result<PreparedRequest, BoundaryE
 /// second tuple element is the post-cleanup geometry-cache telemetry snapshot.
 /// Decoding and routing failures return the default zero-usage snapshot because
 /// no job-local cache was constructed. The third element is the post-cleanup
-/// free-material cache telemetry snapshot. The fourth element is the Rayon
-/// thread count this job's job-owned pool actually resolved to
-/// (`boundary::parallel`, diagnostics-only per that module's doc); `1` when
-/// decoding or routing failed before a pool was constructed.
+/// free-material cache telemetry snapshot. The fourth element carries both
+/// the resolved requested Rayon thread count and the built pool's actual
+/// worker count (`boundary::parallel::JobThreadCounts`, diagnostics-only
+/// per that module's doc -- the two differ exactly when the pool-build
+/// fallback fired); `{requested: 1, actual: 1}` when decoding or routing
+/// failed before a pool was constructed.
 /// `thread_count_override`, when `Some`, wins over the
 /// `MIN_PLANE_IRREGULAR_NATIVE_THREADS` environment variable (see
 /// `boundary::parallel::resolve_thread_count`); the real N-API entry point
@@ -94,7 +96,7 @@ pub fn run_job_from_json<'a>(
     String,
     CacheTelemetrySnapshot,
     crate::search::layout_scorer::FreeMaterialCacheTelemetry,
-    usize,
+    JobThreadCounts,
 ) {
     run_job_from_json_with_cache_caps_for_test(
         request_json,
@@ -124,7 +126,7 @@ pub(crate) fn run_job_from_json_with_cache_caps_for_test<'a>(
     String,
     CacheTelemetrySnapshot,
     crate::search::layout_scorer::FreeMaterialCacheTelemetry,
-    usize,
+    JobThreadCounts,
 ) {
     match decode_and_route(request_json) {
         Ok(prepared) => run_job_with_cache_caps(
@@ -140,7 +142,10 @@ pub(crate) fn run_job_from_json_with_cache_caps_for_test<'a>(
                 envelope,
                 CacheTelemetrySnapshot::default(),
                 crate::search::layout_scorer::FreeMaterialCacheTelemetry::default(),
-                1,
+                JobThreadCounts {
+                    requested: 1,
+                    actual: 1,
+                },
             )
         }
     }
@@ -153,9 +158,10 @@ pub(crate) fn run_job_from_json_with_cache_caps_for_test<'a>(
 /// `{"ok":false,"error":{"category",...}}` -- see this module's top doc for
 /// why this is not a Rust `Result`. The second and third elements are
 /// post-cleanup geometry and free-material cache telemetry snapshots. The
-/// fourth element is the resolved Rayon thread count (`boundary::parallel`),
-/// for the caller to forward into the diagnostics sidecar; see
-/// `run_job_from_json`'s doc for `thread_count_override`.
+/// fourth element is the job pool's requested-and-actual thread-count
+/// snapshot (`boundary::parallel::JobThreadCounts`), for the caller to
+/// forward into the diagnostics sidecar; see `run_job_from_json`'s doc for
+/// `thread_count_override`.
 ///
 /// Constructs and installs this job's own `rayon::ThreadPool`
 /// (`boundary::parallel::JobPool`) for the duration of the
@@ -175,7 +181,7 @@ pub fn run_job<'a>(
     String,
     CacheTelemetrySnapshot,
     crate::search::layout_scorer::FreeMaterialCacheTelemetry,
-    usize,
+    JobThreadCounts,
 ) {
     run_job_with_cache_caps(
         prepared,
@@ -196,7 +202,7 @@ fn run_job_with_cache_caps<'a>(
     String,
     CacheTelemetrySnapshot,
     crate::search::layout_scorer::FreeMaterialCacheTelemetry,
-    usize,
+    JobThreadCounts,
 ) {
     let mut geometry_cache = cache_caps.map_or_else(GeometryCacheStore::new, |caps| {
         GeometryCacheStore::with_byte_cap(caps.geometry_bytes)
@@ -211,7 +217,7 @@ fn run_job_with_cache_caps<'a>(
     };
 
     let job_pool = JobPool::new(thread_count_override);
-    let thread_count = job_pool.thread_count();
+    let thread_counts = job_pool.thread_counts();
     let _pool_guard = job_pool.install();
 
     let outcome = compute_irregular_nesting(
@@ -241,7 +247,7 @@ fn run_job_with_cache_caps<'a>(
         json,
         geometry_cache_telemetry,
         free_material_telemetry,
-        thread_count,
+        thread_counts,
     )
 }
 
@@ -517,7 +523,12 @@ mod tests {
                         Some(thread_count),
                         caps,
                     );
-                assert_eq!(resolved_threads, thread_count);
+                assert_eq!(resolved_threads.requested, thread_count);
+                assert_eq!(
+                    resolved_threads.actual, thread_count,
+                    "a successful pool build must report an actual worker count equal to \
+                     the requested one"
+                );
                 let parsed: serde_json::Value =
                     serde_json::from_str(&envelope).expect("envelope must be valid JSON");
                 assert_eq!(parsed["ok"], serde_json::json!(true));

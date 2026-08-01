@@ -252,11 +252,16 @@ fn fixture_path(piece_count: usize) -> String {
 /// every remaining semantic value into deterministic bytes.
 fn run_once(request_json: &str, thread_count: usize) -> Value {
     let mut sink = NullEventSink;
-    let (envelope, _cache, _free_material_telemetry, resolved_thread_count) =
+    let (envelope, _cache, _free_material_telemetry, thread_counts) =
         run_job_from_json(request_json, &mut sink, None, Some(thread_count));
     assert_eq!(
-        resolved_thread_count, thread_count,
+        thread_counts.requested, thread_count,
         "run_job_from_json must resolve to exactly the requested override thread count"
+    );
+    assert_eq!(
+        thread_counts.actual, thread_count,
+        "the built pool's actual worker count must equal the requested override; a \
+         divergence means the pool-build fallback fired and this sample is invalid"
     );
     serde_json::from_str(&envelope).expect("envelope must be valid JSON")
 }
