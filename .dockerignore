@@ -1,0 +1,14 @@
+.git
+.github
+.claude
+.agents
+.direnv
+node_modules
+out
+dist
+repos
+knowledge
+target
+**/target
+**/*.node
+**/.DS_Store

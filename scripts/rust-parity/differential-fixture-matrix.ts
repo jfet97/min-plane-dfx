@@ -23,14 +23,16 @@
  *   text (and its follow-up addendum, if present) for root-cause status.
  *
  * Usage:
- *   pnpm exec tsx --tsconfig tsconfig.node.json scripts/rust-parity/differential-fixture-matrix.ts [--required-only] [--exploratory-only]
+ *   pnpm exec tsx --tsconfig tsconfig.node.json scripts/rust-parity/differential-fixture-matrix.ts [--required-only] [--exploratory-only] [--strict-exact]
  *
+ * Required and exploratory child rows use explicit diagnostic comparison by
+ * default. `--strict-exact` omits that flag for the historical blocking lane.
  * Exit code: nonzero if any `REQUIRED_ROWS` row fails. `EXPLORATORY_ROWS`
  * failures are reported but never fail the overall exit code (matching
  * their "documented, not blocking" status) unless `--strict-exploratory` is
  * passed.
  */
-import { execFileSync } from 'node:child_process'
+import { spawnSync } from 'node:child_process'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -117,55 +119,69 @@ interface RowResult {
   readonly output: string
 }
 
-function runRow(row: FixtureRow): RowResult {
-  try {
-    const output = execFileSync(
-      'pnpm',
-      ['exec', 'tsx', '--tsconfig', 'tsconfig.node.json', RUN_DIFFERENTIAL, ...row.args],
-      {
-        cwd: REPO_ROOT,
-        encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'pipe'],
-        timeout: DIFFERENTIAL_ROW_TIMEOUT_MS
-      }
-    )
-    return { row, ok: true, output }
-  } catch (error) {
-    const output =
-      error !== null && typeof error === 'object' && 'stdout' in error
-        ? `${String((error as { stdout?: unknown }).stdout ?? '')}${String((error as { stderr?: unknown }).stderr ?? '')}`
-        : String(error)
-    return { row, ok: false, output }
-  }
+function runRow(row: FixtureRow, differentialFlags: ReadonlyArray<string>): RowResult {
+  const result = spawnSync(
+    'pnpm',
+    [
+      'exec',
+      'tsx',
+      '--tsconfig',
+      'tsconfig.node.json',
+      RUN_DIFFERENTIAL,
+      ...row.args,
+      ...differentialFlags
+    ],
+    {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+      timeout: DIFFERENTIAL_ROW_TIMEOUT_MS
+    }
+  )
+  const output = `${result.stdout ?? ''}${result.stderr ?? ''}${result.error === undefined ? '' : String(result.error)}`
+  return { row, ok: result.status === 0 && result.error === undefined, output }
 }
 
-function runGroup(groupLabel: string, rows: ReadonlyArray<FixtureRow>): RowResult[] {
+function hasDiagnosticDivergence(output: string): boolean {
+  return output.includes('[run-differential] diagnostic divergence accepted for quality evaluation')
+}
+
+function relevantOutput(output: string): string {
+  return output
+    .split('\n')
+    .filter(
+      (line) =>
+        line.includes('FIRST DIVERGENCE') ||
+        line.includes('typescript:') ||
+        line.includes('rust      :') ||
+        line.includes('[run-differential] placedCollisionGeometries:') ||
+        line.includes('[run-differential] score:') ||
+        line.includes('[run-differential] unplacedPieceIds:') ||
+        line.includes('[run-differential] sortedPieceIds:') ||
+        line.includes('[run-differential] diagnostics:') ||
+        line.includes('[run-differential] portfolio:') ||
+        line.includes('[run-differential] runtime:') ||
+        line.includes('diagnostic divergence accepted for quality evaluation') ||
+        line.includes('FAILED')
+    )
+    .map((line) => `    ${line}`)
+    .join('\n')
+}
+
+function runGroup(
+  groupLabel: string,
+  rows: ReadonlyArray<FixtureRow>,
+  differentialFlags: ReadonlyArray<string>
+): RowResult[] {
   const results: RowResult[] = []
   for (const row of rows) {
     process.stdout.write(`[differential-fixture-matrix] ${groupLabel}: ${row.label} ... `)
-    const result = runRow(row)
+    const result = runRow(row, differentialFlags)
     console.log(result.ok ? 'OK' : 'FAILED')
-    if (!result.ok) {
-      console.error(
-        result.output
-          .split('\n')
-          .filter(
-            (line) =>
-              line.includes('FIRST DIVERGENCE') ||
-              line.includes('typescript:') ||
-              line.includes('rust      :') ||
-              line.includes('[run-differential] placedCollisionGeometries:') ||
-              line.includes('[run-differential] score:') ||
-              line.includes('[run-differential] unplacedPieceIds:') ||
-              line.includes('[run-differential] sortedPieceIds:') ||
-              line.includes('[run-differential] diagnostics:') ||
-              line.includes('[run-differential] portfolio:') ||
-              line.includes('[run-differential] runtime:') ||
-              line.includes('FAILED')
-          )
-          .map((line) => `    ${line}`)
-          .join('\n')
-      )
+    if (result.ok && hasDiagnosticDivergence(result.output)) {
+      console.error(relevantOutput(result.output))
+    } else if (!result.ok) {
+      console.error(relevantOutput(result.output))
     }
     results.push(result)
   }
@@ -177,9 +193,15 @@ function main(): void {
   const requiredOnly = argv.includes('--required-only')
   const exploratoryOnly = argv.includes('--exploratory-only')
   const strictExploratory = argv.includes('--strict-exploratory')
+  const strictExact = argv.includes('--strict-exact')
+  const differentialFlags = strictExact ? [] : ['--diagnostic']
 
-  const requiredResults = exploratoryOnly ? [] : runGroup('required', REQUIRED_ROWS)
-  const exploratoryResults = requiredOnly ? [] : runGroup('exploratory (N1)', EXPLORATORY_ROWS)
+  const requiredResults = exploratoryOnly
+    ? []
+    : runGroup('required', REQUIRED_ROWS, differentialFlags)
+  const exploratoryResults = requiredOnly
+    ? []
+    : runGroup('exploratory (N1)', EXPLORATORY_ROWS, differentialFlags)
 
   const requiredFailures = requiredResults.filter((result) => !result.ok)
   const exploratoryFailures = exploratoryResults.filter((result) => !result.ok)

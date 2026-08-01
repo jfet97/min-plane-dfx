@@ -47,6 +47,7 @@ import {
   canonicalizeIrregularLayout,
   type LayoutPoint
 } from './lib/irregularLayoutCanonicalization.js'
+import { exactIrregularPiecePartition } from '../src/workers/irregular/differential/irregularQualityAcceptance.js'
 
 type FixtureName = 'triangle-20' | 'mixed-61' | 'shapes-17'
 type ObjectiveProfile = 'compact' | 'short-side'
@@ -450,15 +451,12 @@ const pairFoldObserverWinnerHash =
       })
 const pairFoldSelectedGeometryHash =
   pairFoldObserverWinnerHash ??
-  (shortSidePairFoldTrace?.outputInfluence === 'selected'
-    ? collisionIdentitySha256
-    : undefined)
+  (shortSidePairFoldTrace?.outputInfluence === 'selected' ? collisionIdentitySha256 : undefined)
 const directionalTargetCount =
   args.objectiveProfile === 'short-side'
     ? result.placedCollisionGeometries.length
     : request.pieces.length
-const expectedPairCount =
-  (directionalTargetCount * (directionalTargetCount - 1)) / 2
+const expectedPairCount = (directionalTargetCount * (directionalTargetCount - 1)) / 2
 const contactStripLanes = shortSidePairFoldTrace?.contactStripLanes ?? []
 const contactStripLaneContractValid =
   contactStripLanes.length >= 2 &&
@@ -475,8 +473,7 @@ const contactStripLaneContractValid =
         .every(
           (lane, index) =>
             lane.selectionPolicy === 'depth-first' &&
-            lane.orderPolicy ===
-              (index === 0 ? 'reverse' : 'piece-id-ascending')
+            lane.orderPolicy === (index === 0 ? 'reverse' : 'piece-id-ascending')
         )))
 const shortSidePairFoldContractValid =
   shortSidePairFoldTrace === undefined
@@ -502,8 +499,7 @@ const shortSidePairFoldContractValid =
                     shortSidePairFoldTrace.contactStrip?.status === 'constructed' &&
                     contactStripLaneContractValid
                   : false)) &&
-          shortSidePairFoldTrace.canonicalGeometryHash ===
-            pairFoldSelectedGeometryHash
+          shortSidePairFoldTrace.canonicalGeometryHash === pairFoldSelectedGeometryHash
         : pairFoldObserverWinner === undefined &&
           shortSidePairFoldTrace.admission?.accepted !== true)
 const shortSideObserverWinner =
@@ -591,10 +587,7 @@ const shortSideProfileBounds =
 const shortSideProfileShortAxisSpanMm =
   shortSideProfileBounds === undefined
     ? undefined
-    : intrinsicShortSideSpan(
-        intrinsicShortSideAxes(args.sheet),
-        shortSideProfileBounds
-      )
+    : intrinsicShortSideSpan(intrinsicShortSideAxes(args.sheet), shortSideProfileBounds)
 const shortSideProfileShortAxisFillRatio =
   shortSideProfileShortAxisSpanMm === undefined
     ? undefined
@@ -622,51 +615,26 @@ const matchesExpectedOptional = (
   expected: string | undefined
 ): boolean =>
   expected === undefined ? true : expected === 'none' ? actual === undefined : actual === expected
-const requestedPieceIds = request.pieces.map(({ id }) => id)
-const placedPieceIds = result.placedCollisionGeometries.map(({ placement }) => placement.pieceId)
-const definedPlacedPieceIds = placedPieceIds.filter(
-  (pieceId): pieceId is NonNullable<typeof pieceId> => pieceId !== undefined
+const requestedPieceIds = request.pieces.map(({ id }) => String(id))
+const placedPieceIds = result.placedCollisionGeometries.map(({ placement }) =>
+  placement.pieceId === undefined ? undefined : String(placement.pieceId)
 )
-const requestedPieceIdSet = new Set(requestedPieceIds)
-const placedPieceIdSet = new Set(definedPlacedPieceIds)
-const unplacedPieceIdSet = new Set(result.unplacedPieceIds)
-const exactPiecePartition =
-  definedPlacedPieceIds.length === placedPieceIds.length &&
-  requestedPieceIdSet.size === requestedPieceIds.length &&
-  placedPieceIdSet.size === definedPlacedPieceIds.length &&
-  unplacedPieceIdSet.size === result.unplacedPieceIds.length &&
-  placedPieceIdSet.size + unplacedPieceIdSet.size === requestedPieceIdSet.size &&
-  definedPlacedPieceIds.every((pieceId) => requestedPieceIdSet.has(pieceId)) &&
-  result.unplacedPieceIds.every(
-    (pieceId) => requestedPieceIdSet.has(pieceId) && !placedPieceIdSet.has(pieceId)
-  ) &&
-  requestedPieceIds.every(
-    (pieceId) => placedPieceIdSet.has(pieceId) || unplacedPieceIdSet.has(pieceId)
-  )
+const exactPiecePartition = exactIrregularPiecePartition(
+  requestedPieceIds,
+  placedPieceIds,
+  result.unplacedPieceIds.map(String)
+)
 const shortSideProfilePlacedPieceIds =
-  shortSideProfilePlacedCollisionGeometries?.map(({ placement }) => placement.pieceId) ?? []
-const shortSideProfileDefinedPlacedPieceIds = shortSideProfilePlacedPieceIds.filter(
-  (pieceId): pieceId is NonNullable<typeof pieceId> => pieceId !== undefined
-)
-const shortSideProfilePlacedPieceIdSet = new Set(shortSideProfileDefinedPlacedPieceIds)
-const shortSideProfileUnplacedPieceIdSet = new Set(shortSideProfileUnplacedPieceIds ?? [])
+  shortSideProfilePlacedCollisionGeometries?.map(({ placement }) =>
+    placement.pieceId === undefined ? undefined : String(placement.pieceId)
+  ) ?? []
 const shortSideProfileExactPiecePartition =
   shortSideProfileSource === undefined ||
   (shortSideProfileUnplacedPieceIds !== undefined &&
-    shortSideProfileDefinedPlacedPieceIds.length === shortSideProfilePlacedPieceIds.length &&
-    shortSideProfilePlacedPieceIdSet.size === shortSideProfileDefinedPlacedPieceIds.length &&
-    shortSideProfileUnplacedPieceIdSet.size === shortSideProfileUnplacedPieceIds.length &&
-    shortSideProfilePlacedPieceIdSet.size + shortSideProfileUnplacedPieceIdSet.size ===
-      requestedPieceIdSet.size &&
-    shortSideProfileDefinedPlacedPieceIds.every((pieceId) => requestedPieceIdSet.has(pieceId)) &&
-    shortSideProfileUnplacedPieceIds.every(
-      (pieceId) =>
-        requestedPieceIdSet.has(pieceId) && !shortSideProfilePlacedPieceIdSet.has(pieceId)
-    ) &&
-    requestedPieceIds.every(
-      (pieceId) =>
-        shortSideProfilePlacedPieceIdSet.has(pieceId) ||
-        shortSideProfileUnplacedPieceIdSet.has(pieceId)
+    exactIrregularPiecePartition(
+      requestedPieceIds,
+      shortSideProfilePlacedPieceIds,
+      shortSideProfileUnplacedPieceIds.map(String)
     ))
 const svgPath = `${args.outputPrefix}.svg`
 const shortSideProfileSvgPath =
@@ -703,6 +671,7 @@ if (shortSideProfileSource !== undefined && shortSideProfileReportPath !== undef
               ? shortSidePairFoldTrace?.prescribedRotationDeg
               : undefined,
         placedCount: shortSideProfilePlacedCollisionGeometries?.length ?? 0,
+        placedPieceIds: shortSideProfilePlacedPieceIds,
         unplacedCount: shortSideProfileUnplacedPieceIds?.length ?? 0,
         unplacedPieceIds: shortSideProfileUnplacedPieceIds ?? [],
         collisionIdentitySha256: shortSideProfileCollisionIdentitySha256,
@@ -744,9 +713,9 @@ const checks = {
     intrinsicAnytimeSchedulerTraceValid(result.intrinsicAnytimeSchedulerTrace),
   productionStrategyIdentity:
     workerStrategy?.strategyId ===
-      (args.objectiveProfile === 'short-side'
-        ? 'irregular-convex-compact-short-side'
-        : 'irregular-convex-shared-archive'),
+    (args.objectiveProfile === 'short-side'
+      ? 'irregular-convex-compact-short-side'
+      : 'irregular-convex-shared-archive'),
   focusedTracePresent: args.disableFocusedCompleteReconstruction || focusedTrace !== undefined,
   focusedStatus:
     args.expectedFocusedStatus === undefined || focusedTrace?.status === args.expectedFocusedStatus,
@@ -784,8 +753,7 @@ const checks = {
   shortSidePairFoldOutputInfluence:
     shortSidePairFoldTrace === undefined ||
     shortSidePairFoldTrace.outputInfluence ===
-      (args.objectiveProfile === 'short-side' &&
-      shortSidePairFoldTrace.status === 'accepted'
+      (args.objectiveProfile === 'short-side' && shortSidePairFoldTrace.status === 'accepted'
         ? 'selected'
         : 'none'),
   shortSidePairFoldBudget:
@@ -806,8 +774,7 @@ const checks = {
       shortSideProfileReportPath !== undefined),
   shortSideProfileExactPiecePartition,
   shortSideProfileDirectionalContract:
-    !args.captureShortSideObserver ||
-    shortSideProfileOutcome === 'directional-success'
+    !args.captureShortSideObserver || shortSideProfileOutcome === 'directional-success'
 }
 const passed = Object.values(checks).every(Boolean)
 const report = jsonSafe({
@@ -820,6 +787,7 @@ const report = jsonSafe({
   runtime: { elapsedMs, node: process.version, v8: process.versions.v8 },
   result: {
     placedCount: result.placedCollisionGeometries.length,
+    placedPieceIds,
     unplacedCount: result.unplacedPieceIds.length,
     unplacedPieceIds: result.unplacedPieceIds,
     collisionIdentitySha256,

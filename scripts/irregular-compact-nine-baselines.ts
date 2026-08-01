@@ -182,7 +182,6 @@ const BASELINES: ReadonlyArray<Baseline> = [
   }
 ]
 
-
 const SVG_RENDERER_SCRIPT =
   process.env.IRREGULAR_SVG_RENDERER_SCRIPT ??
   (process.env.IRREGULAR_SVG_RENDERER === 'magick'
@@ -290,10 +289,7 @@ async function runBaseline(baseline: Baseline, outputDirectory: string): Promise
     '--expected-unplaced-count',
     String(baseline.shortSideUnplacedCount),
     '--maximum-canonical-cavities',
-    String(
-      baseline.shortSideMaximumCanonicalCavities ??
-        baseline.maximumCanonicalCavities
-    ),
+    String(baseline.shortSideMaximumCanonicalCavities ?? baseline.maximumCanonicalCavities),
     '--maximum-elapsed-ms',
     String(baseline.maximumElapsedMs),
     ...focusedExpectedArguments(baseline)
@@ -418,6 +414,7 @@ interface CompactReport {
   }
   readonly result: {
     readonly placedCount: number
+    readonly placedPieceIds: ReadonlyArray<string | undefined>
     readonly unplacedCount: number
     readonly unplacedPieceIds: ReadonlyArray<string>
     readonly collisionIdentitySha256: string
@@ -445,10 +442,7 @@ interface CompactReport {
     readonly intrinsicShortSidePairFoldTrace?: {
       readonly status: string
       readonly outputInfluence: 'none' | 'selected'
-      readonly constructionKind?:
-        | 'pair-fold'
-        | 'multi-row-shelf'
-        | 'contact-strip'
+      readonly constructionKind?: 'pair-fold' | 'multi-row-shelf' | 'contact-strip'
       readonly envelopeAreaCostVetoes?: ReadonlyArray<unknown>
     }
   }
@@ -508,10 +502,8 @@ for (let index = 0; index < BASELINES.length; index += 1) {
     await access(shortSidePngPath)
   }
   const archiveSelected =
-    shortSideReport.result.intrinsicShortSideObserverTrace?.outputInfluence ===
-    'selected'
-  const terminalTrace =
-    shortSideReport.result.intrinsicShortSidePairFoldTrace
+    shortSideReport.result.intrinsicShortSideObserverTrace?.outputInfluence === 'selected'
+  const terminalTrace = shortSideReport.result.intrinsicShortSidePairFoldTrace
   const terminalSelected = terminalTrace?.outputInfluence === 'selected'
   const shortSideSource = archiveSelected
     ? ('guarded-stage1-winner' as const)
@@ -527,8 +519,7 @@ for (let index = 0; index < BASELINES.length; index += 1) {
     shortSideReport.result.bounds
   )
   const shortAxisFillRatio =
-    shortAxisSpan /
-    Math.min(shortSideReport.sheet.width, shortSideReport.sheet.height)
+    shortAxisSpan / Math.min(shortSideReport.sheet.width, shortSideReport.sheet.height)
   const profileOutcome =
     shortSideSource === 'missing-directional-output'
       ? ('directional-miss' as const)
@@ -536,6 +527,17 @@ for (let index = 0; index < BASELINES.length; index += 1) {
   const inheritedSubsetMatchesCompact =
     JSON.stringify([...shortSideReport.result.unplacedPieceIds].toSorted()) ===
     JSON.stringify([...compactReport.result.unplacedPieceIds].toSorted())
+  const selectedPartitionMatchesCompact =
+    JSON.stringify(
+      [...shortSideReport.result.placedPieceIds].toSorted((first, second) =>
+        String(first).localeCompare(String(second))
+      )
+    ) ===
+      JSON.stringify(
+        [...compactReport.result.placedPieceIds].toSorted((first, second) =>
+          String(first).localeCompare(String(second))
+        )
+      ) && inheritedSubsetMatchesCompact
   layoutRecords.push(
     {
       fixture: baseline.fixture,
@@ -551,9 +553,7 @@ for (let index = 0; index < BASELINES.length; index += 1) {
       canonicalCavities: compactReport.result.canonicalTopology?.enclosedCavityCount,
       bounds: compactReport.result.bounds,
       exactPiecePartition: compactReport.checks.exactPiecePartition,
-      passed:
-        compactReport.objectiveProfile === 'compact' &&
-        compactReport.passed,
+      passed: compactReport.objectiveProfile === 'compact' && compactReport.passed,
       svgPath: compactReport.svgPath,
       pngPath: skipPng ? undefined : basename(compactPngPath)
     },
@@ -565,28 +565,23 @@ for (let index = 0; index < BASELINES.length; index += 1) {
       strategyId: shortSideReport.workerOutput.strategyId,
       profileOutcome,
       shortAxisFillRatio,
-      observerStatus:
-        shortSideReport.result.intrinsicShortSideObserverTrace?.status ??
-        'missing',
+      observerStatus: shortSideReport.result.intrinsicShortSideObserverTrace?.status ?? 'missing',
       inheritedSubsetMatchesCompact,
+      selectedPartitionMatchesCompact,
       selectedRotationDeg:
-        shortSideReport.result.intrinsicShortSideObserverTrace
-          ?.observerWinnerRotationDeg,
+        shortSideReport.result.intrinsicShortSideObserverTrace?.observerWinnerRotationDeg,
       placedCount: shortSideReport.result.placedCount,
       unplacedCount: shortSideReport.result.unplacedCount,
       unplacedPieceIds: shortSideReport.result.unplacedPieceIds,
-      collisionIdentitySha256:
-        shortSideReport.result.collisionIdentitySha256,
-      fittedCanonicalSha256:
-        shortSideReport.result.fittedCanonicalSha256,
-      canonicalCavities:
-        shortSideReport.result.canonicalTopology?.enclosedCavityCount,
+      collisionIdentitySha256: shortSideReport.result.collisionIdentitySha256,
+      fittedCanonicalSha256: shortSideReport.result.fittedCanonicalSha256,
+      canonicalCavities: shortSideReport.result.canonicalTopology?.enclosedCavityCount,
       bounds: shortSideReport.result.bounds,
       exactPiecePartition: shortSideReport.checks.exactPiecePartition,
       passed:
         shortSideReport.objectiveProfile === 'short-side' &&
         Boolean(shortSideReport.checks.exactPiecePartition) &&
-        inheritedSubsetMatchesCompact &&
+        selectedPartitionMatchesCompact &&
         shortSideReport.passed,
       svgPath: shortSideReport.svgPath,
       pngPath: skipPng ? undefined : basename(shortSidePngPath)
@@ -609,8 +604,7 @@ const terminalContactStripWinnerCount = layoutRecords.filter(
   ({ profile, source }) => profile === 'short-side' && source === 'terminal-contact-strip-winner'
 ).length
 const compactFallbackCount = layoutRecords.filter(
-  ({ profile, source }) =>
-    profile === 'short-side' && source === 'missing-directional-output'
+  ({ profile, source }) => profile === 'short-side' && source === 'missing-directional-output'
 ).length
 const directionalSuccessCount = layoutRecords.filter(
   ({ profile, profileOutcome }) =>
@@ -632,10 +626,15 @@ const layoutContractPassed =
   compactFallbackCount === 0 &&
   directionalSuccessCount === 9 &&
   directionalMissCount === 0 &&
-  layoutRecords.every(({ exactPiecePartition, passed }) => Boolean(exactPiecePartition && passed)) &&
+  layoutRecords.every(({ exactPiecePartition, passed }) =>
+    Boolean(exactPiecePartition && passed)
+  ) &&
   layoutRecords
     .filter(({ profile }) => profile === 'short-side')
-    .every(({ inheritedSubsetMatchesCompact }) => inheritedSubsetMatchesCompact === true)
+    .every(
+      ({ inheritedSubsetMatchesCompact, selectedPartitionMatchesCompact }) =>
+        inheritedSubsetMatchesCompact === true && selectedPartitionMatchesCompact === true
+    )
 const summaryPath = join(outputDirectory, 'summary.json')
 await writeFile(
   summaryPath,

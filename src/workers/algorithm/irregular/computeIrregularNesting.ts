@@ -149,12 +149,12 @@ export interface ComputeIrregularNestingOptions {
   /** Independent observer-only generic topology-frontier lane. */
   readonly captureCapacityCohesionShadow?: boolean
   /** Benchmark hook for the independent exact cohesion endpoint. */
-  readonly onCapacityCohesionShadowLane?: (
-    endpoint: IntrinsicCapacityEndpoint | undefined
-  ) => void
+  readonly onCapacityCohesionShadowLane?: (endpoint: IntrinsicCapacityEndpoint | undefined) => void
   /** Benchmark hook exposing the exact prepared order without affecting search. */
-  readonly onPreparedPieces?: (
-    preparedPieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly onPreparedPieces?: (preparedPieces: ReadonlyArray<IrregularPreparedPiece>) => void
+  /** Quality-gate hook exposing the Compact geometry before Short Side can replace it. */
+  readonly onIntrinsicShortSideProductionGeometry?: (
+    placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
   ) => void
   /** Opt-in complete-capable place/defer shadow producer. */
   readonly captureExperimentalPlaceDeferCompleteShadow?: boolean
@@ -270,19 +270,14 @@ export function intrinsicAnytimeSchedulerTraceValid(
   const laterPartial = quanta.filter(
     ({ cohort }, index) => index > completeIndex && cohort === 'partial'
   )
-  const laterCold = laterPartial.filter(
-    ({ producerRole }) => producerRole === 'capacity-cold'
-  )
+  const laterCold = laterPartial.filter(({ producerRole }) => producerRole === 'capacity-cold')
   const laterWarm = laterPartial.filter(
     ({ producerRole }) =>
-      producerRole === 'capacity-warm-prefix' ||
-      producerRole === 'capacity-quality-warm-prefix'
+      producerRole === 'capacity-warm-prefix' || producerRole === 'capacity-quality-warm-prefix'
   )
   const coldSettledBeforeComplete = quanta.some(
     ({ producerRole, outcome }, index) =>
-      index < completeIndex &&
-      producerRole === 'capacity-cold' &&
-      outcome === 'settled'
+      index < completeIndex && producerRole === 'capacity-cold' && outcome === 'settled'
   )
   const firstLaterPartialIndex = quanta.findIndex(
     ({ cohort }, index) => index > completeIndex && cohort === 'partial'
@@ -305,9 +300,7 @@ export function intrinsicAnytimeSchedulerTraceValid(
     ) {
       return false
     }
-    const warmCheckpoints = laterWarm.filter(
-      ({ outcome }) => outcome === 'checkpointed'
-    ).length
+    const warmCheckpoints = laterWarm.filter(({ outcome }) => outcome === 'checkpointed').length
     const warmTerminals = laterWarm.filter(
       ({ outcome }) => outcome === 'settled' || outcome === 'censored'
     ).length
@@ -325,8 +318,7 @@ export function intrinsicAnytimeSchedulerTraceValid(
     )
   }
   return (
-    laterPartial.length === 0 &&
-    (trace.coldStartStatus === 'settled' || coldSettledBeforeComplete)
+    laterPartial.length === 0 && (trace.coldStartStatus === 'settled' || coldSettledBeforeComplete)
   )
 }
 
@@ -495,16 +487,12 @@ function coordinateIntrinsicSharedArchive(
     let capacityShadowTelemetry: IntrinsicCapacityShadowTelemetry | undefined
     let intrinsicAnytimeSchedulerTrace: IntrinsicAnytimeSchedulerTrace | undefined
     let experimentalPlaceDeferTrace: IntrinsicPlaceDeferTrace | undefined
-    let focusedCompleteReconstructionTrace:
-      | IntrinsicFocusedCompleteReconstructionTrace
-      | undefined
+    let focusedCompleteReconstructionTrace: IntrinsicFocusedCompleteReconstructionTrace | undefined
     let settledCompleteArchiveForShortSideObserver:
       | ReadonlyArray<IntrinsicSharedArchiveEndpoint>
       | undefined
     let intrinsicShortSideObserverTrace: IntrinsicShortSideObserverTrace | undefined
-    let intrinsicShortSidePairFoldTrace:
-      | IntrinsicShortSidePairFoldTrace
-      | undefined
+    let intrinsicShortSidePairFoldTrace: IntrinsicShortSidePairFoldTrace | undefined
 
     if (archiveEnabled) {
       settledCompleteArchiveForShortSideObserver = []
@@ -564,8 +552,7 @@ function coordinateIntrinsicSharedArchive(
         ...(input.options?.onCapacityCohesionShadowLane === undefined
           ? {}
           : {
-              onCohesionShadowLane:
-                input.options.onCapacityCohesionShadowLane
+              onCohesionShadowLane: input.options.onCapacityCohesionShadowLane
             }),
         ...(input.options?.onCapacityWarmPrefixLane === undefined
           ? {}
@@ -635,8 +622,7 @@ function coordinateIntrinsicSharedArchive(
                 ordinal: 0,
                 cohort: 'partial',
                 producerRole: 'capacity-cold',
-                outcome:
-                  scheduledColdStart.status === 'paused' ? 'checkpointed' : 'settled'
+                outcome: scheduledColdStart.status === 'paused' ? 'checkpointed' : 'settled'
               }
             ]
           }
@@ -669,24 +655,20 @@ function coordinateIntrinsicSharedArchive(
                         }
                       }
                       const checkpoint = scheduledColdStart?.checkpoint
-                      if (
-                        scheduledColdStart?.status !== 'paused' ||
-                        checkpoint === undefined
-                      ) {
+                      if (scheduledColdStart?.status !== 'paused' || checkpoint === undefined) {
                         return
                       }
-                      scheduledColdStart =
-                        yield* runIntrinsicCapacitySchedulerColdQuantum({
-                          sheet: input.request.sheet,
-                          preparedPieces: input.preparedPieces,
-                          checkpoint,
-                          maximumDepthBoundaries: 1,
-                          ...(control === undefined ? {} : { control }),
-                          ...(input.options?.captureCapacityPhaseTimings === true
-                            ? { capturePhaseTimings: true }
-                            : {}),
-                          retentionMode: capacityRetentionMode
-                        })
+                      scheduledColdStart = yield* runIntrinsicCapacitySchedulerColdQuantum({
+                        sheet: input.request.sheet,
+                        preparedPieces: input.preparedPieces,
+                        checkpoint,
+                        maximumDepthBoundaries: 1,
+                        ...(control === undefined ? {} : { control }),
+                        ...(input.options?.captureCapacityPhaseTimings === true
+                          ? { capturePhaseTimings: true }
+                          : {}),
+                        retentionMode: capacityRetentionMode
+                      })
                       scheduledColdCheckpointReused = true
                       if (intrinsicAnytimeSchedulerTrace !== undefined) {
                         intrinsicAnytimeSchedulerTrace = {
@@ -698,9 +680,7 @@ function coordinateIntrinsicSharedArchive(
                               cohort: 'partial',
                               producerRole: 'capacity-cold',
                               outcome:
-                                scheduledColdStart.status === 'paused'
-                                  ? 'checkpointed'
-                                  : 'settled'
+                                scheduledColdStart.status === 'paused' ? 'checkpointed' : 'settled'
                             }
                           ]
                         }
@@ -738,7 +718,7 @@ function coordinateIntrinsicSharedArchive(
                 })
               : error._tag === 'IntrinsicCapacityError'
                 ? mapIntrinsicCapacityError(error)
-              : error
+                : error
           )
         )
         if (!intrinsicSharedArchiveProductionValid(archive)) {
@@ -796,33 +776,25 @@ function coordinateIntrinsicSharedArchive(
                   ordinal: intrinsicAnytimeSchedulerTrace.quanta.length,
                   cohort: 'experimental-complete',
                   producerRole: 'experimental-place-defer-complete',
-                  outcome:
-                    experimental.trace.status === 'censored' ? 'censored' : 'settled'
+                  outcome: experimental.trace.status === 'censored' ? 'censored' : 'settled'
                 }
               ]
             }
           }
         }
-        const protectedSheetlessArchive = retainRankedSharedArchive(
-          archive.sheetlessArchive
-        )
+        const protectedSheetlessArchive = retainRankedSharedArchive(archive.sheetlessArchive)
         const protectedSheetlessWinner =
           selectIntrinsicSharedArchiveWinner(protectedSheetlessArchive)
         const protectedFittingWinner = selectIntrinsicSharedArchiveWinner(
           selectFittingSharedArchive(protectedSheetlessArchive)
         )
-        let focusedReconstructionEndpoints: ReadonlyArray<IntrinsicSharedArchiveEndpoint> =
-          []
+        let focusedReconstructionEndpoints: ReadonlyArray<IntrinsicSharedArchiveEndpoint> = []
         if (focusedCompleteReconstructionEnabled) {
-          if (
-            protectedSheetlessWinner === undefined ||
-            protectedFittingWinner === undefined
-          ) {
+          if (protectedSheetlessWinner === undefined || protectedFittingWinner === undefined) {
             focusedCompleteReconstructionTrace = {
               version: 'intrinsic-focused-complete-reconstruction-v1',
               status: 'skipped-no-fitting-protected-endpoint',
-              sourceCanonicalGeometryHash:
-                protectedSheetlessWinner?.sheetlessCanonicalGeometryHash,
+              sourceCanonicalGeometryHash: protectedSheetlessWinner?.sheetlessCanonicalGeometryHash,
               candidateCanonicalGeometryHash: undefined,
               selectedCanonicalGeometryHash: undefined,
               consumedCandidateEvaluations: 0,
@@ -834,10 +806,8 @@ function coordinateIntrinsicSharedArchive(
           } else {
             const reconstructionSeed: IntrinsicReconstructionSeed = {
               role: 'settled-protected',
-              canonicalGeometryHash:
-                protectedSheetlessWinner.sheetlessCanonicalGeometryHash,
-              placedCollisionGeometries:
-                protectedSheetlessWinner.placedCollisionGeometries,
+              canonicalGeometryHash: protectedSheetlessWinner.sheetlessCanonicalGeometryHash,
+              placedCollisionGeometries: protectedSheetlessWinner.placedCollisionGeometries,
               stepTrace: [],
               metrics: protectedSheetlessWinner.metrics
             }
@@ -854,8 +824,7 @@ function coordinateIntrinsicSharedArchive(
               }),
               {
                 onFailure: (error) =>
-                  error._tag === 'IrregularNfpIfpControlAbortError' &&
-                  error.reason === 'cancelled'
+                  error._tag === 'IrregularNfpIfpControlAbortError' && error.reason === 'cancelled'
                     ? Effect.fail(error)
                     : Effect.succeed({
                         kind: 'failed' as const,
@@ -888,8 +857,7 @@ function coordinateIntrinsicSharedArchive(
                 ({ role }) => role === 'endpoint-q90-right-to-left'
               )
               focusedReconstructionEndpoints =
-                focusedRun?.status !== 'completed' ||
-                focusedRun.metrics === undefined
+                focusedRun?.status !== 'completed' || focusedRun.metrics === undefined
                   ? []
                   : [
                       makeIntrinsicSharedArchiveEndpoint({
@@ -898,35 +866,27 @@ function coordinateIntrinsicSharedArchive(
                         sourceId: focusedRun.sourceEndpointHash,
                         state: new IrregularBeamState({
                           remainingPreparedPieces: [],
-                          placedCollisionGeometries:
-                            focusedRun.placedCollisionGeometries,
+                          placedCollisionGeometries: focusedRun.placedCollisionGeometries,
                           unplacedPieceIds: [],
-                          placementOrder:
-                            focusedRun.placedCollisionGeometries.flatMap(
-                              ({ placement }) => {
-                                const pieceId =
-                                  placement.pieceId ??
-                                  placement.sourcePieceId
-                                return pieceId === undefined ? [] : [pieceId]
-                              }
-                            )
+                          placementOrder: focusedRun.placedCollisionGeometries.flatMap(
+                            ({ placement }) => {
+                              const pieceId = placement.pieceId ?? placement.sourcePieceId
+                              return pieceId === undefined ? [] : [pieceId]
+                            }
+                          )
                         }),
                         runtimeMs: focusedRun.runtimeMs
                       })
-                    ].flatMap((endpoint) =>
-                      endpoint === undefined ? [] : [endpoint]
-                    )
+                    ].flatMap((endpoint) => (endpoint === undefined ? [] : [endpoint]))
               focusedCompleteReconstructionTrace = {
                 version: 'intrinsic-focused-complete-reconstruction-v1',
                 status: focusedRun?.status ?? 'incomplete',
                 sourceCanonicalGeometryHash:
                   protectedSheetlessWinner.sheetlessCanonicalGeometryHash,
                 candidateCanonicalGeometryHash:
-                  focusedReconstructionEndpoints[0]
-                    ?.sheetlessCanonicalGeometryHash,
+                  focusedReconstructionEndpoints[0]?.sheetlessCanonicalGeometryHash,
                 selectedCanonicalGeometryHash: undefined,
-                consumedCandidateEvaluations:
-                  reconstruction.consumedCandidateEvaluations,
+                consumedCandidateEvaluations: reconstruction.consumedCandidateEvaluations,
                 candidateEvaluationAccountingComplete:
                   reconstruction.candidateEvaluationAccountingComplete,
                 runtimeMs: reconstruction.runtimeMs,
@@ -947,15 +907,13 @@ function coordinateIntrinsicSharedArchive(
         if (focusedCompleteReconstructionTrace !== undefined) {
           focusedCompleteReconstructionTrace = {
             ...focusedCompleteReconstructionTrace,
-            selectedCanonicalGeometryHash:
-              winner?.sheetlessCanonicalGeometryHash,
+            selectedCanonicalGeometryHash: winner?.sheetlessCanonicalGeometryHash,
             outputInfluence:
               winner === undefined
                 ? 'none'
                 : focusedReconstructionEndpoints.some(
                       ({ sheetlessCanonicalGeometryHash }) =>
-                        sheetlessCanonicalGeometryHash ===
-                        winner.sheetlessCanonicalGeometryHash
+                        sheetlessCanonicalGeometryHash === winner.sheetlessCanonicalGeometryHash
                     )
                   ? 'selected'
                   : 'protected-fallback'
@@ -989,9 +947,7 @@ function coordinateIntrinsicSharedArchive(
                   (producerRole === 'capacity-cold' && phase === 'resume') ||
                   ((producerRole === 'capacity-warm-prefix' ||
                     producerRole === 'capacity-quality-warm-prefix') &&
-                    (phase === 'initial' ||
-                      phase === 'censor' ||
-                      outcome === 'settled'))
+                    (phase === 'initial' || phase === 'censor' || outcome === 'settled'))
               )
               .map(({ producerRole, outcome }, index) => ({
                 ordinal: capacityResumeOrdinal + index,
@@ -1004,10 +960,7 @@ function coordinateIntrinsicSharedArchive(
               coldCheckpointReused: scheduledColdCheckpointReused,
               warmPrefixEndpointsAdmitted: capacity.trace.warmPrefixEndpointsAdmitted,
               cancellationReason: 'complete-cohort-miss',
-              quanta: [
-                ...intrinsicAnytimeSchedulerTrace.quanta,
-                ...capacityQuanta
-              ]
+              quanta: [...intrinsicAnytimeSchedulerTrace.quanta, ...capacityQuanta]
             }
           }
           selected = yield* materializeIntrinsicCapacityResult(input, capacity)
@@ -1021,8 +974,7 @@ function coordinateIntrinsicSharedArchive(
         } else {
           if (intrinsicAnytimeSchedulerTrace !== undefined) {
             const capacityCancellation =
-              scheduledColdCheckpointReused &&
-              scheduledColdStart?.status === 'paused'
+              scheduledColdCheckpointReused && scheduledColdStart?.status === 'paused'
                 ? [
                     {
                       ordinal: intrinsicAnytimeSchedulerTrace.quanta.length,
@@ -1035,9 +987,7 @@ function coordinateIntrinsicSharedArchive(
             intrinsicAnytimeSchedulerTrace = {
               ...intrinsicAnytimeSchedulerTrace,
               cancellationReason:
-                scheduledColdStart === undefined
-                  ? undefined
-                  : 'complete-endpoint-fitted',
+                scheduledColdStart === undefined ? undefined : 'complete-endpoint-fitted',
               quanta: [...intrinsicAnytimeSchedulerTrace.quanta, ...capacityCancellation]
             }
           }
@@ -1079,6 +1029,7 @@ function coordinateIntrinsicSharedArchive(
         input.options?.captureIntrinsicShortSideObserver === true ||
         input.options?.onIntrinsicShortSideObserver !== undefined)
     ) {
+      input.options?.onIntrinsicShortSideProductionGeometry?.(selected.placedCollisionGeometries)
       if (shortSideProfileRequested) {
         yield* emitSharedArchiveProgress(
           input,
@@ -1090,39 +1041,30 @@ function coordinateIntrinsicSharedArchive(
       intrinsicShortSideObserverTrace = observeIntrinsicShortSideOrientations({
         sheet: input.request.sheet,
         endpoints: settledCompleteArchiveForShortSideObserver,
-        productionPlacedCollisionGeometries:
-          selected.placedCollisionGeometries
+        productionPlacedCollisionGeometries: selected.placedCollisionGeometries
       })
-      const winnerHash =
-        intrinsicShortSideObserverTrace.observerWinnerCanonicalGeometryHash
-      const winnerRotation =
-        intrinsicShortSideObserverTrace.observerWinnerRotationDeg
+      const winnerHash = intrinsicShortSideObserverTrace.observerWinnerCanonicalGeometryHash
+      const winnerRotation = intrinsicShortSideObserverTrace.observerWinnerRotationDeg
       const winnerEndpoint = settledCompleteArchiveForShortSideObserver.find(
-        ({ sheetlessCanonicalGeometryHash }) =>
-          sheetlessCanonicalGeometryHash === winnerHash
+        ({ sheetlessCanonicalGeometryHash }) => sheetlessCanonicalGeometryHash === winnerHash
       )
       const winnerState =
         winnerEndpoint === undefined || winnerRotation === undefined
           ? undefined
           : new IrregularBeamState({
               remainingPreparedPieces: [],
-              placedCollisionGeometries:
-                winnerEndpoint.placedCollisionGeometries,
+              placedCollisionGeometries: winnerEndpoint.placedCollisionGeometries,
               placementOrder: winnerEndpoint.placedCollisionGeometries.map(
-                ({ placement }) =>
-                  placement.pieceId ?? placement.sourcePieceId
+                ({ placement }) => placement.pieceId ?? placement.sourcePieceId
               )
             }).withQuarterTurnBottomLeft(winnerRotation)
       input.options?.onIntrinsicShortSideObserverWinner?.(
-        winnerHash === undefined ||
-          winnerRotation === undefined ||
-          winnerState === undefined
+        winnerHash === undefined || winnerRotation === undefined || winnerState === undefined
           ? undefined
           : {
               canonicalGeometryHash: winnerHash,
               rotationDeg: winnerRotation,
-              placedCollisionGeometries:
-                winnerState.placedCollisionGeometries
+              placedCollisionGeometries: winnerState.placedCollisionGeometries
             }
       )
       let shortSideSelected = false
@@ -1130,18 +1072,12 @@ function coordinateIntrinsicSharedArchive(
         (shortSideProfileRequested ||
           input.options?.captureIntrinsicShortSidePairFoldObserver === true) &&
         !shortSideSelected &&
-        intrinsicShortSideObserverTrace.productionShortAxisSpanMm !==
-          undefined &&
-        intrinsicShortSideObserverTrace.productionMaximumSideMm !==
-          undefined &&
-        intrinsicShortSideObserverTrace.productionEnvelopeAreaMm2 !==
-          undefined &&
-        intrinsicShortSideObserverTrace.productionShortAxisSpanGrid !==
-          undefined &&
-        intrinsicShortSideObserverTrace.productionMaximumSideGrid !==
-          undefined &&
-        intrinsicShortSideObserverTrace.productionEnvelopeAreaGrid2 !==
-          undefined
+        intrinsicShortSideObserverTrace.productionShortAxisSpanMm !== undefined &&
+        intrinsicShortSideObserverTrace.productionMaximumSideMm !== undefined &&
+        intrinsicShortSideObserverTrace.productionEnvelopeAreaMm2 !== undefined &&
+        intrinsicShortSideObserverTrace.productionShortAxisSpanGrid !== undefined &&
+        intrinsicShortSideObserverTrace.productionMaximumSideGrid !== undefined &&
+        intrinsicShortSideObserverTrace.productionEnvelopeAreaGrid2 !== undefined
       ) {
         const directionalTargetIds = new Set(
           selected.placedCollisionGeometries.map(
@@ -1155,18 +1091,12 @@ function coordinateIntrinsicSharedArchive(
           sheet: input.request.sheet,
           preparedPieces: directionalPreparedPieces,
           settings: input.settings,
-          productionShortAxisSpanMm:
-            intrinsicShortSideObserverTrace.productionShortAxisSpanMm,
-          productionMaximumSideMm:
-            intrinsicShortSideObserverTrace.productionMaximumSideMm,
-          productionEnvelopeAreaMm2:
-            intrinsicShortSideObserverTrace.productionEnvelopeAreaMm2,
-          productionShortAxisSpanGrid:
-            intrinsicShortSideObserverTrace.productionShortAxisSpanGrid,
-          productionMaximumSideGrid:
-            intrinsicShortSideObserverTrace.productionMaximumSideGrid,
-          productionEnvelopeAreaGrid2:
-            intrinsicShortSideObserverTrace.productionEnvelopeAreaGrid2,
+          productionShortAxisSpanMm: intrinsicShortSideObserverTrace.productionShortAxisSpanMm,
+          productionMaximumSideMm: intrinsicShortSideObserverTrace.productionMaximumSideMm,
+          productionEnvelopeAreaMm2: intrinsicShortSideObserverTrace.productionEnvelopeAreaMm2,
+          productionShortAxisSpanGrid: intrinsicShortSideObserverTrace.productionShortAxisSpanGrid,
+          productionMaximumSideGrid: intrinsicShortSideObserverTrace.productionMaximumSideGrid,
+          productionEnvelopeAreaGrid2: intrinsicShortSideObserverTrace.productionEnvelopeAreaGrid2,
           ...(input.options?.intrinsicShortSidePairFoldRuntimeControl === undefined
             ? {}
             : {
@@ -1230,21 +1160,13 @@ function coordinateIntrinsicSharedArchive(
       portfolio: selected.portfolio,
       ...(selected.capacityTrace === undefined ? {} : { capacityTrace: selected.capacityTrace }),
       ...(capacityShadowTelemetry === undefined ? {} : { capacityShadowTelemetry }),
-      ...(intrinsicAnytimeSchedulerTrace === undefined
-        ? {}
-        : { intrinsicAnytimeSchedulerTrace }),
-      ...(experimentalPlaceDeferTrace === undefined
-        ? {}
-        : { experimentalPlaceDeferTrace }),
+      ...(intrinsicAnytimeSchedulerTrace === undefined ? {} : { intrinsicAnytimeSchedulerTrace }),
+      ...(experimentalPlaceDeferTrace === undefined ? {} : { experimentalPlaceDeferTrace }),
       ...(focusedCompleteReconstructionTrace === undefined
         ? {}
         : { focusedCompleteReconstructionTrace }),
-      ...(intrinsicShortSideObserverTrace === undefined
-        ? {}
-        : { intrinsicShortSideObserverTrace }),
-      ...(intrinsicShortSidePairFoldTrace === undefined
-        ? {}
-        : { intrinsicShortSidePairFoldTrace })
+      ...(intrinsicShortSideObserverTrace === undefined ? {} : { intrinsicShortSideObserverTrace }),
+      ...(intrinsicShortSidePairFoldTrace === undefined ? {} : { intrinsicShortSidePairFoldTrace })
     }
   })
 }
@@ -1693,9 +1615,7 @@ function selectedLayoutRevealSnapshots(
         remainingPreparedPieces,
         placedCollisionGeometries: placed,
         unplacedPieceIds,
-        placementOrder: placed.map(
-          ({ placement }) => placement.pieceId ?? placement.sourcePieceId
-        )
+        placementOrder: placed.map(({ placement }) => placement.pieceId ?? placement.sourcePieceId)
       })
     }
   })

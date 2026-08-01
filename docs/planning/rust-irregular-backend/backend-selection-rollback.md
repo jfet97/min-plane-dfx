@@ -85,10 +85,10 @@ Effect dependency, so it is importable from worker code without pulling in
 Electron:
 
 ```ts
-export type IrregularBackend = 'typescript' | 'rust' | 'differential'
+export type IrregularBackend = 'auto' | 'typescript' | 'rust' | 'differential'
 
 export const IRREGULAR_BACKEND_ENV_VAR = 'MIN_PLANE_IRREGULAR_BACKEND'
-export const DEFAULT_IRREGULAR_BACKEND: IrregularBackend = 'typescript'
+export const DEFAULT_IRREGULAR_BACKEND: IrregularBackend = 'auto'
 
 /** Pure and total for recognized values. An unrecognized non-empty value throws. */
 export function parseIrregularBackend(raw: string | undefined): IrregularBackend { ... }
@@ -136,24 +136,26 @@ tolerances, or production algorithm bounds.
 
 ## 3. Capability probe
 
-A lazily-initialized, memoized probe, invoked **only when `backend` resolves
-to `'rust'` or `'differential'`** (never on the default `'typescript'` path,
-so the native addon is never even attempted to load for a pure-TypeScript
-production job — no load-time cost, no crash surface added to the unmodified
-default path):
+A lazily-initialized, memoized probe, invoked when `backend` resolves to
+`'auto'`, `'rust'`, or `'differential'` for an archive-eligible request. It is
+never invoked for the explicit `'typescript'` path or auto's
+archive-ineligible TypeScript path, so the native addon is not attempted for
+those jobs:
 
 ```ts
-export interface NativeCapabilityProbe {
-  readonly available: true
-  readonly nativeApiVersion: number      // versioned N-API contract, prompt §7/§20.4
-  readonly backendVersion: string        // Rust crate semver
-  readonly targetTriple: string
-  readonly threadCountDefault: number
-} | {
-  readonly available: false
-  readonly reason: 'not-installed' | 'load-error' | 'version-mismatch'
-  readonly detail: string                // sanitized — no raw panic/backtrace, prompt §16
-}
+export type NativeCapabilityProbe =
+  | {
+      readonly available: true
+      readonly nativeApiVersion: number // versioned N-API contract, prompt §7/§20.4
+      readonly backendVersion: string // Rust crate semver
+      readonly targetTriple: string
+      readonly profiles: ReadonlyArray<string>
+    }
+  | {
+      readonly available: false
+      readonly reason: 'not-installed' | 'load-error' | 'version-mismatch'
+      readonly detail: string // sanitized; no raw panic/backtrace, prompt §16
+    }
 
 export function probeNativeIrregularAddon(): NativeCapabilityProbe
 ```
@@ -173,16 +175,20 @@ ABI mismatch, corrupt binary) and the actionable-error-message requirement.
 
 ## 4. Pre-execution backend policy
 
-Backend choice is explicit. TypeScript is the maintained oracle, fallback, and
-rollback path, but selecting it is the fallback action. An explicitly requested
-Rust or differential run never silently substitutes TypeScript.
+Backend choice is explicit or automatic. TypeScript is the maintained oracle,
+fallback, and rollback path, but rollback requires selecting it explicitly.
+An explicitly requested Rust or differential run never silently substitutes
+TypeScript. Auto selects TypeScript only for archive-ineligible jobs; an eligible
+auto job requires a compatible native addon advertising the job's required
+`compact` or `compact-short-side` profile.
 
-Before either Rust-capable mode executes, the worker checks archive eligibility
-and probes the native addon. An unavailable or ineligible explicit request fails
-with `worker_protocol_error` and stable `requestedBackend` and `reason` context.
-Differential mode performs both checks before the TypeScript oracle run starts,
-so it cannot emit partial TypeScript callbacks and then discover that Rust could
-not execute.
+Before an eligible auto, Rust, or differential run executes, the worker probes
+the native addon and validates the required profile. Unavailable, incompatible,
+or profile-mismatched capability fails with `worker_protocol_error` before
+either backend starts. Explicit Rust and differential additionally fail before
+probing when the request is archive-ineligible. Differential mode performs all
+preflight checks before the TypeScript oracle run starts, so it cannot emit
+partial TypeScript callbacks and then discover that Rust could not execute.
 
 ### 4.1 No-retry rules (hard requirement, not configurable)
 
@@ -258,12 +264,14 @@ stable mismatch failure when parity does not hold.
 
 ### 6.1 Error mapping additions to the existing table
 
-The runtime adds two backend-orchestration conditions to the external error
-mapping without changing existing algorithm failure mappings:
+The runtime adds backend-orchestration conditions to the external error mapping
+without changing existing algorithm failure mappings:
 
 | New internal condition | External `AppErrorCode` | Context fields |
 | --- | --- | --- |
-| Explicit Rust or differential request is unavailable or archive-ineligible | `worker_protocol_error` | `requestedBackend`, `reason` |
+| Eligible auto, Rust, or differential request has unavailable or incompatible native capability | `worker_protocol_error` | `requestedBackend`, `reason` |
+| Explicit Rust or differential request is archive-ineligible | `worker_protocol_error` | `requestedBackend`, `reason` |
+| Eligible auto, Rust, or differential request lacks the required native profile | `worker_protocol_error` | `requestedBackend`, `reason`, `requiredProfile`, `advertisedProfiles` |
 | Differential-mode exact-comparison mismatch (§5) | `irregular_differential_mismatch` | `path`, bounded `typescriptValue`, bounded `rustValue` |
 
 No existing row in the 8-row table changes. `not_implemented`,
@@ -291,19 +299,15 @@ code deploy and no persisted-data migration**, because backend selection
 never touches persisted state:
 
 1. Set `MIN_PLANE_IRREGULAR_BACKEND=typescript` in the environment the
-   Electron main process launches with (or simply unset it, since
-   `'typescript'` is the compiled-in default per `DEFAULT_IRREGULAR_BACKEND`,
-   §2.2 — rollback via *removing* an override is equally valid to rollback
-   via *setting* one, as long as the compiled default remains `'typescript'`
-   until an explicit, separate promotion decision flips it).
-2. Because `createSupervisor()` is designed to resolve this per job (§2.2),
-   the very next nesting job after the environment change runs on
-   TypeScript — no application restart is required if the environment
-   change is applied to the running main process (e.g., via a support
-   toggle that calls `process.env[...] = ...` before the next
-   `createSupervisor()`-adjacent read); a full process restart is required
-   only if the environment is supplied at OS/launcher level (the common
-   case for a packaged desktop app).
+   Electron main process launches with. Do not unset the variable or leave it
+   empty for rollback: unset and empty values resolve to `auto`, which may
+   dispatch an eligible job to Rust.
+2. The worker reads the selector for each irregular job, so the next nesting
+   job after the environment change runs on TypeScript. No application
+   restart is required if the environment change is applied to the running
+   process (for example, by assigning `process.env[...]` before the next
+   job). A full process restart is required when the environment is supplied
+   at OS or launcher level, which is common for packaged desktop apps.
 3. No `NestingRequest`, `NestingOptions`, persisted project file, saved job,
    or history artifact needs any change — every persisted shape is already
    backend-agnostic by construction (§1).
@@ -369,7 +373,7 @@ non-archive irregular jobs.
    the "how does a real rollout flip this for real users" UX/ops question to
    the orchestrator — it is a product decision, not something inferable
    from source.
-3. **Compiled default flip timing.** `DEFAULT_IRREGULAR_BACKEND` remains
-   `'typescript'`. Any future default change requires an explicit, separate
+3. **Compiled default flip timing.** `DEFAULT_IRREGULAR_BACKEND` is currently
+   `'auto'`. Any future default change requires an explicit, separate
    promotion decision gated by `performance-contract.md`; this document does
    not authorize that flip.

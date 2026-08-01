@@ -15,9 +15,11 @@
 - Production gates passed: Mixed-61 Compact area `391605.85017399996`, cavities `0`, elapsed `32061.670542` ms; Compact nine-baselines 9 cases and 18 layouts; capacity report `/tmp/capacity-production.Q2EH7P/report.json`.
 - The rebuilt macOS arm64 package passed for `aarch64-apple-darwin`, API 3. Its 46 MiB Asar contains only 9 allowlisted native-package entries, resolves the addon inside the packaged app, and unpacks the target binary. The npm tarball contained the required loader, target metadata, Darwin arm64 binary, `package.json`, `NOTICE`, and `LICENSES` assets.
 
-## Promotion verdict
+## Historical PR27 promotion verdict
 
-P1, P4, P6, and P7 remain passed in the preregistered controlled Linux performance record. P2 and P3 remain failed, and P5 remains unevaluated. Rust therefore remains opt-in through `MIN_PLANE_IRREGULAR_BACKEND=rust`; TypeScript remains the default. Current macOS figures are correctness and packaging verification, not new controlled performance-contract evidence.
+P1, P4, P6, and P7 remain passed in the preregistered controlled Linux performance record. P2 and P3 remain failed, and P5 remains unevaluated. PR27 therefore shipped Rust as opt-in. This historical verdict is not rewritten or treated as a performance pass.
+
+The follow-up automatic-routing policy in `quality-acceptance.md` supersedes the PR27 product-routing consequence while preserving every P1 through P7 threshold and verdict. Archive-eligible profiles that pass the complete quality matrix and native capability preflight route automatically to Rust. Explicit `MIN_PLANE_IRREGULAR_BACKEND=typescript` remains the rollback. Current macOS figures are correctness and packaging verification, not new controlled performance-contract evidence.
 
 ## Historical verification detail
 ## 1. Scope
@@ -28,7 +30,7 @@ P1, P4, P6, and P7 remain passed in the preregistered controlled Linux performan
 | 1.2 | Compact Short Side runs fully in Rust through a coarse N-API call | **met** | Same entry point, `profile=short-side`; `verify-mixed61-hash.ts --profile short-side` reproduces its own pinned hash (`ef2b783a…` sibling `2a63c729…`, `differential-e2e-report.md`); `short_side` module (`src/short_side/`) builds genuine directional geometry, not a Compact-geometry reuse (§1.9 below). |
 | 1.3 | The final architecture is not a collection of per-kernel N-API calls | **met** | One `#[napi]`-exported coarse job API (`boundary/`); `architecture.md` §4.1 (still labeled "Stage 0 design" — see §6 doc-maintenance note below, but the coarse-call architecture it specifies is what actually shipped, independently confirmed by reading `boundary/run_job.rs`/`lib.rs` directly rather than trusting the design doc's own claim). |
 | 1.4 | Rectangular nesting remains TypeScript | **met** | No rectangular-nesting code exists anywhere in `crates/irregular-nesting-native`; the crate's own module map (`architecture.md` §3, cross-checked by directory listing) covers only the irregular Compact/Compact-Short-Side subsystems named in the migration prompt's §5 file map. Untouched by this port. |
-| 1.5 | The complete existing TypeScript irregular backend remains maintained and selectable | **met** | `src/workers/nesting.worker.ts`'s backend-selection routing (the one sanctioned wiring edit, `freeze-verification.md` §5) takes the exact prior `computeIrregularNesting` branch whenever `MIN_PLANE_IRREGULAR_BACKEND` is unset or resolves to `'typescript'` — confirmed byte-identical pre/post-change by `pnpm test:focused` (925 passed, 17 skipped, this session, §7 below); `backend-selection-rollback.md` documents the selector and rollback runbook. |
+| 1.5 | The complete existing TypeScript irregular backend remains maintained and selectable | **met** | At the PR27 evidence point, unset selection used TypeScript. Under the superseding follow-up policy, explicit `MIN_PLANE_IRREGULAR_BACKEND=typescript` still takes the exact prior `computeIrregularNesting` branch without a native probe; unset or empty selection now uses `auto`. `backend-selection-rollback.md` documents the current selector and rollback runbook. |
 
 ## 2. Semantics
 
@@ -80,17 +82,13 @@ P1, P4, P6, and P7 remain passed in the preregistered controlled Linux performan
 | P6 (memory) | **PASS** | — |
 | P7 (thread-count neutrality) | **PASS** | — |
 
-**Consequence, stated per this task's explicit instruction:** P2/P3 (and the unevaluated P5) are
-**not met** — therefore **the Rust backend must remain opt-in (`MIN_PLANE_IRREGULAR_BACKEND=rust`),
-not the default backend.** `backend-selection-rollback.md`'s selector already defaults to
-`'typescript'` and requires an explicit environment override to select Rust — this default is
-**correct and must not be changed** until P2/P3/P5 are re-evaluated and cleared, per
-`performance-contract.md`'s own binding language ("parallelism is not a success criterion") and
-the migration prompt §25's performance section, which this checklist reads as requiring **all**
-listed performance criteria, not a subset, before the backend could be considered for
-default-on promotion. Single-threaded Rust is, on its own, a correctness-preserving, reproducible
-win (P1/P4/P6/P7 all pass) and remains valuable as an **opt-in** backend regardless of the P2/P3
-outcome.
+**Historical PR27 consequence:** P2/P3 and P5 were not met, so PR27 shipped Rust
+as opt-in. That decision and its numeric evidence remain recorded here without being
+reclassified as a pass. The follow-up policy in `quality-acceptance.md` explicitly
+supersedes only the product-routing consequence: automatic routing is governed by
+archive eligibility, native capability, and the complete quality matrix. P2, P3,
+and P5 remain independent performance verdicts and must still be measured and
+reported honestly.
 
 ## 5. Integration
 
@@ -101,7 +99,7 @@ outcome.
 | 5.3 | Supported platform and architecture artifacts are built and smoke-tested | **met-with-note** | Only `x86_64-unknown-linux-gnu` was built and tested this session (this development machine's own platform, per `native-boundary.md` §3.1's target-triple capability field, confirmed `x86_64-unknown-linux-gnu` in every capability probe this session). macOS/Windows artifacts are design-only (`build-packaging.md` §9 prebuild-targets section) — not built or smoke-tested on this machine, since no macOS/Windows build host is available in this environment. This is an honest scope gap, not a claim of full multi-platform coverage. |
 | 5.4 | CI exercises Rust, addon loading, deterministic parity, production gates, and packaging | **met-with-note** | `.github/workflows/rust-native.yml` (new this port, present on disk, its own header comment cross-references `ci-matrix.md`) defines rust-fmt/rust-clippy/rust-test/native-build/addon-load-smoke/required-differential-subset/determinism jobs for the per-PR tier; **the full production-gate and packaging jobs are explicitly deferred to a "nightly" tier** (the workflow file's own header comment: "Expensive gates ... deliberately NOT run per-PR"). This workflow has not been observed to execute successfully on GitHub's own runners as part of this evidence pass (no CI run was triggered/inspected this session — only the workflow file's presence and content were reviewed). |
 | 5.5 | Missing or incompatible native binaries fail clearly before explicit Rust or differential execution | **met** | `backend-selection-rollback.md` §3-4 (capability probe and fail-closed no-retry rules); `native-boundary.md` §3.3 (load-time compatibility check); `boundary::error` module's typed error mapping (`cargo test --release`'s `boundary::error::tests` — 8 tests, all green, covering API-version mismatch, panic sanitization, archive-ineligibility routing). |
-| 5.6 | Rollback to TypeScript remains immediate and documented | **met** | `backend-selection-rollback.md` §8 ("Rollback runbook"); the default backend selection is `'typescript'` unless explicitly overridden (§4.7 above), so rollback is the unmodified default state rather than a separate procedure. |
+| 5.6 | Rollback to TypeScript remains immediate and documented | **met** | `backend-selection-rollback.md` §8 documents the current rollback runbook. Because unset or empty selection now means `auto`, rollback explicitly sets `MIN_PLANE_IRREGULAR_BACKEND=typescript`; that path does not probe or invoke native code. |
 | 5.7 | Native event callbacks use one ordered API-v2 channel and drain before settlement | **met** | `boundary::events` owns one Rust ordinal sequence across progress, snapshots, and terminal. `nativeIrregularBackend.test.ts` exercises delayed progress and snapshot delivery, callback rejection, malformed data, gaps, duplicates, reversals, and post-terminal callbacks through the injectable addon seam. The real-addon smoke script asserts the terminal marker appears before its promise resolves. |
 
 ---
@@ -176,9 +174,9 @@ run.
 - **Concurrency/caches (§3): fully met**, with one measurement-scope note (§3.4) that does not
   indicate a defect.
 - **Performance (§4): partially met.** P1/P4/P6/P7 pass; **P2 and P3 do not**, and P5 was not
-  evaluated. Per the task's own instruction, this is reported plainly: **the Rust backend has
-  not earned unconditional default-on promotion and must remain opt-in**, exactly as
-  `backend-selection-rollback.md`'s current default already has it.
+  evaluated. These historical performance verdicts remain unchanged. The follow-up automatic-routing
+  policy is a separate product decision governed by archive eligibility, native capability, and the
+  complete quality matrix, as recorded in `quality-acceptance.md`.
 - **Integration (§5): met, with honest scope notes** on single-platform build/test coverage and
   on CI not having been observed to execute successfully on real GitHub infrastructure as part
   of this evidence pass (the workflow file exists and was reviewed, not executed remotely here).

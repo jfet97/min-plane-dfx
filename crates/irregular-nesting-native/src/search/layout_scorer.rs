@@ -767,21 +767,12 @@ fn polygon_area(polygon: &IrregularPolygon) -> f64 {
 
 /// TS: `irregularLayoutScorer.ts:401-410` `polygonPerimeter`.
 ///
-/// N2 (`differential-e2e-report.md`): routes through the two-argument
-/// Node/V8-compatible [`js_math::hypot`], not `f64::hypot`. Its committed
-/// 21,696-vector Node/V8 oracle is generated and checked independently.
-/// **Measured, not assumed**: of the 235 polygon edges exercised by this
-/// crate's own free-material vector suite,
-/// 80 (34%) disagreed with the V8 oracle by 1 ULP under `std::f64::hypot` --
-/// the same class of divergence R21/N1 already document and fix for
-/// `canonical_grid::contact::collinear_overlap_segment`'s comparator-feeding
-/// `hypot` call. This function's summed `perimeter` feeds
-/// `derive_free_material_metrics`'s `free_material_sliver_metric`
-/// (`perimeter * perimeter / net_area`), which is serialized verbatim onto
-/// `IrregularLayoutScore::free_material_sliver_metric` -- a **metric/
-/// serialized-value** field, not merely a diagnostic one, so it falls
-/// squarely under R21's "any call site whose output can reach a semantic
-/// field" mandate even though nothing here is a comparator tie-break.
+/// The perimeter routes through [`js_math::hypot`] so scoring shares one
+/// audited standard-library boundary with production geometry. The summed
+/// value feeds `derive_free_material_metrics`'s `free_material_sliver_metric`
+/// (`perimeter * perimeter / net_area`) and is serialized onto
+/// `IrregularLayoutScore`. Final legality, quality, and deterministic output
+/// are blocking; Node/V8 ULP differences are diagnostic.
 fn polygon_perimeter(polygon: &IrregularPolygon) -> f64 {
     let len = polygon.points.len();
     let mut perimeter = 0.0_f64;

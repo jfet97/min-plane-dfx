@@ -7,8 +7,10 @@
  * the documented semantic projection (placements, score, portfolio,
  * diagnostics, sorted-piece order, and the complete state-snapshot sequence,
  * including remaining prepared pieces). Prints the exact first field where
- * the two backends disagree
- * and exits nonzero on any real difference.
+ * the two backends disagree. With `--diagnostic`, semantic differences are
+ * reported and accepted after both backends complete successfully. Native
+ * availability failures and typed backend failures remain blocking; omitting
+ * the flag preserves strict exact comparison.
  *
  * This is a development/CI diagnostic instrument, never a production code
  * path: it drives `computeIrregularNesting`/`computeIrregularNestingNative`
@@ -33,14 +35,14 @@
  *
  * Usage:
  *   pnpm exec tsx --tsconfig tsconfig.node.json scripts/rust-parity/run-differential.ts \
- *     [--fixture mixed61] [--pieces 4|all] [--request-file <path-to-NestingRequest.json>]
+ *     [--fixture mixed61] [--pieces 4|all] [--request-file <path-to-NestingRequest.json>] [--diagnostic]
  *
  * `--pieces` (default `4`) truncates a named fixture's `pieces`/`sourcePieces`
  * to a fast, iterable subset; `--request-file` always runs the file's full,
- * untruncated request. Exit code 0 only if both backends actually ran to
- * completion and the compared outcomes matched exactly; nonzero otherwise
- * (including native addon unavailability or any semantic divergence). Equal
- * typed failures are a valid parity outcome.
+ * untruncated request. Equal typed failures remain a valid exact parity
+ * outcome. Semantic divergence between successful outcomes is blocking unless
+ * `--diagnostic` is passed; native addon unavailability, unequal typed
+ * failures, and operational failures are always blocking.
  */
 import { Effect, Layer, Schema } from 'effect'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
@@ -62,6 +64,7 @@ import { preparePieces } from '@shared/preparePieces.js'
 
 import {
   computeIrregularNesting,
+  type ComputeIrregularNestingOptions,
   type IrregularComputeResult
 } from '../../src/workers/algorithm/irregular/computeIrregularNesting.js'
 import { CollisionGeometryBuilder } from '../../src/workers/irregular/collisionGeometryBuilder.js'
@@ -88,7 +91,7 @@ import {
 // CLI
 // ===========================================================================
 
-interface Args {
+export interface DifferentialArgs {
   readonly fixture: string
   readonly pieces: number | 'all'
   readonly requestFile: string | undefined
@@ -100,7 +103,7 @@ interface Args {
   readonly profile: 'compact' | 'short-side' | undefined
 }
 
-function parseArgs(argv: ReadonlyArray<string>): Args {
+export function parseDifferentialArgs(argv: ReadonlyArray<string>): DifferentialArgs {
   let fixture = 'mixed61'
   let pieces: number | 'all' = 4
   let requestFile: string | undefined
@@ -138,6 +141,8 @@ function parseArgs(argv: ReadonlyArray<string>): Args {
         throw new Error(`--profile must be compact or short-side, received ${JSON.stringify(raw)}`)
       }
       profile = raw
+    } else if (arg === '--diagnostic') {
+      continue
     } else {
       throw new Error(`Unrecognized argument ${JSON.stringify(arg)}`)
     }
@@ -332,7 +337,7 @@ function mixed61RequestAtSheet(raw: FixtureJson, sheet: SheetSpec): NestingReque
   })
 }
 
-async function loadRequest(args: Args): Promise<NestingRequest> {
+export async function loadDifferentialRequest(args: DifferentialArgs): Promise<NestingRequest> {
   if (args.requestFile !== undefined) {
     if (!existsSync(args.requestFile))
       throw new Error(`Request file not found: ${args.requestFile}`)
@@ -383,12 +388,14 @@ async function loadRequest(args: Args): Promise<NestingRequest> {
 // Running both backends
 // ===========================================================================
 
-function runTypeScriptBackend(
+export function runTypeScriptBackend(
   request: NestingRequest,
-  geometrySettings: IrregularNestingSettings
+  geometrySettings: IrregularNestingSettings,
+  options?: ComputeIrregularNestingOptions
 ): Effect.Effect<IrregularComputeResult, WorkerResponseFailureError> {
   return computeIrregularNesting(request, {
-    intrinsicShortSidePairFoldRuntimeControl: {
+    ...options,
+    intrinsicShortSidePairFoldRuntimeControl: options?.intrinsicShortSidePairFoldRuntimeControl ?? {
       now: () => 0,
       currentRssBytes: () => 0
     }
@@ -409,14 +416,14 @@ function runTypeScriptBackend(
   )
 }
 
-function runRustBackend(
+export function runRustBackend(
   request: NestingRequest,
   geometrySettings: IrregularNestingSettings
 ): Effect.Effect<IrregularComputeResult, WorkerResponseFailureError> {
   return computeIrregularNestingNative(request, geometrySettings)
 }
 
-async function runToOutcome(
+export async function runToOutcome(
   effect: Effect.Effect<IrregularComputeResult, WorkerResponseFailureError>
 ): Promise<IrregularDifferentialOutcome> {
   return Effect.runPromise(
@@ -438,9 +445,21 @@ function fail(message: string): never {
   process.exit(1)
 }
 
+function logDivergence(
+  divergence: NonNullable<ReturnType<typeof compareIrregularDifferentialOutcomes>>
+): void {
+  console.error(`[run-differential] FIRST DIVERGENCE at path: ${divergence.path}`)
+  console.error(`  typescript: ${JSON.stringify(divergence.typescript)}`)
+  console.error(`  rust      : ${JSON.stringify(divergence.rust)}`)
+  console.error(
+    `[run-differential] runtime: node=${process.version} platform=${process.platform} arch=${process.arch}`
+  )
+}
+
 async function main(): Promise<void> {
-  const args = parseArgs(process.argv.slice(2))
-  const request = await loadRequest(args)
+  const diagnostic = process.argv.includes('--diagnostic')
+  const args = parseDifferentialArgs(process.argv.slice(2))
+  const request = await loadDifferentialRequest(args)
   const geometrySettings = request.options.irregularSettings ?? GeometrySettings.Make
   const eligibility = intrinsicSharedArchiveEligibility(geometrySettings.optimizer)
 
@@ -479,21 +498,24 @@ async function main(): Promise<void> {
   console.log('[run-differential] backend execution: typescript=ran rust=ran')
 
   const divergence = compareIrregularDifferentialOutcomes(tsOutcome, rustOutcome)
-  if (divergence !== undefined) {
-    console.error(`[run-differential] FIRST DIVERGENCE at path: ${divergence.path}`)
-    console.error(`  typescript: ${JSON.stringify(divergence.typescript)}`)
-    console.error(`  rust      : ${JSON.stringify(divergence.rust)}`)
-    console.error(
-      `[run-differential] runtime: node=${process.version} platform=${process.platform} arch=${process.arch}`
-    )
-    fail('the compared semantic outcome diverged between backends.')
-  }
-
-  if (!tsOutcome.ok) {
+  if (!tsOutcome.ok || !rustOutcome.ok) {
+    if (divergence !== undefined) {
+      logDivergence(divergence)
+      fail('the compared typed failure outcomes diverged between backends.')
+    }
     console.log(
       '[run-differential] OK: TypeScript and Rust backends produced an identical typed failure envelope ' +
         JSON.stringify(projectIrregularDifferentialOutcome(tsOutcome))
     )
+    return
+  }
+
+  if (divergence !== undefined) {
+    logDivergence(divergence)
+    if (!diagnostic) {
+      fail('the compared semantic outcome diverged between backends.')
+    }
+    console.error('[run-differential] diagnostic divergence accepted for quality evaluation')
     return
   }
 
@@ -504,6 +526,8 @@ async function main(): Promise<void> {
   )
 }
 
-main().catch((error: unknown) => {
-  fail(error instanceof Error ? (error.stack ?? error.message) : String(error))
-})
+if (process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((error: unknown) => {
+    fail(error instanceof Error ? (error.stack ?? error.message) : String(error))
+  })
+}

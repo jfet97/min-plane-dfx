@@ -24,6 +24,57 @@ All contract measurements run on one machine under controlled conditions:
 - No other performance measurement or heavy process may run concurrently;
   measurement batches are strictly serial
 
+### 1.1 Docker/Linux P5 runner
+
+Run the aggregate suites through the checked-in wrapper:
+
+```sh
+pnpm benchmark:p5:linux -- --output-dir out/p5-linux-container
+```
+
+Use `pnpm benchmark:p5:linux -- --dry-run` to inspect the build and container
+commands without building the image or running a benchmark. The image pins Node
+v24.18.0, pnpm 11.11.0, rustc 1.97.1 stable, and the
+`x86_64-unknown-linux-gnu` target. It does not and cannot manufacture the host
+kernel, CPU architecture, hardware-thread count, or physical memory required by
+this contract.
+
+The wrapper compares the source host, Docker daemon host, container, and
+toolchain provenance with `docker/p5-controlled-host.contract.json` before
+starting the aggregate runner. The controlled daemon identity is NixOS host
+`t3vm`; an unknown or different daemon operating system or name is a mismatch.
+Docker Desktop and other daemon identities remain blocked even if their Linux
+VM is configured to resemble the contract machine.
+Classification fails closed:
+
+- local Linux arm64 is blocked and non-authoritative;
+- a Linux amd64 container emulated on an arm64 host is blocked and
+  non-authoritative;
+- native Linux x64 with any kernel, hardware-thread, memory, container, or
+  toolchain mismatch is blocked and non-authoritative;
+- a dirty source tree or unknown Git state is blocked and non-authoritative;
+- authoritative execution requires all C5, C6, and C7 suites, Rust thread
+  cells `1` and `default`, exactly three initial measured samples, and warmups;
+- bounded profiling overrides such as `--suite C5`, `--rust-threads 1`,
+  `--samples 1`, or `--skip-warmups` remain available, but they force blocked
+  classification and never receive `--controlled-linux`;
+- only an exact host, source, toolchain, and benchmark-schedule match causes the
+  wrapper to pass `--controlled-linux` to
+  `scripts/rust-parity/measure-p5-aggregate.ts`.
+
+Wrapper provenance records the Git commit and clean or dirty state. When Git
+inspection is available, it also records only an opaque SHA-256 fingerprint of
+`git diff --binary`, `git diff --cached --binary`, and porcelain status. Source
+contents and status text are not written to the evidence artifact.
+
+The aggregate TypeScript file remains the sole benchmark implementation. The
+wrapper only builds and runs the container, mounts the requested output
+directory, and records classification plus host, image, Docker, architecture,
+and toolchain provenance. Raw artifacts are
+`p5-wrapper-provenance.json` and `p5-aggregate-evidence.json` in the mounted
+output directory. Blocked runs may produce diagnostic timings, but they cannot
+produce an authoritative P5 pass or fail verdict.
+
 ## 2. Benchmark cases
 
 | # | Case | Profile | Harness |

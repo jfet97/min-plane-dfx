@@ -47,10 +47,7 @@ import {
 } from '../src/workers/algorithm/irregular/targetedExactLns.js'
 import { CollisionGeometryBuilder } from '../src/workers/irregular/collisionGeometryBuilder.js'
 import { FreeMaterialServiceLive } from '../src/workers/irregular/freeMaterialService.js'
-import {
-  GeometryKernel,
-  GeometrySettings
-} from '../src/workers/irregular/geometryKernel.js'
+import { GeometryKernel, GeometrySettings } from '../src/workers/irregular/geometryKernel.js'
 import { NfpIfpServiceLive } from '../src/workers/irregular/nfpIfpService.js'
 import { TransformGeneratorLive } from '../src/workers/irregular/transformGenerator.js'
 import {
@@ -61,6 +58,7 @@ import {
   canonicalizeIrregularLayout,
   type LayoutPoint
 } from './lib/irregularLayoutCanonicalization.js'
+import { exactIrregularPiecePartition } from '../src/workers/irregular/differential/irregularQualityAcceptance.js'
 
 interface CapacityShapeSpec {
   readonly kind: PresetShapeKind
@@ -90,7 +88,7 @@ interface CapacityFixture {
     >['outputInfluence']
     readonly sourceRole: string
     readonly prefixDepth: number
-    readonly endpointCanonicalGeometryHash?: string
+    readonly endpointCanonicalGeometryHash: string | undefined
   }
   readonly pairedEligible: boolean
   /** Allows expected shell-side preparation warnings such as piece_does_not_fit. */
@@ -158,13 +156,13 @@ const fixtures: ReadonlyArray<CapacityFixture> = [
     expectedRouting: undefined,
     expectedPlacedCount: 17,
     minimumPlacedCount: 17,
-    expectedCanonicalSha256:
-      '2f236b79c7c49a999daf5363e257bbda6b8562239571c6fedab2485cffb38c35',
+    expectedCanonicalSha256: '2f236b79c7c49a999daf5363e257bbda6b8562239571c6fedab2485cffb38c35',
     expectedQualityWarmPrefix: {
       status: 'skipped-below-minimum-piece-count',
       outputInfluence: 'none',
       sourceRole: 'canonical-grid',
-      prefixDepth: 10
+      prefixDepth: 10,
+      endpointCanonicalGeometryHash: undefined
     },
     pairedEligible: true
   },
@@ -187,8 +185,7 @@ const fixtures: ReadonlyArray<CapacityFixture> = [
     expectedRouting: undefined,
     expectedPlacedCount: 50,
     minimumPlacedCount: 50,
-    expectedCanonicalSha256:
-      '97dbc5029a050389b9b8f440dfd764e0b758e75c5cbfdbc8f27e1c0ddcdca04b',
+    expectedCanonicalSha256: '97dbc5029a050389b9b8f440dfd764e0b758e75c5cbfdbc8f27e1c0ddcdca04b',
     expectedQualityWarmPrefix: {
       status: 'evaluation-cap',
       outputInfluence: 'strict-count-improvement',
@@ -208,8 +205,7 @@ const fixtures: ReadonlyArray<CapacityFixture> = [
     expectedRouting: undefined,
     expectedPlacedCount: 59,
     minimumPlacedCount: 59,
-    expectedCanonicalSha256:
-      '36cee3489abffe6f5961a7ae96cbe9ce34d33d8754c9822841abb7585117ba16',
+    expectedCanonicalSha256: '36cee3489abffe6f5961a7ae96cbe9ce34d33d8754c9822841abb7585117ba16',
     expectedQualityWarmPrefix: {
       status: 'evaluation-cap',
       outputInfluence: 'strict-count-improvement',
@@ -322,10 +318,7 @@ function absolutePlacedCollisionPolygons(
   )
 }
 
-function renderSvg(
-  sheet: SheetSpec,
-  polygons: ReadonlyArray<ReadonlyArray<LayoutPoint>>
-): string {
+function renderSvg(sheet: SheetSpec, polygons: ReadonlyArray<ReadonlyArray<LayoutPoint>>): string {
   const margin = Math.max(20, Math.max(sheet.width, sheet.height) * 0.04)
   const viewMinX = -margin
   const viewMinY = -sheet.height - margin
@@ -347,9 +340,7 @@ interface CapacityRunReport {
   readonly arm: 'production' | 'cold-only'
   readonly elapsedMs: number
   readonly routing: string | undefined
-  readonly preflight:
-    | { readonly kind: string; readonly reason?: string }
-    | undefined
+  readonly preflight: { readonly kind: string; readonly reason?: string } | undefined
   readonly placedCount: number
   readonly unplacedCount: number
   readonly unplacedPieceIds: ReadonlyArray<string>
@@ -359,10 +350,7 @@ interface CapacityRunReport {
   readonly shadowTelemetry: IrregularComputeResult['capacityShadowTelemetry']
   readonly schedulerTrace: IrregularComputeResult['intrinsicAnytimeSchedulerTrace']
   readonly experimentalPlaceDeferTrace: IrregularComputeResult['experimentalPlaceDeferTrace']
-  readonly retentionMode:
-    | 'cohesion-frontier'
-    | 'area-first'
-    | 'axis-buckets'
+  readonly retentionMode: 'cohesion-frontier' | 'area-first' | 'axis-buckets'
   readonly cohesionShadow:
     | {
         readonly artifactPath: string
@@ -475,9 +463,7 @@ interface CapacityColdSearchTrace {
   readonly pieceCount: number
 }
 
-function capacityColdSearchTrace(
-  report: CapacityRunReport
-): CapacityColdSearchTrace | undefined {
+function capacityColdSearchTrace(report: CapacityRunReport): CapacityColdSearchTrace | undefined {
   return report.capacity?.coldSearch as CapacityColdSearchTrace | undefined
 }
 
@@ -507,15 +493,11 @@ async function runArm(
     captureCapacityShadowTelemetry: true,
     captureCapacityWarmPrefixTelemetry: true,
     intrinsicAnytimeSchedulerMode: 'deterministic-v1',
-    ...(retentionMode === 'objective'
-      ? {}
-      : { intrinsicCapacityRetentionShadow: retentionMode }),
+    ...(retentionMode === 'objective' ? {} : { intrinsicCapacityRetentionShadow: retentionMode }),
     ...(captureCohesionShadow
       ? {
           captureCapacityCohesionShadow: true,
-          onCapacityCohesionShadowLane: (
-            endpoint: IntrinsicCapacityEndpoint | undefined
-          ) => {
+          onCapacityCohesionShadowLane: (endpoint: IntrinsicCapacityEndpoint | undefined) => {
             cohesionEndpoint = endpoint
           }
         }
@@ -524,9 +506,7 @@ async function runArm(
     captureCohesionReinsertionShadow ||
     captureCohesionTwoPieceInterfaceShadow
       ? {
-          onPreparedPieces: (
-            observedPreparedPieces: ReadonlyArray<IrregularPreparedPiece>
-          ) => {
+          onPreparedPieces: (observedPreparedPieces: ReadonlyArray<IrregularPreparedPiece>) => {
             preparedPieces = observedPreparedPieces
           }
         }
@@ -578,19 +558,15 @@ async function runArm(
           canonicalGeometryHash: cohesionEndpoint.canonicalGeometryHash,
           objective: {
             placedCount: cohesionEndpoint.metrics.placedCount,
-            placedDoubledMaterialAreaGrid2:
-              cohesionEndpoint.metrics.placedDoubledMaterialAreaGrid2,
+            placedDoubledMaterialAreaGrid2: cohesionEndpoint.metrics.placedDoubledMaterialAreaGrid2,
             enclosedCavityCount: cohesionEndpoint.metrics.enclosedCavityCount,
-            totalEnclosedCavityAreaMm2:
-              cohesionEndpoint.metrics.totalEnclosedCavityAreaMm2,
+            totalEnclosedCavityAreaMm2: cohesionEndpoint.metrics.totalEnclosedCavityAreaMm2,
             totalEnclosedCavityDoubledAreaGrid2:
               cohesionEndpoint.metrics.totalEnclosedCavityDoubledAreaGrid2,
-            envelopeMaximumSideMm:
-              cohesionEndpoint.metrics.envelopeMaximumSideMm,
+            envelopeMaximumSideMm: cohesionEndpoint.metrics.envelopeMaximumSideMm,
             envelopeAreaMm2: cohesionEndpoint.metrics.envelopeAreaMm2,
             envelopeSpanMm: cohesionEndpoint.metrics.envelopeSpanMm,
-            envelopeMaximumSideGrid:
-              cohesionEndpoint.metrics.envelopeMaximumSideGrid,
+            envelopeMaximumSideGrid: cohesionEndpoint.metrics.envelopeMaximumSideGrid,
             envelopeAreaGrid2: cohesionEndpoint.metrics.envelopeAreaGrid2,
             envelopeSpanGrid: cohesionEndpoint.metrics.envelopeSpanGrid,
             canonicalGeometryHash: cohesionEndpoint.canonicalGeometryHash,
@@ -598,18 +574,14 @@ async function runArm(
             prefixDepth: cohesionEndpoint.prefixDepth,
             sourceRole: cohesionEndpoint.sourceRole
           },
-          topology: measureCanonicalLayoutTopologyExact(
-            cohesionEndpoint.placedCollisionGeometries
-          )
+          topology: measureCanonicalLayoutTopologyExact(cohesionEndpoint.placedCollisionGeometries)
         }
   if (cohesionShadow !== undefined && cohesionEndpoint !== undefined) {
     await writeFile(
       cohesionShadow.artifactPath,
       renderSvg(
         request.sheet,
-        absolutePlacedCollisionPolygons(
-          cohesionEndpoint.placedCollisionGeometries
-        )
+        absolutePlacedCollisionPolygons(cohesionEndpoint.placedCollisionGeometries)
       )
     )
   }
@@ -651,17 +623,15 @@ async function runArm(
           endpoint: cohesionEndpoint,
           artifactPath: `${artifactPath.slice(0, -4)}-cohesion-two-piece-interface-shadow.svg`
         })
-  const requestIds = request.pieces.map(({ id }) => id)
-  const accountedIds = [
-    ...result.placedCollisionGeometries.map(
-      ({ placement }) => placement.pieceId ?? placement.sourcePieceId
-    ),
-    ...result.unplacedPieceIds
-  ]
-  const partitionExact =
-    accountedIds.length === requestIds.length &&
-    new Set(accountedIds).size === accountedIds.length &&
-    [...accountedIds].sort().every((id, index) => id === [...requestIds].sort()[index])
+  const requestIds = request.pieces.map(({ id }) => String(id))
+  const placedIds = result.placedCollisionGeometries.map(({ placement }) =>
+    String(placement.pieceId ?? placement.sourcePieceId)
+  )
+  const partitionExact = exactIrregularPiecePartition(
+    requestIds,
+    placedIds,
+    result.unplacedPieceIds.map(String)
+  )
   const trace = result.capacityTrace
   return {
     arm,
@@ -685,8 +655,7 @@ async function runArm(
     shadowTelemetry: result.capacityShadowTelemetry,
     schedulerTrace: result.intrinsicAnytimeSchedulerTrace,
     experimentalPlaceDeferTrace: result.experimentalPlaceDeferTrace,
-    retentionMode:
-      retentionMode === 'objective' ? 'cohesion-frontier' : retentionMode,
+    retentionMode: retentionMode === 'objective' ? 'cohesion-frontier' : retentionMode,
     cohesionShadow,
     cohesionLnsShadow,
     cohesionReinsertionShadow,
@@ -735,9 +704,7 @@ async function runCohesionTwoPieceInterfaceShadow(input: {
       Effect.provide(Layer.succeed(GeometrySettings, input.settings))
     )
   )
-  const polygons = absolutePlacedCollisionPolygons(
-    result.placedCollisionGeometries
-  )
+  const polygons = absolutePlacedCollisionPolygons(result.placedCollisionGeometries)
   const canonical = canonicalizeIrregularLayout(polygons)
   await writeFile(input.artifactPath, renderSvg(input.request.sheet, polygons))
   const bestExactArtifactPath = `${input.artifactPath.slice(0, -4)}-best-topology.svg`
@@ -745,9 +712,7 @@ async function runCohesionTwoPieceInterfaceShadow(input: {
     bestExactArtifactPath,
     renderSvg(
       input.request.sheet,
-      absolutePlacedCollisionPolygons(
-        result.bestExactPlacedCollisionGeometries
-      )
+      absolutePlacedCollisionPolygons(result.bestExactPlacedCollisionGeometries)
     )
   )
   return {
@@ -759,9 +724,7 @@ async function runCohesionTwoPieceInterfaceShadow(input: {
     runtimeMs: result.runtimeMs,
     canonicalSha256: canonical.sha256,
     placedCount: result.placedCollisionGeometries.length,
-    topology: measureCanonicalLayoutTopologyExact(
-      result.placedCollisionGeometries
-    ),
+    topology: measureCanonicalLayoutTopologyExact(result.placedCollisionGeometries),
     candidateEvaluations: result.candidateEvaluations,
     pairCount: result.pairCount,
     orderCount: result.orderCount,
@@ -791,9 +754,7 @@ async function runCohesionFeatureContactShadow(input: {
   if (result === undefined) {
     throw new Error(`${input.request.jobId}: component interface closure rejected its seed`)
   }
-  const seedMetrics = measureRelaxationMetrics(
-    input.endpoint.placedCollisionGeometries
-  )
+  const seedMetrics = measureRelaxationMetrics(input.endpoint.placedCollisionGeometries)
   if (seedMetrics === undefined) {
     throw new Error(`${input.request.jobId}: component interface seed metrics failed`)
   }
@@ -801,16 +762,12 @@ async function runCohesionFeatureContactShadow(input: {
     const metrics = measureRelaxationMetrics(endpoint.placedCollisionGeometries)
     return (
       metrics !== undefined &&
-      assertCanonicalGridLegalLayout(
-        input.request.sheet,
-        endpoint.placedCollisionGeometries
-      ) &&
+      assertCanonicalGridLegalLayout(input.request.sheet, endpoint.placedCollisionGeometries) &&
       isAdmissibleTargetedImprovement(seedMetrics, metrics)
     )
   })
   const selectedPlaced =
-    selected?.placedCollisionGeometries ??
-    input.endpoint.placedCollisionGeometries
+    selected?.placedCollisionGeometries ?? input.endpoint.placedCollisionGeometries
   const selectedMetrics = measureRelaxationMetrics(selectedPlaced)
   if (selectedMetrics === undefined) {
     throw new Error(`${input.request.jobId}: component interface result metrics failed`)
@@ -820,8 +777,7 @@ async function runCohesionFeatureContactShadow(input: {
   await writeFile(input.artifactPath, renderSvg(input.request.sheet, polygons))
   const attemptOutcomeCounts: Record<string, number> = {}
   for (const attempt of result.attempts) {
-    attemptOutcomeCounts[attempt.outcome] =
-      (attemptOutcomeCounts[attempt.outcome] ?? 0) + 1
+    attemptOutcomeCounts[attempt.outcome] = (attemptOutcomeCounts[attempt.outcome] ?? 0) + 1
   }
   return {
     artifactPath: input.artifactPath,
@@ -860,9 +816,7 @@ async function runCohesionReinsertionShadow(input: {
       Effect.provide(Layer.succeed(GeometrySettings, input.settings))
     )
   )
-  const polygons = absolutePlacedCollisionPolygons(
-    result.placedCollisionGeometries
-  )
+  const polygons = absolutePlacedCollisionPolygons(result.placedCollisionGeometries)
   const canonical = canonicalizeIrregularLayout(polygons)
   await writeFile(input.artifactPath, renderSvg(input.request.sheet, polygons))
   return {
@@ -873,9 +827,7 @@ async function runCohesionReinsertionShadow(input: {
     placedCount: result.placedCollisionGeometries.length,
     selectedPieceId: result.selectedPieceId,
     detachedPieceIds: result.detachedPieceIds,
-    topology: measureCanonicalLayoutTopologyExact(
-      result.placedCollisionGeometries
-    ),
+    topology: measureCanonicalLayoutTopologyExact(result.placedCollisionGeometries),
     seedMetrics: result.seedMetrics,
     selectedMetrics: result.selectedMetrics,
     pieceReports: result.pieceReports
@@ -897,10 +849,7 @@ async function runCohesionLnsShadow(input: {
   const subsetPreparedPieces = input.preparedPieces.filter((piece) =>
     placedIds.has(piece.pieceId ?? piece.source.id)
   )
-  if (
-    subsetPreparedPieces.length !==
-    input.endpoint.placedCollisionGeometries.length
-  ) {
+  if (subsetPreparedPieces.length !== input.endpoint.placedCollisionGeometries.length) {
     throw new Error(
       `${input.request.jobId}: cohesion LNS could not resolve every placed prepared piece`
     )
@@ -920,23 +869,16 @@ async function runCohesionLnsShadow(input: {
       Effect.provide(Layer.succeed(GeometrySettings, input.settings))
     )
   )
-  const polygons = absolutePlacedCollisionPolygons(
-    result.placedCollisionGeometries
-  )
+  const polygons = absolutePlacedCollisionPolygons(result.placedCollisionGeometries)
   const canonical = canonicalizeIrregularLayout(polygons)
-  await writeFile(
-    input.artifactPath,
-    renderSvg(input.request.sheet, polygons)
-  )
+  await writeFile(input.artifactPath, renderSvg(input.request.sheet, polygons))
   return {
     artifactPath: input.artifactPath,
     accepted: result.accepted,
     runtimeMs: result.runtimeMs,
     canonicalSha256: canonical.sha256,
     placedCount: result.placedCollisionGeometries.length,
-    topology: measureCanonicalLayoutTopologyExact(
-      result.placedCollisionGeometries
-    ),
+    topology: measureCanonicalLayoutTopologyExact(result.placedCollisionGeometries),
     incumbentMetrics: result.incumbentMetrics,
     selectedMetrics: result.selectedMetrics,
     rounds: result.rounds
@@ -999,11 +941,7 @@ function parseArguments(argv: ReadonlyArray<string>): CliArguments {
       strict = true
     } else if (argument === '--retention') {
       const value = argv[index + 1]
-      if (
-        value !== 'objective' &&
-        value !== 'area-first' &&
-        value !== 'axis-buckets'
-      ) {
+      if (value !== 'objective' && value !== 'area-first' && value !== 'axis-buckets') {
         throw new Error('--retention requires objective, area-first, or axis-buckets')
       }
       retentionMode = value
@@ -1077,10 +1015,8 @@ for (const fixture of fixtures) {
         )
       : undefined
   const productionColdSearch = capacityColdSearchTrace(production)
-  const productionQualityWarmPrefix =
-    production.capacity?.qualityWarmPrefix
-  const coldOnlyColdSearch =
-    coldOnly === undefined ? undefined : capacityColdSearchTrace(coldOnly)
+  const productionQualityWarmPrefix = production.capacity?.qualityWarmPrefix
+  const coldOnlyColdSearch = coldOnly === undefined ? undefined : capacityColdSearchTrace(coldOnly)
 
   const checks = {
     partitionExact: production.partitionExact && (coldOnly?.partitionExact ?? true),
@@ -1099,18 +1035,13 @@ for (const fixture of fixtures) {
     qualityWarmPrefixContract:
       fixture.expectedQualityWarmPrefix === undefined ||
       cli.retentionMode !== 'objective' ||
-      (productionQualityWarmPrefix?.status ===
-        fixture.expectedQualityWarmPrefix.status &&
+      (productionQualityWarmPrefix?.status === fixture.expectedQualityWarmPrefix.status &&
         productionQualityWarmPrefix.outputInfluence ===
           fixture.expectedQualityWarmPrefix.outputInfluence &&
-        productionQualityWarmPrefix.sourceRole ===
-          fixture.expectedQualityWarmPrefix.sourceRole &&
-        productionQualityWarmPrefix.prefixDepth ===
-          fixture.expectedQualityWarmPrefix.prefixDepth &&
-        (fixture.expectedQualityWarmPrefix.endpointCanonicalGeometryHash ===
-          undefined ||
-          productionQualityWarmPrefix.endpoint?.canonicalGeometryHash ===
-            fixture.expectedQualityWarmPrefix.endpointCanonicalGeometryHash)),
+        productionQualityWarmPrefix.sourceRole === fixture.expectedQualityWarmPrefix.sourceRole &&
+        productionQualityWarmPrefix.prefixDepth === fixture.expectedQualityWarmPrefix.prefixDepth &&
+        productionQualityWarmPrefix.endpoint?.canonicalGeometryHash ===
+          fixture.expectedQualityWarmPrefix.endpointCanonicalGeometryHash),
     capacitySettled:
       production.capacity === undefined ||
       production.terminationReason === 'capacity_subset_settled',
@@ -1199,10 +1130,7 @@ await writeFile(
     {
       generatedAt: new Date().toISOString(),
       experiment: {
-        retentionMode:
-          cli.retentionMode === 'objective'
-            ? 'cohesion-frontier'
-            : cli.retentionMode,
+        retentionMode: cli.retentionMode === 'objective' ? 'cohesion-frontier' : cli.retentionMode,
         cohesionShadow: cli.cohesionShadow,
         requireCohesionPromotion: cli.requireCohesionPromotion
       },

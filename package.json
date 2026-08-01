@@ -29,6 +29,7 @@
     "test:native:package": "node --test crates/irregular-nesting-native/scripts/build-native.test.mjs scripts/verify-native-license-compliance.test.mjs scripts/verify-native-package-layout.test.mjs scripts/verify-packaged-native-load.test.mjs",
     "test:watch": "pnpm native:electron && ELECTRON_RUN_AS_NODE=1 electron ./node_modules/vitest/vitest.mjs",
     "benchmark:irregular": "tsx --tsconfig tsconfig.node.json scripts/irregular-benchmark.ts",
+    "benchmark:p5:linux": "node scripts/rust-parity/run-p5-linux-container.mjs",
     "profile:mixed61": "node scripts/profile-mixed61.mjs",
     "corpus:sheet-invariance": "tsx --tsconfig tsconfig.node.json scripts/irregular-sheet-invariance.ts",
     "gate:mixed61-compact": "pnpm corpus:sheet-invariance --case mixed-61 --sheets 2000x2700 --allow-single-sheet --strict --expected-canonical-sha256 ef2b783ae12491d2a80a12ef94d1bb2801c13cbd43aeb6e2c1cc00d86828fd3b --maximum-area-mm2 391606 --maximum-canonical-cavities 0 --maximum-elapsed-ms 330000",
@@ -37,6 +38,8 @@
     "gate:capacity:production": "tsx --tsconfig tsconfig.node.json scripts/irregular-capacity-gate.ts --strict",
     "build:native": "node crates/irregular-nesting-native/scripts/build-native.mjs --release",
     "test:differential": "tsx --tsconfig tsconfig.node.json scripts/rust-parity/differential-fixture-matrix.ts --required-only",
+    "test:differential:exact": "tsx --tsconfig tsconfig.node.json scripts/rust-parity/differential-fixture-matrix.ts --required-only --strict-exact",
+    "gate:quality-acceptance": "tsx --tsconfig tsconfig.node.json scripts/rust-parity/run-quality-acceptance.ts",
     "postinstall": "pnpm native:electron"
   },
   "dependencies": {

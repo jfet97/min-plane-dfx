@@ -8,32 +8,34 @@
  * `src/main` and `src/workers` without pulling in Electron (§2.2).
  *
  * Backend selection is independent of `workerMode` (rectangle vs. irregular
- * algorithm shape). Rust and differential may execute only archive-eligible
- * Compact or Compact Short Side jobs. An explicit Rust or differential request
- * that is unavailable or ineligible fails; TypeScript runs only when it is the
- * selected backend. The routing decision lives in the worker's irregular
- * backend execution module, not in this pure parser.
+ * algorithm shape). Auto selects Rust only for archive-eligible Compact or
+ * Compact Short Side jobs with a compatible advertised native profile. An
+ * explicit Rust or differential request that is unavailable or ineligible
+ * fails; TypeScript runs only when it is the selected backend. The routing
+ * decision lives in the worker's irregular backend execution module, not in
+ * this pure parser.
  */
 
 /** Which irregular-nesting implementation a job should run on. */
-export type IrregularBackend = 'typescript' | 'rust' | 'differential'
+export type IrregularBackend = 'auto' | 'typescript' | 'rust' | 'differential'
 
 /**
- * Out-of-band environment variable read once, at worker-thread startup,
- * before algorithm execution -- never persisted, never part of a request.
+ * Out-of-band environment variable read fresh for each irregular job, before
+ * algorithm execution. It is never persisted and never part of a request.
  * Mirrors the existing `MIN_PLANE_HISTORY_DIR` precedent
  * (`WorkerSupervisor.makeWorkerThread`).
  */
 export const IRREGULAR_BACKEND_ENV_VAR = 'MIN_PLANE_IRREGULAR_BACKEND'
 
 /**
- * Compiled-in default. Must stay `'typescript'` until an explicit, separate
- * promotion decision (gated by `performance-contract.md`'s thresholds) flips
- * it -- this module does not authorize that flip.
+ * Compiled-in default. Auto owns the production promotion decision by
+ * selecting only a preflight-eligible native profile; this module does not
+ * inspect requests or capabilities.
  */
-export const DEFAULT_IRREGULAR_BACKEND: IrregularBackend = 'typescript'
+export const DEFAULT_IRREGULAR_BACKEND: IrregularBackend = 'auto'
 
 const IRREGULAR_BACKEND_VALUES: ReadonlySet<IrregularBackend> = new Set([
+  'auto',
   'typescript',
   'rust',
   'differential'
@@ -41,7 +43,7 @@ const IRREGULAR_BACKEND_VALUES: ReadonlySet<IrregularBackend> = new Set([
 
 /**
  * Pure, total, no I/O. `undefined`/empty-string resolves to the compiled-in
- * default; any other unrecognized value throws -- an operator typo must
+ * auto default; any other unrecognized value throws -- an operator typo must
  * never silently resolve to the default, per the design doc's "fallback is
  * explicit and observable" requirement.
  */
@@ -51,7 +53,7 @@ export function parseIrregularBackend(raw: string | undefined): IrregularBackend
     return raw as IrregularBackend
   }
   throw new Error(
-    `${IRREGULAR_BACKEND_ENV_VAR} must be one of 'typescript' | 'rust' | 'differential', received ${JSON.stringify(raw)}`
+    `${IRREGULAR_BACKEND_ENV_VAR} must be one of 'auto' | 'typescript' | 'rust' | 'differential', received ${JSON.stringify(raw)}`
   )
 }
 

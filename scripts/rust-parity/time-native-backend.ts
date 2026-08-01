@@ -25,7 +25,7 @@
  *
  * Usage:
  *   pnpm exec tsx --tsconfig tsconfig.node.json scripts/rust-parity/time-native-backend.ts \
- *     --fixture triangle-20|shapes-17|mixed-61 --sheet WIDTHxHEIGHT
+ *     --fixture triangle-20|shapes-17|mixed-61 --profile compact|short-side --sheet WIDTHxHEIGHT
  */
 import { createHash } from 'node:crypto'
 import { readdir, readFile } from 'node:fs/promises'
@@ -41,11 +41,12 @@ import {
   DEFAULT_IRREGULAR_GEOMETRY_SETTINGS,
   makeCompactQualityIrregularOptimizerSettings
 } from '../../src/shared/irregular/defaults.js'
-import { IrregularNestingSettings } from '../../src/shared/irregular/domain.js'
+import { IrregularNestingSettings, IrregularOptimizerSettings } from '../../src/shared/irregular/domain.js'
 import { makePresetShapeDocument } from '../../src/shared/presetShapes.js'
 import { preparePieces } from '../../src/shared/preparePieces.js'
 import { canonicalCollisionLayoutIdentity } from '../../src/workers/irregular/canonicalLayoutGeometry.js'
 import { computeIrregularNestingNative } from '../../src/workers/irregular/native/nativeIrregularBackend.js'
+import { loadNativeIrregularAddon } from '../../src/workers/irregular/native/loadNativeBackend.js'
 import { canonicalizeIrregularLayout, type LayoutPoint } from '../lib/irregularLayoutCanonicalization.js'
 import type { IrregularComputeResult } from '../../src/workers/algorithm/irregular/computeIrregularNesting.js'
 
@@ -54,6 +55,7 @@ const MIXED61_FIXTURE_PATH = join(REPO_ROOT, 'tests/fixtures/irregularSheetInvar
 const SHAPES_17_FIXTURE = join(REPO_ROOT, 'tests/fixtures/irregularSeventeenShapes')
 
 type FixtureName = 'triangle-20' | 'mixed-61' | 'shapes-17'
+type LayoutProfile = 'compact' | 'short-side'
 
 function argument(name: string): string | undefined {
   const index = process.argv.indexOf(name)
@@ -71,6 +73,12 @@ function fixtureArgument(value: string): FixtureName {
   throw new Error('--fixture must be triangle-20, mixed-61, or shapes-17')
 }
 
+function profileArgument(value: string | undefined): LayoutProfile {
+  if (value === undefined || value === 'compact') return 'compact'
+  if (value === 'short-side') return value
+  throw new Error('--profile must be compact or short-side')
+}
+
 function parseSheet(value: string): SheetSpec {
   const match = /^(\d+(?:\.\d+)?)x(\d+(?:\.\d+)?)$/.exec(value)
   if (match === null) throw new Error('--sheet must be WIDTHxHEIGHT')
@@ -83,10 +91,17 @@ function parseSheet(value: string): SheetSpec {
 // `compactSettings`/`requestOptions`/`buildPreparedRequest`/`triangleRequest`/
 // `shapes17Request` (module-private there, so not importable) -- see this
 // file's top doc for why an exact duplicate, not a reimplementation, is used.
-function compactSettings(): IrregularNestingSettings {
+function compactSettings(profile: LayoutProfile): IrregularNestingSettings {
+  const optimizer = makeCompactQualityIrregularOptimizerSettings({ localRepairBudget: 0 })
   return new IrregularNestingSettings({
     geometry: DEFAULT_IRREGULAR_GEOMETRY_SETTINGS,
-    optimizer: makeCompactQualityIrregularOptimizerSettings({ localRepairBudget: 0 })
+    optimizer:
+      profile === 'compact'
+        ? optimizer
+        : new IrregularOptimizerSettings({
+            ...optimizer,
+            intrinsicObjectiveProfileId: 'short-side'
+          })
   })
 }
 
@@ -94,7 +109,7 @@ function requestOptions(settings: IrregularNestingSettings): NestingOptions {
   return new NestingOptions({
     allowGlobalRotation: true,
     allowGlobalMirror: true,
-    timeoutMs: 0,
+    timeoutMs: 180000,
     workerMode: 'irregular-convex-v2',
     historyMode: 'off',
     historyScope: 'winning_path',
@@ -108,6 +123,7 @@ function requestOptions(settings: IrregularNestingSettings): NestingOptions {
 
 function buildPreparedRequest(input: {
   readonly fixture: FixtureName
+  readonly profile: LayoutProfile
   readonly sheet: SheetSpec
   readonly sources: ReadonlyArray<ImportedPiece>
   readonly interchangeabilityKey: (piece: ImportedPiece) => string
@@ -125,7 +141,7 @@ function buildPreparedRequest(input: {
   if (prepared.warnings.length > 0) {
     throw new Error(`${input.fixture}: preparation warnings ${JSON.stringify(prepared.warnings)}`)
   }
-  const settings = compactSettings()
+  const settings = compactSettings(input.profile)
   return new NestingRequest({
     version: 1,
     jobId,
@@ -137,7 +153,7 @@ function buildPreparedRequest(input: {
   })
 }
 
-function triangleRequest(sheet: SheetSpec): NestingRequest {
+function triangleRequest(sheet: SheetSpec, profile: LayoutProfile): NestingRequest {
   const triangle = makePresetShapeDocument({
     kind: 'triangle',
     width: 70,
@@ -157,13 +173,14 @@ function triangleRequest(sheet: SheetSpec): NestingRequest {
   )
   return buildPreparedRequest({
     fixture: 'triangle-20',
+    profile,
     sheet,
     sources,
     interchangeabilityKey: () => 'triangle-70x60'
   })
 }
 
-async function shapes17Request(sheet: SheetSpec): Promise<NestingRequest> {
+async function shapes17Request(sheet: SheetSpec, profile: LayoutProfile): Promise<NestingRequest> {
   const fileNames = (await readdir(SHAPES_17_FIXTURE))
     .filter((fileName) => fileName.endsWith('.dxf'))
     .sort((first, second) => first.localeCompare(second, undefined, { numeric: true }))
@@ -188,30 +205,44 @@ async function shapes17Request(sheet: SheetSpec): Promise<NestingRequest> {
   )
   return buildPreparedRequest({
     fixture: 'shapes-17',
+    profile,
     sheet,
     sources,
     interchangeabilityKey: () => 'shapes-17'
   })
 }
 
-async function mixed61Request(sheet: SheetSpec): Promise<{ request: NestingRequest; settings: IrregularNestingSettings }> {
+async function mixed61Request(
+  sheet: SheetSpec,
+  profile: LayoutProfile
+): Promise<{ request: NestingRequest; settings: IrregularNestingSettings }> {
   const document: unknown = JSON.parse(await readFile(MIXED61_FIXTURE_PATH, 'utf8'))
   const { Schema } = await import('effect')
   const request = Schema.decodeUnknownSync(NestingRequest)(document)
   const settings = request.options.irregularSettings
   if (settings === undefined) throw new Error('mixed-61 fixture has no irregular settings')
+  const profileSettings = new IrregularNestingSettings({
+    ...settings,
+    optimizer:
+      profile === 'compact'
+        ? settings.optimizer
+        : new IrregularOptimizerSettings({
+            ...settings.optimizer,
+            intrinsicObjectiveProfileId: 'short-side'
+          })
+  })
   const rebuilt = new NestingRequest({
     ...request,
     jobId: JobId.make(`time-native-mixed-61-${sheet.label}`),
     sheet,
     options: new NestingOptions({
       ...request.options,
-      timeoutMs: 0,
+      timeoutMs: 180000,
       historyMode: 'off',
-      irregularSettings: settings
+      irregularSettings: profileSettings
     })
   })
-  return { request: rebuilt, settings }
+  return { request: rebuilt, settings: profileSettings }
 }
 
 function absoluteCollisionPolygons(
@@ -227,18 +258,19 @@ function absoluteCollisionPolygons(
 
 async function main(): Promise<void> {
   const fixture = fixtureArgument(requiredArgument('--fixture'))
+  const profile = profileArgument(argument('--profile'))
   const sheet = parseSheet(requiredArgument('--sheet'))
 
   let request: NestingRequest
   let settings: IrregularNestingSettings
   if (fixture === 'triangle-20') {
-    request = triangleRequest(sheet)
-    settings = compactSettings()
+    request = triangleRequest(sheet, profile)
+    settings = compactSettings(profile)
   } else if (fixture === 'shapes-17') {
-    request = await shapes17Request(sheet)
-    settings = compactSettings()
+    request = await shapes17Request(sheet, profile)
+    settings = compactSettings(profile)
   } else {
-    const built = await mixed61Request(sheet)
+    const built = await mixed61Request(sheet, profile)
     request = built.request
     settings = built.settings
   }
@@ -250,6 +282,8 @@ async function main(): Promise<void> {
   const result = await Effect.runPromise(computeIrregularNestingNative(request, settings))
   const elapsedMs = Date.now() - startedAt
 
+  const nativeDiagnosticsJson = loadNativeIrregularAddon().getLastJobDiagnostics()
+  const nativeDiagnostics: unknown = JSON.parse(nativeDiagnosticsJson)
   const identity = canonicalCollisionLayoutIdentity(result.placedCollisionGeometries)
   const collisionIdentitySha256 =
     identity === undefined ? undefined : createHash('sha256').update(identity).digest('hex')
@@ -261,12 +295,14 @@ async function main(): Promise<void> {
     JSON.stringify(
       {
         fixture,
+        profile,
         sheet: sheet.label,
         placedCount: result.placedCollisionGeometries.length,
         unplacedCount: result.unplacedPieceIds.length,
         collisionIdentitySha256,
         fittedCanonicalSha256,
-        elapsedMs
+        elapsedMs,
+        nativeDiagnostics
       },
       null,
       2

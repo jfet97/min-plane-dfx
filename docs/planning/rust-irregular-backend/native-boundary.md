@@ -4,11 +4,11 @@
 
 ## Current verification update
 
-The native boundary is API version 3 and uses one coarse, profile-discriminated job path. The stable TypeScript loader resolves `irregular-nesting-native` by package name only. Explicit Rust and differential requests fail closed when the addon is unavailable or ineligible; TypeScript remains the default backend.
+The native boundary is API version 3 and uses one coarse, profile-discriminated job path. The stable TypeScript loader resolves `irregular-nesting-native` by package name only. Explicit Rust and differential requests fail closed when the addon is unavailable or ineligible. Under the follow-up policy, unset or empty selection uses `auto`; explicit `MIN_PLANE_IRREGULAR_BACKEND=typescript` remains the rollback and bypasses the native probe.
 
 API 3 uses an opaque invocation token outside semantic request JSON for cancellation. One ordered event channel carries progress, snapshots, and terminal; terminal acknowledgement precedes settlement. Differential and thread comparisons normalize timing/RSS values by presence only and compare score fields exactly.
 
-The release Rust suite passed 590 library tests plus all integration and documentation tests; thread equality passed 6/6; required differential passed 16/16; strict full required passed 16/16; exploratory passed 8/8. Rust remains opt-in because controlled performance P2/P3 fail and P5 is unevaluated.
+The release Rust suite passed 590 library tests plus all integration and documentation tests; thread equality passed 6/6; required differential passed 16/16; strict full required passed 16/16; exploratory passed 8/8. Controlled performance P2/P3 remain failed and P5 remains unevaluated. Those verdicts remain honest measurements, while `quality-acceptance.md` records the superseding automatic-routing product policy.
 
 ## Historical design detail
 ## 1. Purpose and non-goals

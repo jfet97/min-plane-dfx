@@ -176,7 +176,133 @@ test('runs the full strict differential matrix only on scheduled and manual CI',
   assert.match(workflow, /^\s*schedule:/m)
   assert.match(workflow, /^\s*workflow_dispatch:/m)
   assert.match(workflow, /differential-full/)
-  assert.match(workflow, /differential-fixture-matrix\.ts --strict-exploratory/)
+  const fullStrictJob = workflow.slice(
+    workflow.indexOf('  differential-full:'),
+    workflow.indexOf('  thread-equality:')
+  )
+  assert.match(fullStrictJob, /differential-fixture-matrix\.ts --strict-exploratory --strict-exact/)
   assert.match(workflow, /differential-required/)
   assert.match(workflow, /pnpm test:differential/)
+})
+
+test('keeps exact differential output visible while making quality acceptance blocking', () => {
+  const rootPackage = readJson('package.json')
+  assert.equal(
+    rootPackage.scripts['test:differential'],
+    'tsx --tsconfig tsconfig.node.json scripts/rust-parity/differential-fixture-matrix.ts --required-only'
+  )
+  assert.equal(
+    rootPackage.scripts['test:differential:exact'],
+    'tsx --tsconfig tsconfig.node.json scripts/rust-parity/differential-fixture-matrix.ts --required-only --strict-exact'
+  )
+
+  const differential = readText('scripts/rust-parity/run-differential.ts')
+  assert.match(differential, /const diagnostic = process\.argv\.includes\('--diagnostic'\)/)
+  assert.match(differential, /diagnostic divergence accepted for quality evaluation/)
+  assert.match(differential, /FIRST DIVERGENCE at path/)
+  assert.match(differential, /if \(!tsOutcome\.ok \|\| !rustOutcome\.ok\)/)
+
+  const matrix = readText('scripts/rust-parity/differential-fixture-matrix.ts')
+  assert.match(matrix, /const differentialFlags = strictExact \? \[\] : \['--diagnostic'\]/)
+  assert.match(matrix, /\.\.\.row\.args,\s+\.\.\.differentialFlags/)
+
+  const workflow = readText('.github/workflows/rust-native.yml')
+  const qualityJob = workflow.slice(workflow.indexOf('  quality-acceptance:'))
+  assert.match(
+    qualityJob,
+    /if: github\.event_name == 'pull_request' \|\| github\.event_name == 'schedule' \|\| github\.event_name == 'workflow_dispatch'/
+  )
+  assert.ok(
+    qualityJob.indexOf('build-native.mjs --release') <
+      qualityJob.indexOf('pnpm gate:quality-acceptance'),
+    'quality acceptance must run after the release addon build'
+  )
+  assert.match(workflow, /dump-js-hypot\.ts --check/)
+  assert.match(workflow, /pnpm test:differential/)
+})
+
+test('surfaces accepted diagnostic divergence from successful differential rows', () => {
+  const matrix = readText('scripts/rust-parity/differential-fixture-matrix.ts')
+  assert.match(matrix, /spawnSync\(/)
+  assert.match(matrix, /result\.stdout[\s\S]*?result\.stderr/)
+  assert.match(matrix, /diagnostic divergence accepted for quality evaluation/)
+  assert.match(matrix, /if \(result\.ok && hasDiagnosticDivergence\(result\.output\)\)/)
+})
+
+test('characterizes standard hypot on every packaged native target', () => {
+  const workflow = readText('.github/workflows/rust-native.yml')
+  const packagedJob = workflow.slice(workflow.indexOf('  packaged-native-load:'))
+  assert.match(
+    packagedJob,
+    /cargo test --release --manifest-path "\$CRATE_MANIFEST" --target "\$\{\{ matrix\.cargo_target \}\}" --test js_hypot_vectors -- --nocapture/
+  )
+  assert.ok(
+    packagedJob.indexOf('test js_hypot_vectors') <
+      packagedJob.indexOf('Build the matrix target addon'),
+    'hypot characterization must run before the packaged addon build'
+  )
+})
+
+test('packages the fail-closed P5 Linux container runner and controlled-host contract', () => {
+  const rootPackage = readJson('package.json')
+  assert.equal(
+    rootPackage.scripts['benchmark:p5:linux'],
+    'node scripts/rust-parity/run-p5-linux-container.mjs'
+  )
+
+  const contract = readJson('docker/p5-controlled-host.contract.json')
+  assert.deepEqual(contract, {
+    schemaVersion: 1,
+    host: {
+      platform: 'linux',
+      kernelRelease: '6.18.38',
+      architecture: 'x86_64',
+      processArchitecture: 'x64',
+      hardwareThreads: 16,
+      memoryGiB: 125
+    },
+    container: {
+      platform: 'linux',
+      architecture: 'x86_64',
+      processArchitecture: 'x64',
+      imagePlatform: 'linux',
+      imageArchitecture: 'amd64'
+    },
+    dockerDaemon: {
+      operatingSystem: 'NixOS',
+      name: 't3vm'
+    },
+    toolchain: {
+      node: 'v24.18.0',
+      pnpm: '11.11.0',
+      rustc: '1.97.1',
+      rustChannel: 'stable',
+      rustTarget: 'x86_64-unknown-linux-gnu'
+    }
+  })
+
+  const dockerfile = readText('docker/p5-runner.Dockerfile')
+  assert.match(dockerfile, /FROM node:24\.18\.0-bookworm-slim/)
+  assert.match(dockerfile, /PNPM_VERSION=11\.11\.0/)
+  assert.match(dockerfile, /RUST_VERSION=1\.97\.1/)
+  assert.match(dockerfile, /pnpm build:native/)
+  assert.match(
+    dockerfile,
+    /ENTRYPOINT \["pnpm", "exec", "tsx", "--tsconfig", "tsconfig\.node\.json", "scripts\/rust-parity\/measure-p5-aggregate\.ts"\]/
+  )
+
+  const runner = readText('scripts/rust-parity/run-p5-linux-container.mjs')
+  assert.match(runner, /p5-controlled-host\.contract\.json/)
+  assert.match(runner, /function dockerBuildArgs[\s\S]*?'build'/)
+  assert.match(runner, /function dockerRunArgs[\s\S]*?'run'/)
+  assert.match(runner, /runInherited\('docker', buildArgs\)/)
+  assert.match(runner, /runInherited\('docker', dockerRunArgs/)
+  assert.match(runner, /p5-wrapper-provenance\.json/)
+  assert.match(runner, /p5-aggregate-evidence\.json/)
+  assert.doesNotMatch(runner, /runSuiteOnce|P5_THRESHOLDS|computeIrregularNesting/)
+
+  const dockerIgnore = readText('.dockerignore')
+  for (const excluded of ['.git', 'node_modules', 'out', 'target']) {
+    assert.match(dockerIgnore, new RegExp(`^${excluded.replace('.', '\\.')}`, 'm'))
+  }
 })

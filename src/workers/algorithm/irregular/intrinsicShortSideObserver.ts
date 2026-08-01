@@ -479,7 +479,7 @@ function comparisonTuple(input: {
   ]
 }
 
-interface DirectionalReference {
+export interface IntrinsicShortSideDirectionalReference {
   readonly usedShortAxisSpanMm: number
   readonly usedLongAxisSpanMm: number
   readonly maximumSideMm: number
@@ -490,11 +490,24 @@ interface DirectionalReference {
   readonly envelopeAreaGrid2: bigint
 }
 
+/** Recomputes the production directional reference from caller-owned geometry. */
+export function measureIntrinsicShortSideDirectionalReference(input: {
+  readonly sheet: SheetSpec
+  readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
+}): IntrinsicShortSideDirectionalReference | undefined {
+  const axes = intrinsicShortSideAxes(input.sheet)
+  return directionalReference({
+    sheet: input.sheet,
+    placedCollisionGeometries: input.placedCollisionGeometries,
+    axes
+  })
+}
+
 function directionalReference(input: {
   readonly sheet: SheetSpec
   readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
   readonly axes: IntrinsicShortSideAxes
-}): DirectionalReference | undefined {
+}): IntrinsicShortSideDirectionalReference | undefined {
   if (input.placedCollisionGeometries.length === 0) {
     return undefined
   }
@@ -567,7 +580,7 @@ export interface IntrinsicShortSideDirectionalAdmissionTerms {
 
 function directionalImprovementTerms(input: {
   readonly candidate: IntrinsicShortSideOrientationObservation
-  readonly production: DirectionalReference
+  readonly production: IntrinsicShortSideDirectionalReference
   readonly requestedShortAxisGrid: number | undefined
 }): IntrinsicShortSideDirectionalAdmissionTerms | undefined {
   const candidateShortfall =
