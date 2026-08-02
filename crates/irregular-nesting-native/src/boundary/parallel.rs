@@ -311,6 +311,47 @@ where
     }
 }
 
+/// Chunked compute-then-replay driver shared by the whole-batch parallel
+/// sites whose serial loops observe a cooperative-cancellation checkpoint
+/// every fixed number of items (the crop enumeration in
+/// `archive::periodic_cells` and the per-point legality loop in
+/// `nfp_ifp::candidates`). Dispatches `items` in bounded `chunk_size`
+/// chunks through the job-owned pool ([`map_slice_with_job_pool`]:
+/// ordinary serial iteration when no pool is installed), observing
+/// `chunk_checkpoint` once per chunk boundary -- reproducing a serial
+/// `index % chunk_size == 0` checkpoint observation ordinal for ordinal --
+/// and replays every chunk completely, in source-ordinal order, before the
+/// next chunk is dispatched, so at most one chunk of outcomes is ever
+/// live. `before_each` fires exactly once per ordinal up to and including
+/// an erroring item and never beyond it; the first error in ordinal order
+/// is returned and no later chunk is dispatched, reproducing the serial
+/// short-circuit exactly.
+pub(crate) fn for_each_chunked_outcome<S, T, E>(
+    items: &[S],
+    chunk_size: usize,
+    mut chunk_checkpoint: impl FnMut() -> Result<(), E>,
+    compute: impl Fn(&S) -> Result<Option<T>, E> + Sync + Send,
+    mut before_each: impl FnMut(&S),
+    mut replay: impl FnMut(&S, T),
+) -> Result<(), E>
+where
+    S: Sync,
+    T: Send,
+    E: Send,
+{
+    for chunk in items.chunks(chunk_size) {
+        chunk_checkpoint()?;
+        let outcomes = map_slice_with_job_pool(chunk, &compute);
+        for (item, outcome) in chunk.iter().zip(outcomes) {
+            before_each(item);
+            if let Some(value) = outcome? {
+                replay(item, value);
+            }
+        }
+    }
+    Ok(())
+}
+
 /// Order-preserving per-item map over `items`: dispatched across the
 /// installed job-owned pool when one exists, ordinary serial iteration when
 /// none does.

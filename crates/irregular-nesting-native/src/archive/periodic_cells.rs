@@ -1867,40 +1867,6 @@ fn compute_periodic_crop(
     }))
 }
 
-/// Chunked compute-then-replay driver for the crop enumeration: dispatches
-/// `specs` in bounded [`PERIODIC_CROP_CHUNK_SIZE`] chunks through the
-/// job-owned pool (ordinary serial iteration when no pool is installed --
-/// `boundary::parallel::map_slice_with_job_pool`'s contract), observing the
-/// cooperative-cancellation `chunk_checkpoint` once per chunk boundary, and
-/// replays every chunk completely, in source-ordinal order, before the next
-/// chunk is dispatched. `attempt` fires exactly once per ordinal up to and
-/// including an erroring crop and never beyond it; the first error in
-/// ordinal order is returned and no later chunk is dispatched, reproducing
-/// the serial loop's short-circuit exactly.
-fn for_each_crop_outcome<T, E>(
-    specs: &[PeriodicCropSpec],
-    mut chunk_checkpoint: impl FnMut() -> Result<(), E>,
-    compute: impl Fn(&PeriodicCropSpec) -> Result<Option<T>, E> + Sync + Send,
-    mut attempt: impl FnMut(),
-    mut replay: impl FnMut(&PeriodicCropSpec, T),
-) -> Result<(), E>
-where
-    T: Send,
-    E: Send,
-{
-    for chunk in specs.chunks(PERIODIC_CROP_CHUNK_SIZE) {
-        chunk_checkpoint()?;
-        let outcomes = crate::boundary::parallel::map_slice_with_job_pool(chunk, &compute);
-        for (spec, outcome) in chunk.iter().zip(outcomes) {
-            attempt();
-            if let Some(value) = outcome? {
-                replay(spec, value);
-            }
-        }
-    }
-    Ok(())
-}
-
 /// TS: `enumerateIntrinsicPeriodicCellCrops` (`CELLS:707-809`).
 ///
 /// Parallel-dispatch structure (`PAR-PERIOD-01`, see
@@ -1961,11 +1927,12 @@ pub fn enumerate_intrinsic_periodic_cell_crops(
     // Phases 2+3: chunked parallel compute, serial in-order replay.
     let mut candidates: Vec<IntrinsicPeriodicSeed> = Vec::new();
     let mut identities: std::collections::HashSet<String> = std::collections::HashSet::new();
-    for_each_crop_outcome(
+    crate::boundary::parallel::for_each_chunked_outcome(
         &specs,
+        PERIODIC_CROP_CHUNK_SIZE,
         || checkpoint(control),
         |spec| compute_periodic_crop(cell, family_members, &v1, &v2, q, member_count, spec),
-        on_crop_attempt,
+        |_| on_crop_attempt(),
         |spec, precursor| {
             let PeriodicCropPrecursor {
                 identity,
@@ -3784,8 +3751,8 @@ mod crop_dispatch_tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Mutex;
 
-    use super::{for_each_crop_outcome, IntrinsicPeriodicCropTraversal, PeriodicCropSpec};
-    use crate::boundary::parallel::JobPool;
+    use super::{IntrinsicPeriodicCropTraversal, PeriodicCropSpec, PERIODIC_CROP_CHUNK_SIZE};
+    use crate::boundary::parallel::{for_each_chunked_outcome, JobPool};
 
     fn specs(count: usize) -> Vec<PeriodicCropSpec> {
         (0..count)
@@ -3804,14 +3771,15 @@ mod crop_dispatch_tests {
         let observed: Mutex<Vec<Option<usize>>> = Mutex::new(Vec::new());
         let mut attempts = 0usize;
         let mut replayed: Vec<i64> = Vec::new();
-        let outcome: Result<(), ()> = for_each_crop_outcome(
+        let outcome: Result<(), ()> = for_each_chunked_outcome(
             &specs,
+            PERIODIC_CROP_CHUNK_SIZE,
             || Ok(()),
             |spec| {
                 observed.lock().unwrap().push(rayon::current_thread_index());
                 Ok(Some(spec.rows))
             },
-            || attempts += 1,
+            |_| attempts += 1,
             |_, value| replayed.push(value),
         );
         assert!(outcome.is_ok());
@@ -3830,14 +3798,15 @@ mod crop_dispatch_tests {
         let specs = specs(40);
         let observed: Mutex<Vec<Option<usize>>> = Mutex::new(Vec::new());
         let mut replayed: Vec<i64> = Vec::new();
-        let outcome: Result<(), ()> = for_each_crop_outcome(
+        let outcome: Result<(), ()> = for_each_chunked_outcome(
             &specs,
+            PERIODIC_CROP_CHUNK_SIZE,
             || Ok(()),
             |spec| {
                 observed.lock().unwrap().push(rayon::current_thread_index());
                 Ok(Some(spec.rows))
             },
-            || {},
+            |_| {},
             |_, value| replayed.push(value),
         );
         assert!(outcome.is_ok());
@@ -3856,22 +3825,23 @@ mod crop_dispatch_tests {
     fn crop_dispatch_replays_each_chunk_before_dispatching_the_next() {
         let job_pool = JobPool::new(Some(4));
         let _guard = job_pool.install();
-        let specs = specs(super::PERIODIC_CROP_CHUNK_SIZE + 8);
+        let specs = specs(PERIODIC_CROP_CHUNK_SIZE + 8);
         let attempts = AtomicUsize::new(0);
-        let outcome: Result<(), ()> = for_each_crop_outcome(
+        let outcome: Result<(), ()> = for_each_chunked_outcome(
             &specs,
+            PERIODIC_CROP_CHUNK_SIZE,
             || Ok(()),
             |spec| {
-                if spec.rows as usize >= super::PERIODIC_CROP_CHUNK_SIZE {
+                if spec.rows as usize >= PERIODIC_CROP_CHUNK_SIZE {
                     assert!(
-                        attempts.load(Ordering::SeqCst) >= super::PERIODIC_CROP_CHUNK_SIZE,
+                        attempts.load(Ordering::SeqCst) >= PERIODIC_CROP_CHUNK_SIZE,
                         "a crop in chunk N+1 must never be computed before chunk N finished \
                          its serial replay"
                     );
                 }
                 Ok(Some(()))
             },
-            || {
+            |_| {
                 attempts.fetch_add(1, Ordering::SeqCst);
             },
             |_, ()| {},
@@ -3879,7 +3849,7 @@ mod crop_dispatch_tests {
         assert!(outcome.is_ok());
         assert_eq!(
             attempts.load(Ordering::SeqCst),
-            super::PERIODIC_CROP_CHUNK_SIZE + 8
+            PERIODIC_CROP_CHUNK_SIZE + 8
         );
     }
 
@@ -3887,12 +3857,13 @@ mod crop_dispatch_tests {
     fn crop_dispatch_selects_the_lowest_ordinal_error_and_counts_attempts_exactly() {
         let job_pool = JobPool::new(Some(4));
         let _guard = job_pool.install();
-        let specs = specs(super::PERIODIC_CROP_CHUNK_SIZE + 8);
+        let specs = specs(PERIODIC_CROP_CHUNK_SIZE + 8);
         let computed: Mutex<Vec<i64>> = Mutex::new(Vec::new());
         let mut attempts = 0usize;
         let mut replayed: Vec<i64> = Vec::new();
-        let outcome: Result<(), i64> = for_each_crop_outcome(
+        let outcome: Result<(), i64> = for_each_chunked_outcome(
             &specs,
+            PERIODIC_CROP_CHUNK_SIZE,
             || Ok(()),
             |spec| {
                 computed.lock().unwrap().push(spec.rows);
@@ -3902,7 +3873,7 @@ mod crop_dispatch_tests {
                     other => Ok(Some(other)),
                 }
             },
-            || attempts += 1,
+            |_| attempts += 1,
             |_, value| replayed.push(value),
         );
         assert_eq!(
@@ -3923,18 +3894,19 @@ mod crop_dispatch_tests {
         assert!(
             computed
                 .iter()
-                .all(|rows| (*rows as usize) < super::PERIODIC_CROP_CHUNK_SIZE),
+                .all(|rows| (*rows as usize) < PERIODIC_CROP_CHUNK_SIZE),
             "no crop from a chunk after the erroring chunk may ever be computed: {computed:?}"
         );
     }
 
     #[test]
     fn crop_dispatch_stops_at_a_failed_chunk_checkpoint() {
-        let specs = specs(super::PERIODIC_CROP_CHUNK_SIZE * 3);
+        let specs = specs(PERIODIC_CROP_CHUNK_SIZE * 3);
         let mut checkpoints = 0usize;
         let mut attempts = 0usize;
-        let outcome: Result<(), &'static str> = for_each_crop_outcome(
+        let outcome: Result<(), &'static str> = for_each_chunked_outcome(
             &specs,
+            PERIODIC_CROP_CHUNK_SIZE,
             || {
                 checkpoints += 1;
                 if checkpoints > 1 {
@@ -3944,13 +3916,12 @@ mod crop_dispatch_tests {
                 }
             },
             |_| Ok(Some(())),
-            || attempts += 1,
+            |_| attempts += 1,
             |_, ()| {},
         );
         assert_eq!(outcome, Err("aborted"));
         assert_eq!(
-            attempts,
-            super::PERIODIC_CROP_CHUNK_SIZE,
+            attempts, PERIODIC_CROP_CHUNK_SIZE,
             "cancellation at a chunk boundary must stop before any further crop is attempted"
         );
     }

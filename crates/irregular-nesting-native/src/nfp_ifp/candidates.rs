@@ -959,6 +959,130 @@ fn orientation_of(origin: IrregularPoint, first: IrregularPoint, second: Irregul
 // The main entry point.
 // ---------------------------------------------------------------------------
 
+/// Chunk width for the parallel per-point legality dispatch below: equal to
+/// the serial loop's historical `point_index % 32 == 0` checkpoint stride,
+/// so chunk-boundary cancellation observation reproduces the exact same
+/// ordinals.
+const CANDIDATE_POINT_CHUNK_SIZE: usize = 32;
+
+/// The winning canonical alternative for one raw point.
+struct CandidatePointWinner {
+    point: IrregularPoint,
+    grid_x: i64,
+    grid_y: i64,
+}
+
+/// One raw point's pure legality-search outcome: the provenance tallies for
+/// every alternative attempted up to and including the winning one
+/// (commutative integer sums, applied by the serial replay), the point's
+/// source mask, and the first legal alternative if any.
+struct CandidatePointOutcome {
+    nfp_interior_rejected: u32,
+    live_convex_rejected: u32,
+    live_convex_legal: u32,
+    source_mask: u32,
+    winner: Option<CandidatePointWinner>,
+}
+
+/// The pure per-point payload (PAR-NFP-02): tries the canonical placement
+/// alternatives in order and returns the first legal one, tallying
+/// rejections along the way. Reads only per-call state frozen before the
+/// point loop; never touches the acceptance fold, provenance accumulator,
+/// caches, control, or clocks, so it may run on any thread. `Err` is the
+/// exact geometry error the serial loop's short-circuit would have
+/// propagated.
+#[allow(clippy::too_many_arguments)]
+fn assess_candidate_point(
+    raw_point: IrregularPoint,
+    points: &CanonicalPointSet,
+    sheetless_nfp: bool,
+    ifp_bounds: &Option<IrregularBounds>,
+    candidate_pruning_mode: NfpCandidatePruningMode,
+    candidate_nfp_index: &BoundsIndex<usize>,
+    nfp_boundaries: &[NfpBoundary],
+    input: &GeneratePlacementCandidatesInput<'_>,
+    placed_collision_index: Option<&PlacedCollisionSpatialIndex>,
+) -> Result<CandidatePointOutcome, NfpIfpError> {
+    let mut outcome = CandidatePointOutcome {
+        nfp_interior_rejected: 0,
+        live_convex_rejected: 0,
+        live_convex_legal: 0,
+        source_mask: points
+            .source_masks
+            .get(&point_key(raw_point))
+            .copied()
+            .unwrap_or(0),
+        winner: None,
+    };
+
+    for candidate in canonical_placement_point_alternatives(raw_point) {
+        let candidate_point = IrregularPoint::new(candidate.x, candidate.y);
+        if !sheetless_nfp {
+            match ifp_bounds {
+                None => continue,
+                Some(bounds) => {
+                    if !is_inside_bounds(candidate_point, bounds) {
+                        continue;
+                    }
+                }
+            }
+        }
+
+        let strictly_inside_any = if candidate_pruning_mode == NfpCandidatePruningMode::Indexed {
+            candidate_nfp_index
+                .query(&point_bounds(candidate_point))
+                .into_iter()
+                .any(|index| {
+                    let boundary = &nfp_boundaries[index];
+                    is_inside_bounds(candidate_point, &boundary.bounds)
+                        && is_strictly_inside(candidate_point, &boundary.boundary, boundary.winding)
+                })
+        } else {
+            nfp_boundaries.iter().any(|boundary| {
+                is_inside_bounds(candidate_point, &boundary.bounds)
+                    && is_strictly_inside(candidate_point, &boundary.boundary, boundary.winding)
+            })
+        };
+        if strictly_inside_any {
+            outcome.nfp_interior_rejected += 1;
+            continue;
+        }
+
+        let assess_input = AssessPlacementInput {
+            sheet: if sheetless_nfp {
+                None
+            } else {
+                Some(input.sheet)
+            },
+            placed: input.placed,
+            placed_collision_index,
+            moving: input.moving,
+            candidate_point,
+        };
+        // Assessed synchronously (`nfpIfpService.ts:530-531`'s own
+        // comment: "this runs once per candidate point... an Effect per
+        // point was pure overhead"); this Rust port has no suspension
+        // mechanism to reproduce there in the first place.
+        let legal = match assess_placement(&assess_input, !sheetless_nfp) {
+            AssessPlacementOutcome::Failure(err) => return Err(NfpIfpError::Geometry(err)),
+            AssessPlacementOutcome::Assessment(assessment) => assessment.legal,
+        };
+        if !legal {
+            outcome.live_convex_rejected += 1;
+            continue;
+        }
+        outcome.live_convex_legal += 1;
+        outcome.winner = Some(CandidatePointWinner {
+            point: candidate_point,
+            grid_x: candidate.grid_x,
+            grid_y: candidate.grid_y,
+        });
+        break;
+    }
+
+    Ok(outcome)
+}
+
 /// TS: `nfpIfpService.ts:267-560` (`generatePlacementCandidatesUncached`).
 /// Builds deterministic IFP/NFP contact candidates and filters illegal
 /// results. See `nfp-ifp.md` §6/§10 for the exact ordering/cancellation
@@ -1351,105 +1475,70 @@ pub fn generate_placement_candidates_uncached(
     let mut legal_candidate_source_masks: HashMap<(i64, i64), u32> = HashMap::new();
     let mut candidates: Vec<IrregularPlacementCandidate> = Vec::new();
 
-    for (point_index, raw_point) in sorted_points.iter().enumerate() {
-        if point_index % 32 == 0 {
+    // PAR-NFP-02 (parallelism-inventory.md section 3.3): the per-raw-point
+    // legality search below is a pure function of the point plus per-call
+    // state frozen before this loop (ifp_bounds, the candidate NFP index and
+    // boundaries, the placed set and its spatial index, the moving
+    // geometry); legality never reads the loop-carried acceptance state.
+    // Points therefore dispatch through the job-owned pool in bounded
+    // chunks whose size equals the serial loop's historical
+    // `point_index % 32 == 0` checkpoint stride, so cancellation is
+    // observed at exactly the same ordinals as before. The serial replay
+    // owns everything order-sensitive, in sorted_points order: provenance
+    // tallies (commutative integer sums, applied per ordinal), the
+    // source-mask merge, and the semantically load-bearing
+    // first-acceptance-per-grid-key fold that decides both membership and
+    // order of `candidates` (downstream evaluation caps consume that order,
+    // so it is exact, not cosmetic). The lowest-ordinal geometry error wins
+    // and later chunks are never dispatched, reproducing the serial
+    // short-circuit exactly.
+    crate::boundary::parallel::for_each_chunked_outcome(
+        &sorted_points,
+        CANDIDATE_POINT_CHUNK_SIZE,
+        || {
             nfp_checkpoint(
                 &mut control,
                 NfpIfpCheckpointPhase::CandidatePoints,
                 telemetry.as_deref_mut(),
             )
-            .map_err(NfpIfpError::Abort)?;
-        }
-        let source_mask = points
-            .source_masks
-            .get(&point_key(*raw_point))
-            .copied()
-            .unwrap_or(0);
-
-        for candidate in canonical_placement_point_alternatives(*raw_point) {
-            let candidate_point = IrregularPoint::new(candidate.x, candidate.y);
-            if !sheetless_nfp {
-                match &ifp_bounds {
-                    None => continue,
-                    Some(bounds) => {
-                        if !is_inside_bounds(candidate_point, bounds) {
-                            continue;
-                        }
-                    }
-                }
-            }
-
-            let strictly_inside_any = if candidate_pruning_mode == NfpCandidatePruningMode::Indexed
-            {
-                candidate_nfp_index
-                    .query(&point_bounds(candidate_point))
-                    .into_iter()
-                    .any(|index| {
-                        let boundary = &nfp_boundaries[index];
-                        is_inside_bounds(candidate_point, &boundary.bounds)
-                            && is_strictly_inside(
-                                candidate_point,
-                                &boundary.boundary,
-                                boundary.winding,
-                            )
-                    })
-            } else {
-                nfp_boundaries.iter().any(|boundary| {
-                    is_inside_bounds(candidate_point, &boundary.bounds)
-                        && is_strictly_inside(candidate_point, &boundary.boundary, boundary.winding)
-                })
-            };
-            if strictly_inside_any {
-                if let Some(provenance) = provenance.as_mut() {
-                    provenance.nfp_interior_rejected += 1;
-                }
-                continue;
-            }
-
-            let assess_input = AssessPlacementInput {
-                sheet: if sheetless_nfp {
-                    None
-                } else {
-                    Some(input.sheet)
-                },
-                placed: input.placed,
+            .map_err(NfpIfpError::Abort)
+        },
+        |raw_point| {
+            assess_candidate_point(
+                *raw_point,
+                &points,
+                sheetless_nfp,
+                &ifp_bounds,
+                candidate_pruning_mode,
+                &candidate_nfp_index,
+                &nfp_boundaries,
+                input,
                 placed_collision_index,
-                moving: input.moving,
-                candidate_point,
-            };
-            // Assessed synchronously (`nfpIfpService.ts:530-531`'s own
-            // comment: "this runs once per candidate point... an Effect per
-            // point was pure overhead"); this Rust port has no suspension
-            // mechanism to reproduce there in the first place.
-            let legal = match assess_placement(&assess_input, !sheetless_nfp) {
-                AssessPlacementOutcome::Failure(err) => return Err(NfpIfpError::Geometry(err)),
-                AssessPlacementOutcome::Assessment(assessment) => assessment.legal,
-            };
-            if !legal {
-                if let Some(provenance) = provenance.as_mut() {
-                    provenance.live_convex_rejected += 1;
-                }
-                continue;
-            }
+            )
+            .map(Some)
+        },
+        |_| {},
+        |_, outcome| {
             if let Some(provenance) = provenance.as_mut() {
-                provenance.live_convex_legal += 1;
+                provenance.nfp_interior_rejected += outcome.nfp_interior_rejected;
+                provenance.live_convex_rejected += outcome.live_convex_rejected;
+                provenance.live_convex_legal += outcome.live_convex_legal;
             }
-
-            let grid_key = (candidate.grid_x, candidate.grid_y);
-            *legal_candidate_source_masks.entry(grid_key).or_insert(0) |= source_mask;
-
-            if !accepted_grid_keys.contains(&grid_key) {
-                accepted_grid_keys.insert(grid_key);
-                candidates.push(IrregularPlacementCandidate {
-                    piece_id: input.moving.source_piece_id.clone(),
-                    transform: input.moving.transform,
-                    point: candidate_point,
-                    diagnostics: Vec::new(),
-                });
+            if let Some(winner) = outcome.winner {
+                let grid_key = (winner.grid_x, winner.grid_y);
+                *legal_candidate_source_masks.entry(grid_key).or_insert(0) |= outcome.source_mask;
+                if !accepted_grid_keys.contains(&grid_key) {
+                    accepted_grid_keys.insert(grid_key);
+                    candidates.push(IrregularPlacementCandidate {
+                        piece_id: input.moving.source_piece_id.clone(),
+                        transform: input.moving.transform,
+                        point: winner.point,
+                        diagnostics: Vec::new(),
+                    });
+                }
             }
-            break;
-        }
-    }
+        },
+    )?;
 
     // Last use of `telemetry` in this function, so it is passed by value
     // rather than reborrowed.
