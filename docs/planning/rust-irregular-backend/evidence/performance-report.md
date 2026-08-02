@@ -444,3 +444,96 @@ remains appropriate as an **opt-in** backend (selectable via the existing
 until either P2/P3 are re-evaluated against a deliberately-relaxed target or the
 parallelization is widened enough to close the gap. P5 could not be evaluated in this
 batch and should be measured before any final promotion decision is made.
+
+## Native parallelism optimization pass (2026-08-02, branch feat/native-parallelism-optimization)
+
+Diagnostic local evidence with strong host provenance: measured on the host
+matching every field of `docker/p5-controlled-host.contract.json` (t3vm,
+NixOS, Linux 6.18.38 x86_64, 16 hardware threads, 125 GiB; Node v24.18.0,
+pnpm 11.11.0, rustc 1.97.1), but Docker is not installed there, so the
+checked-in authoritative wrapper (`run-p5-linux-container.mjs`) cannot
+execute and no `--controlled-linux` verdict is claimed. Historical P1-P7
+verdicts are unchanged.
+
+Commits measured (base main `6a40af5`): `cb2135a` no-pool containment plus
+requested/actual thread diagnostics (baseline reference, performance
+neutral); `1e1b467` PAR-PERIOD-01 periodic crop seam; `1337310`
+`JobPool::run_scoped` (job body inside the pool, nested dispatch inline);
+`8023770` capacity successor identity cache; `7fd9691` PAR-NFP-02 per-point
+legality seam plus the shared chunk driver. Addons: baseline
+`43ac1d69...`, final candidate `6f0b4685...`. Raw immutable evidence:
+`/var/lib/t3/src/macs/min-plane-provenance/native-parallelism-20260801/` on
+that host; portable summaries in
+`docs/artifacts/native-parallelism-followup/`.
+
+### C1 Mixed-61 2000x2700 Compact, production N-API path
+
+Two independent batches per source, 1 discarded warmup + 5 measured samples
+per cell, every sample byte-exact (collision `3839e80d...`, fitted
+`ef2b783a...`, 61/61) with `threadCountUsed == threadCountRequested`.
+
+| threads | baseline b1/b2 (ms) | candidate b1/b2 (ms) | improvement |
+| --- | --- | --- | --- |
+| 1 | 33075 / 33164 | 26780 / 27144 | -19.0% / -18.2% |
+| 2 | 29129 / 29123 | 22811 / 22788 | -21.7% / -21.8% |
+| 4 | 26417 / 26330 | 19535 / 19518 | -26.1% / -25.9% |
+| 8 | 24911 / 24838 | 18178 / 18137 | -27.0% / -27.0% |
+| 15 | 25029 / 25148 | 18402 / 18530 | -26.5% / -26.3% |
+| auto (15) | 25036 / 25133 | 18286 / 18113 | -27.0% / -27.9% |
+
+Peak RSS (rust backend): baseline 314-324 MB, candidate 305-318 MB across
+1/8/15/auto. TypeScript reference on this host: 43.0 s, 860 MB. The
+1-thread cell improves as well because `run_scoped` removed the
+pre-existing per-chunk cross-pool dispatch overhead every configuration
+paid (measured directly with the `run_mixed61` example: 1-worker pool
+32.5 s versus true serial 25.8 s before the change, 26.5-27.1 s after).
+The automatic default captures the full improvement; 15 versus 8 remains
+statistically indistinguishable, so the worker policy is unchanged.
+
+### Aggregate suites (direct `measure-p5-aggregate`, rust-threads matrix)
+
+Baseline suites used 3 measured samples per cell. Candidate C5 used 3
+samples; candidate C6 and C7 were re-measured with 1 warmup + 1 sample
+after a host interruption (regression-guard precision, recorded honestly;
+the statistical weight of this pass rests on C1). Every sample reports
+`valid` and `qualityPassed` true.
+
+C5 (nine compact fixture/sheet rows, per-cell medians, rust backend):
+rust-1 55741 -> 47494 ms (-14.8%), rust-2 50474 -> 39936 ms (-20.9%),
+rust-8 44896 -> 34196 ms (-23.8%), rust-default 45960 -> 32815 ms
+(-28.6%). TypeScript drift check between the two runs: -3.0% (host
+slightly slower during the candidate run, so rust gains are, if anything,
+understated).
+
+C6 (eight production capacity fixtures) and C7 (nine short-side rows) ran
+their candidate cells with 1 warmup + 1 sample while an unrelated external
+process loaded the host; the same-run TypeScript cells quantify that drift
+(C6 TS +14.6% slower, C7 TS +18.1% slower in the candidate runs) and every
+row still reports `valid` and `qualityPassed`. Raw rust-default medians:
+C6 73569 -> 57436 ms (+21.9% even unnormalized; ~32% drift-normalized);
+C7 47159 -> 43818 ms (+7.1% raw, ~21% drift-normalized). The single
+raw-negative cell (C7 rust-8, -11.3%) becomes +5.8% after drift
+normalization; with one sample under external load it carries no
+regression signal. Full per-cell data in
+`docs/artifacts/native-parallelism-followup/aggregate-summary.json`.
+
+### Verification at `7fd9691`
+
+`cargo fmt --check`; `cargo clippy --release --all-targets -D warnings`;
+`cargo test --release` 785 passed 0 failed (byte-exact TS-oracle vector
+suites, thread equality 1/2/4/8 full-pipeline, no-pool global-Rayon
+containment); `pnpm typecheck`, `lint`, `test` (1059), 
+`test:native:package`; `test:differential` required rows 16/16 (divergences
+limited to the characterized `freeMaterialSliverMetric` hypot ULPs);
+`gate:quality-acceptance` 6/6 mandatory rows accepted.
+
+### Verdict
+
+RETAINED. Repeatable multi-thread end-to-end improvement far beyond
+run-to-run noise on the primary gate (two independent batches, IQR under
+0.4 s per cell), no aggregate regression, peak RSS within the baseline
+envelope, byte-exact semantics on every measured sample and every
+maintained suite. The explicit 1-thread cell keeps a small residual
+overhead versus true no-pool serial execution (~1 s on C1); a singleton
+fast path in `map_slice_with_job_pool` is recorded in the parallelism
+inventory as a follow-up lead.

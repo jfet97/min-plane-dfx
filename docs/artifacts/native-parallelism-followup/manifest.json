@@ -1,0 +1,37 @@
+{
+  "experiment": "native-parallelism-followup",
+  "date": "2026-08-02",
+  "classification": "diagnostic local evidence with strong host provenance; not controlled-linux",
+  "source": {
+    "baseCommit": "6a40af5dbd7dadcf69321c5e161d3e2c3949f34a",
+    "baselineCommit": "cb2135a",
+    "candidateCommit": "7fd9691",
+    "branch": "feat/native-parallelism-optimization",
+    "dirty": false
+  },
+  "addons": {
+    "baselineSha256": "43ac1d69212f18bf1c60062c2413c5d045ed4535b60ffbdb3f72b2eb19440764",
+    "candidateSha256": "6f0b4685403d7de1cd37a88798ff83f146465c9e6102ba152f8815d80fee72c1"
+  },
+  "host": {
+    "name": "t3vm",
+    "os": "NixOS, Linux 6.18.38 x86_64",
+    "cpu": "Intel Core Ultra 7 270K Plus",
+    "hardwareThreads": 16,
+    "memoryGiB": 125,
+    "matchesControlledHostContract": true,
+    "dockerAvailable": false
+  },
+  "toolchain": { "node": "v24.18.0", "pnpm": "11.11.0", "rustc": "1.97.1" },
+  "commands": {
+    "c1": "MIN_PLANE_IRREGULAR_NATIVE_THREADS=<T> pnpm exec tsx --tsconfig tsconfig.node.json scripts/rust-parity/time-native-backend.ts --fixture mixed-61 --profile compact --sheet 2000x2700",
+    "rss": "pnpm exec tsx --tsconfig tsconfig.node.json scripts/rust-parity/measure-peak-rss.ts --backend rust",
+    "aggregate": "pnpm exec tsx --tsconfig tsconfig.node.json scripts/rust-parity/measure-p5-aggregate.ts --suite <S> --rust-threads matrix --samples <N> --output <path>"
+  },
+  "sampleValidity": "every C1 sample must reproduce collision 3839e80d... and fitted ef2b783a... with 61/61 placed and threadCountUsed == threadCountRequested; aggregate samples must report valid and qualityPassed true",
+  "rawEvidenceRoot": "/var/lib/t3/src/macs/min-plane-provenance/native-parallelism-20260801/ (host-local, outside the repository)",
+  "notes": [
+    "baseline aggregate suites: 3 measured samples per cell; candidate C5: 3 samples; candidate C6/C7: 1 warmup + 1 sample after a host interruption (regression guard precision)",
+    "candidate C6/C7 ran under external host load (unrelated browser test storm); the TypeScript cells in the same runs serve as the drift denominator"
+  ]
+}
