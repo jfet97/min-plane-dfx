@@ -1,15 +1,27 @@
 # Deterministic Parallelism Inventory — Rust Irregular Nesting Backend
 
-Status: Stage 0 design artifact. Required implementation artifact #5 of migration-prompt
+Status: living implementation inventory (originally the Stage 0 design artifact;
+its per-site semantic analysis remains the authority for conditions and verdicts).
+Required implementation artifact #5 of migration-prompt
 §22 ("a deterministic parallelism inventory listing every Rayon site"). Governed by
 `docs/history/prompts/fable5-rust-irregular-nesting-implementation.md` §14 ("Safe and unsafe
 parallelization boundaries"), read together with §13 ("Cache architecture for true
-multithreading") and §19 (the preregistered performance contract). This document does
-not authorize any Rayon code today — no `rayon` dependency exists in
-`crates/irregular-nesting-native/Cargo.toml` yet, and migration-prompt §6 Stage 4 forbids
-enabling broad parallelism before Stage 2 (full one-thread parity) and Stage 3 (cache
-architecture) land. This is the inventory that Stage 4 must implement against, and the
-contract Stage 4's determinism tests must prove.
+multithreading") and §19 (the preregistered performance contract).
+
+Implemented Rayon sites as of the native parallelism optimization pass
+(2026-08-02): PAR-GEOM-01 (`result/coordinator.rs`, piece preparation),
+PAR-CACHE-01/PAR-NFP-01 (`nfp_ifp/boundary_core.rs`, NFP miss precompute),
+PAR-STRICT-01 (`search/strict_decoder.rs`, chunked candidate scoring, retained
+by PR29), PAR-PERIOD-01 (`archive/periodic_cells.rs`, chunked crop
+enumeration), and PAR-NFP-02 (`nfp_ifp/candidates.rs`, chunked per-point
+legality). All of them route through the job-owned pool via
+`boundary::parallel` (`map_slice_with_job_pool` / `for_each_chunked_outcome` /
+their own `has_job_pool` branch); `tests/no_pool_global_rayon_containment.rs`
+proves the no-pool pipeline never touches Rayon's global registry, and
+`boundary::run_job` executes the whole job body inside the pool
+(`JobPool::run_scoped`) so nested entries are inline. Every other PAR-* site
+below remains unimplemented; stage-gating language in older sections describes
+the historical migration sequence, not a current prohibition.
 
 Source corpus: the 20 documents in `docs/planning/rust-irregular-backend/characterization/`,
 specifically each document's own "Parallelism assessment" section (§13, or the equivalent
@@ -191,6 +203,20 @@ seam entirely (no Effect-TS in Rust), so both characterizations converge on one 
   for concurrent, independent invocation from multiple threads — this is a property of the
   vendor-translated `clipper2-ts` port, not of this loop, and must be proven before this site
   is enabled).
+- Implementation status (2026-08-02): **RETAINED** at
+  `crates/irregular-nesting-native/src/result/coordinator.rs` via
+  `map_slice_with_job_pool` (explicit serial branch when no job pool is
+  installed; ordinal-indexed reconstruction and first-ordinal error selection
+  in the serial reduction that follows).
+- Implementation status (2026-08-02): **RETAINED** at
+  `crates/irregular-nesting-native/src/archive/periodic_cells.rs`
+  (`compute_periodic_crop` + the shared
+  `boundary::parallel::for_each_chunked_outcome` driver): the complete fixed
+  `(rows, traversal, corner)` crop list is the admitted set (the function has
+  no internal budget or quota), crops dispatch in bounded chunks of 32 with a
+  serial checkpoint per chunk boundary, and the serial replay owns crop
+  attempt accounting, lowest-ordinal error selection, the semantically
+  load-bearing first-occurrence identity dedup, and output order.
 
 **PAR-GEOM-02 — Curve flattening within one piece.** Priority: LOW.
 - Description: `ArcFlattening`/`EllipseFlattening` per-segment point generation within one
@@ -345,6 +371,12 @@ prerequisite for PAR-CACHE-01 and every NFP/IFP consumer site below).
 - Target Rust module: `nfp_ifp`.
 - Verdict: **SAFE-CANDIDATE** (conditions: Stage 3 cache design landed first; checkpoint
   bracketing as described above).
+- Implementation status (2026-08-02): **RETAINED** as the compute-then-publish
+  miss pre-pass `precompute_missing_relative_nfp_boundaries`
+  (`crates/irregular-nesting-native/src/nfp_ifp/boundary_core.rs`): serial
+  first-encounter key dedup, parallel pure NFP construction through
+  `map_slice_with_job_pool`, serial publish in first-encounter order; the
+  checkpointed per-placed resolution loop is unchanged (ruling R19).
 
 **PAR-NFP-02 — Candidate-point legality assessment across raw points.** Priority: HIGH.
 - Description: per-point legality-and-grid-key computation across `sortedPoints`.
@@ -367,6 +399,17 @@ prerequisite for PAR-CACHE-01 and every NFP/IFP consumer site below).
 - Verdict: **SAFE-CANDIDATE** (conditions: the pure per-point map runs in parallel; the
   first-acceptance-per-grid-key fold runs serially afterward in original `sortedPoints`
   order, never as a concurrent map).
+- Implementation status (2026-08-02): **RETAINED** at
+  `crates/irregular-nesting-native/src/nfp_ifp/candidates.rs`
+  (`assess_candidate_point` + the shared
+  `boundary::parallel::for_each_chunked_outcome` driver): points dispatch in
+  chunks of 32 (the serial loop's historical `point_index % 32 == 0`
+  checkpoint stride, so cancellation observation ordinals are unchanged);
+  the serial replay owns provenance tallies (commutative integer sums), the
+  source-mask merge, and the first-acceptance-per-grid-key fold in
+  `sorted_points` order; the lowest-ordinal geometry error wins and later
+  chunks are never dispatched. The candidates vector order it preserves is
+  semantic: downstream evaluation caps consume it.
 
 **PAR-NFP-03 — Pairwise NFP-NFP boundary intersection search.** Priority: MEDIUM.
 - Description: for each `(first, second)` pair with `second.index > first.index`, call
@@ -388,6 +431,12 @@ prerequisite for PAR-CACHE-01 and every NFP/IFP consumer site below).
   merge; T-STD is sufficient to catch a regression in that proof).
 - Target Rust module: `nfp_ifp`.
 - Verdict: **SAFE-CANDIDATE** (no additional conditions beyond T-STD).
+- Implementation status (2026-08-02): **evaluated and NOT implemented.** The
+  current Rust unit of work per pair (`add_boundary_intersections`) contains
+  its own cooperative-cancellation checkpoint every 32 second-segments
+  (`candidates.rs`), which pair-level chunked dispatch cannot preserve
+  without a segment-level chunking redesign; deferred until that redesign is
+  specified and measured.
 
 **PAR-NFP-04 — 9-alternative grid-snap search per raw point.** Priority: LOW.
 - Description: `canonicalPlacementPointAlternatives` — pure, tiny per-point search.
@@ -975,6 +1024,14 @@ Priority: HIGH. Same physical site as PAR-SCORE-03, documented independently by
 - Verdict: **SAFE-CANDIDATE** (conditions: exact reproduction of (a) or (b) above, proven by
   the cap-boundary fixture; gated on Stage 3 cache design for the geometry/NFP calls it
   makes).
+- Implementation status (2026-08-02): **measured and NOT implemented.** The
+  HIGH priority label came from TS-era profiling; native re-profiling
+  measured `evaluate_candidate` at 54 ms total across 232k calls on the C1
+  Mixed-61 case (the deliberately cheap bounds-only evaluation), leaving no
+  profitable pool at this site. The capacity lanes instead gained a serial
+  optimization: the successor identity is derived once per beam entry and
+  cached (`make_capacity_beam_entry`), removing ~0.7 s of repeated string
+  construction from the topology-retention memo's lookups.
 
 **PAR-CAPSEARCH-02 — `compareTopology`'s per-entry topology-measurement population.**
 Priority: MEDIUM.
