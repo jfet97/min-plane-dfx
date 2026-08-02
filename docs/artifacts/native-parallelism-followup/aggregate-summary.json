@@ -1,0 +1,104 @@
+{
+ "method": "direct measure-p5-aggregate, rust-threads matrix; baseline 3 samples/cell; candidate C5 3 samples, C6/C7 1 warmup + 1 sample (regression guard); typescript cells in each run are the same-run drift denominator",
+ "suites": {
+  "C5": {
+   "baselineValidAndQuality": true,
+   "candidateValidAndQuality": true,
+   "typescriptDriftFactor": 1.03,
+   "typescriptBaselineMs": 74386,
+   "typescriptCandidateMs": 76585,
+   "rust": {
+    "rust-1": {
+     "baselineMs": 55741,
+     "candidateMs": 47494,
+     "rawImprovementPct": 14.8,
+     "driftNormalizedImprovementPct": 17.3
+    },
+    "rust-2": {
+     "baselineMs": 50474,
+     "candidateMs": 39936,
+     "rawImprovementPct": 20.9,
+     "driftNormalizedImprovementPct": 23.2
+    },
+    "rust-8": {
+     "baselineMs": 44896,
+     "candidateMs": 34196,
+     "rawImprovementPct": 23.8,
+     "driftNormalizedImprovementPct": 26.1
+    },
+    "rust-default": {
+     "baselineMs": 45960,
+     "candidateMs": 32815,
+     "rawImprovementPct": 28.6,
+     "driftNormalizedImprovementPct": 30.7
+    }
+   }
+  },
+  "C6": {
+   "baselineValidAndQuality": true,
+   "candidateValidAndQuality": true,
+   "typescriptDriftFactor": 1.146,
+   "typescriptBaselineMs": 128041,
+   "typescriptCandidateMs": 146713,
+   "rust": {
+    "rust-1": {
+     "baselineMs": 89190,
+     "candidateMs": 76940,
+     "rawImprovementPct": 13.7,
+     "driftNormalizedImprovementPct": 24.7
+    },
+    "rust-2": {
+     "baselineMs": 80554,
+     "candidateMs": 72869,
+     "rawImprovementPct": 9.5,
+     "driftNormalizedImprovementPct": 21.1
+    },
+    "rust-8": {
+     "baselineMs": 73056,
+     "candidateMs": 75577,
+     "rawImprovementPct": -3.5,
+     "driftNormalizedImprovementPct": 9.7
+    },
+    "rust-default": {
+     "baselineMs": 73569,
+     "candidateMs": 57436,
+     "rawImprovementPct": 21.9,
+     "driftNormalizedImprovementPct": 31.9
+    }
+   }
+  },
+  "C7": {
+   "baselineValidAndQuality": true,
+   "candidateValidAndQuality": true,
+   "typescriptDriftFactor": 1.181,
+   "typescriptBaselineMs": 96462,
+   "typescriptCandidateMs": 113968,
+   "rust": {
+    "rust-1": {
+     "baselineMs": 57697,
+     "candidateMs": 50689,
+     "rawImprovementPct": 12.1,
+     "driftNormalizedImprovementPct": 25.6
+    },
+    "rust-2": {
+     "baselineMs": 51804,
+     "candidateMs": 47487,
+     "rawImprovementPct": 8.3,
+     "driftNormalizedImprovementPct": 22.4
+    },
+    "rust-8": {
+     "baselineMs": 46475,
+     "candidateMs": 51733,
+     "rawImprovementPct": -11.3,
+     "driftNormalizedImprovementPct": 5.7
+    },
+    "rust-default": {
+     "baselineMs": 47159,
+     "candidateMs": 43818,
+     "rawImprovementPct": 7.1,
+     "driftNormalizedImprovementPct": 21.3
+    }
+   }
+  }
+ }
+}

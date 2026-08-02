@@ -143,7 +143,7 @@ pub fn resolve_transformed_collision_geometry<TValue, F>(
     materialize: F,
 ) -> TransformCollisionResult<TValue>
 where
-    TValue: TransformedCollisionGeometryLike + Clone + 'static,
+    TValue: TransformedCollisionGeometryLike + Clone + Send + 'static,
     F: FnOnce(TransformedCollisionGeometry) -> TValue,
 {
     let key = make_transform_collision_geometry_cache_key(input, settings);

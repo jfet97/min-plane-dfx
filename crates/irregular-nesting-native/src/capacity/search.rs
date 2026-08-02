@@ -647,6 +647,35 @@ struct CapacityBeamEntry {
     grid_span: IntrinsicCapacityGridSpan,
     cavities: IntrinsicCapacityCavityMetrics,
     observer_transition: Option<CapacityObserverTransition>,
+    /// The successor identity derived once at construction
+    /// (`derive_intrinsic_capacity_successor_identity`): both identity
+    /// inputs (`state.placement_order`, `anchored_occupied_key`) are fixed
+    /// for the entry's whole lifetime, and the topology-retention memo
+    /// previously rebuilt this string (a sort plus a canonical-JSON encode)
+    /// on every one of its ~186k lookups per C1 job.
+    successor_identity: String,
+}
+
+/// Constructs a beam entry, deriving its successor identity exactly once.
+fn make_capacity_beam_entry(
+    state: Arc<IrregularBeamState>,
+    placed_doubled_material_area_grid2: BigInt,
+    anchored_occupied_key: String,
+    grid_span: IntrinsicCapacityGridSpan,
+    cavities: IntrinsicCapacityCavityMetrics,
+    observer_transition: Option<CapacityObserverTransition>,
+) -> CapacityBeamEntry {
+    let successor_identity =
+        derive_intrinsic_capacity_successor_identity(&state, &anchored_occupied_key);
+    CapacityBeamEntry {
+        state,
+        placed_doubled_material_area_grid2,
+        anchored_occupied_key,
+        grid_span,
+        cavities,
+        observer_transition,
+        successor_identity,
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -970,15 +999,15 @@ pub fn run_intrinsic_capacity_cold_search(
         checkpoint_value
             .frontier
             .iter()
-            .map(|entry| CapacityBeamEntry {
-                state: Arc::clone(&entry.state),
-                placed_doubled_material_area_grid2: entry
-                    .placed_doubled_material_area_grid2
-                    .clone(),
-                anchored_occupied_key: entry.anchored_occupied_key.clone(),
-                grid_span: entry.grid_span,
-                cavities: entry.cavities.clone(),
-                observer_transition: None,
+            .map(|entry| {
+                make_capacity_beam_entry(
+                    Arc::clone(&entry.state),
+                    entry.placed_doubled_material_area_grid2.clone(),
+                    entry.anchored_occupied_key.clone(),
+                    entry.grid_span,
+                    entry.cavities.clone(),
+                    None,
+                )
             })
             .collect()
     } else if let Some(warm_entry) = warm_prefix_entry {
@@ -992,18 +1021,18 @@ pub fn run_intrinsic_capacity_cold_search(
             ));
         };
         let anchored_key = empty_state.canonical_occupied_geometry_key.clone();
-        vec![CapacityBeamEntry {
-            state: empty_state,
-            placed_doubled_material_area_grid2: BigInt::from(0),
-            anchored_occupied_key: anchored_key,
-            grid_span: empty_span,
-            cavities: IntrinsicCapacityCavityMetrics {
+        vec![make_capacity_beam_entry(
+            empty_state,
+            BigInt::from(0),
+            anchored_key,
+            empty_span,
+            IntrinsicCapacityCavityMetrics {
                 count: 0.0,
                 total_area_mm2: 0.0,
                 total_doubled_area_grid2: "0".to_string(),
             },
-            observer_transition: None,
-        }]
+            None,
+        )]
     };
 
     let mut control = CapacitySearchControl { inner: control };
@@ -1049,16 +1078,14 @@ pub fn run_intrinsic_capacity_cold_search(
             } else {
                 None
             };
-            let skip_successor = CapacityBeamEntry {
-                state: skip_state,
-                placed_doubled_material_area_grid2: entry
-                    .placed_doubled_material_area_grid2
-                    .clone(),
-                anchored_occupied_key: entry.anchored_occupied_key.clone(),
-                grid_span: entry.grid_span,
-                cavities: entry.cavities.clone(),
+            let skip_successor = make_capacity_beam_entry(
+                skip_state,
+                entry.placed_doubled_material_area_grid2.clone(),
+                entry.anchored_occupied_key.clone(),
+                entry.grid_span,
+                entry.cavities.clone(),
                 observer_transition,
-            };
+            );
             push_successor(&mut successors, &mut successor_keys, skip_successor, || {
                 deduplicated_successors += 1.0;
             });
@@ -1234,18 +1261,17 @@ pub fn run_intrinsic_capacity_cold_search(
                     invalid_candidates += 1.0;
                     return (false, None);
                 };
-                let successor = CapacityBeamEntry {
-                    state: placed_state,
-                    placed_doubled_material_area_grid2: &entry.placed_doubled_material_area_grid2
-                        + &piece_material,
+                let successor = make_capacity_beam_entry(
+                    placed_state,
+                    &entry.placed_doubled_material_area_grid2 + &piece_material,
                     anchored_occupied_key,
                     grid_span,
-                    cavities: IntrinsicCapacityCavityMetrics {
+                    IntrinsicCapacityCavityMetrics {
                         count: 0.0,
                         total_area_mm2: 0.0,
                         total_doubled_area_grid2: "0".to_string(),
                     },
-                    observer_transition: if capture_topology_retention {
+                    if capture_topology_retention {
                         Some(CapacityObserverTransition {
                             parent_decision_identity: intrinsic_capacity_successor_identity(entry),
                             decision: IntrinsicCapacityDecision::Place,
@@ -1255,8 +1281,8 @@ pub fn run_intrinsic_capacity_cold_search(
                     } else {
                         None
                     },
-                };
-                let decision_identity = intrinsic_capacity_successor_identity(&successor);
+                );
+                let decision_identity = successor.successor_identity.clone();
                 let added = push_successor(&mut successors, &mut successor_keys, successor, || {
                     deduplicated_successors += 1.0;
                     if proposal_role == IntrinsicCapacityProposalRole::Contact {
@@ -1780,14 +1806,14 @@ fn validate_warm_prefix_seed(
     WarmPrefixValidation::Valid {
         entry: Some(ValidWarmPrefixEntry {
             depth: seed.depth,
-            beam_entry: CapacityBeamEntry {
-                state: Arc::clone(&seed.state),
+            beam_entry: make_capacity_beam_entry(
+                Arc::clone(&seed.state),
                 placed_doubled_material_area_grid2,
                 anchored_occupied_key,
                 grid_span,
                 cavities,
-                observer_transition: None,
-            },
+                None,
+            ),
         }),
     }
 }
@@ -3022,8 +3048,14 @@ fn push_successor(
 
 /// TS: `intrinsicCapacitySearch.ts:1664-1669` `intrinsicCapacitySuccessorIdentity`.
 /// Future-equivalent identity at one synchronized prepared-piece depth.
-fn intrinsic_capacity_successor_identity(successor: &CapacityBeamEntry) -> String {
-    let mut sorted_ids: Vec<&PieceId> = successor.state.placement_order.iter().collect();
+/// Derived once per entry at construction (`make_capacity_beam_entry`) and
+/// cached in `CapacityBeamEntry::successor_identity`; the derivation is
+/// byte-identical to the previous per-call computation.
+fn derive_intrinsic_capacity_successor_identity(
+    state: &Arc<IrregularBeamState>,
+    anchored_occupied_key: &str,
+) -> String {
+    let mut sorted_ids: Vec<&PieceId> = state.placement_order.iter().collect();
     sorted_ids.sort_by(|a, b| cmp_js_code_units(a.as_str(), b.as_str()));
     let json_array = intrinsic_capacity_canonical_json(&JsValue::Arr(
         sorted_ids
@@ -3032,7 +3064,11 @@ fn intrinsic_capacity_successor_identity(successor: &CapacityBeamEntry) -> Strin
             .collect(),
     ))
     .expect("a string array never encodes to top-level undefined");
-    format!("{}|placed={}", successor.anchored_occupied_key, json_array)
+    format!("{anchored_occupied_key}|placed={json_array}")
+}
+
+fn intrinsic_capacity_successor_identity(successor: &CapacityBeamEntry) -> String {
+    successor.successor_identity.clone()
 }
 
 /// TS: `intrinsicCapacitySearch.ts:1682-1729` `evaluateCandidate`. Cheap
@@ -3681,8 +3717,8 @@ impl CapacityTopologyMeasurements {
         entry: &CapacityBeamEntry,
         timing_now: &TimingNowFn,
     ) -> Option<CanonicalLayoutTopologyExact> {
-        let identity = intrinsic_capacity_successor_identity(entry);
-        if let Some(cached) = self.topology_by_identity.borrow().get(&identity) {
+        let identity = &entry.successor_identity;
+        if let Some(cached) = self.topology_by_identity.borrow().get(identity) {
             return cached.clone();
         }
         let started_at = timing_now();
@@ -3697,7 +3733,7 @@ impl CapacityTopologyMeasurements {
         *self.elapsed_ms.borrow_mut() += js_math::max(0.0, timing_now() - started_at);
         self.topology_by_identity
             .borrow_mut()
-            .insert(identity, measured.clone());
+            .insert(identity.clone(), measured.clone());
         measured
     }
 

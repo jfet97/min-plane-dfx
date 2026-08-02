@@ -1,0 +1,378 @@
+{
+ "case": "mixed-61 2000x2700 compact, production N-API path (time-native-backend.ts), 1 discarded warmup + 5 measured samples per cell",
+ "baseline": {
+  "commit": "cb2135a",
+  "addonSha256": "43ac1d69212f18bf1c60062c2413c5d045ed4535b60ffbdb3f72b2eb19440764",
+  "batches": {
+   "c1-batch1": {
+    "1": {
+     "samples": [
+      32870,
+      33041,
+      33081,
+      33169,
+      33075
+     ],
+     "medianMs": 33075,
+     "minMs": 32870,
+     "maxMs": 33169,
+     "hashOk": true,
+     "threadOk": true
+    },
+    "2": {
+     "samples": [
+      29421,
+      29277,
+      29038,
+      29129,
+      29129
+     ],
+     "medianMs": 29129,
+     "minMs": 29038,
+     "maxMs": 29421,
+     "hashOk": true,
+     "threadOk": true
+    },
+    "4": {
+     "samples": [
+      26716,
+      26076,
+      26417,
+      26757,
+      26231
+     ],
+     "medianMs": 26417,
+     "minMs": 26076,
+     "maxMs": 26757,
+     "hashOk": true,
+     "threadOk": true
+    },
+    "8": {
+     "samples": [
+      24911,
+      25086,
+      24812,
+      25006,
+      24686
+     ],
+     "medianMs": 24911,
+     "minMs": 24686,
+     "maxMs": 25086,
+     "hashOk": true,
+     "threadOk": true
+    },
+    "15": {
+     "samples": [
+      24945,
+      25029,
+      25133,
+      25088,
+      24932
+     ],
+     "medianMs": 25029,
+     "minMs": 24932,
+     "maxMs": 25133,
+     "hashOk": true,
+     "threadOk": true
+    },
+    "auto": {
+     "samples": [
+      24932,
+      25083,
+      25093,
+      25036,
+      24994
+     ],
+     "medianMs": 25036,
+     "minMs": 24932,
+     "maxMs": 25093,
+     "hashOk": true,
+     "threadOk": true
+    }
+   },
+   "c1-batch2": {
+    "1": {
+     "samples": [
+      33201,
+      33164,
+      33277,
+      32901,
+      33079
+     ],
+     "medianMs": 33164,
+     "minMs": 32901,
+     "maxMs": 33277,
+     "hashOk": true,
+     "threadOk": true
+    },
+    "2": {
+     "samples": [
+      29222,
+      29180,
+      29111,
+      29123,
+      29065
+     ],
+     "medianMs": 29123,
+     "minMs": 29065,
+     "maxMs": 29222,
+     "hashOk": true,
+     "threadOk": true
+    },
+    "4": {
+     "samples": [
+      26447,
+      26166,
+      26330,
+      26375,
+      26228
+     ],
+     "medianMs": 26330,
+     "minMs": 26166,
+     "maxMs": 26447,
+     "hashOk": true,
+     "threadOk": true
+    },
+    "8": {
+     "samples": [
+      24753,
+      24952,
+      24802,
+      24972,
+      24838
+     ],
+     "medianMs": 24838,
+     "minMs": 24753,
+     "maxMs": 24972,
+     "hashOk": true,
+     "threadOk": true
+    },
+    "15": {
+     "samples": [
+      25023,
+      24903,
+      25148,
+      25180,
+      25239
+     ],
+     "medianMs": 25148,
+     "minMs": 24903,
+     "maxMs": 25239,
+     "hashOk": true,
+     "threadOk": true
+    },
+    "auto": {
+     "samples": [
+      25343,
+      24946,
+      25146,
+      25133,
+      24871
+     ],
+     "medianMs": 25133,
+     "minMs": 24871,
+     "maxMs": 25343,
+     "hashOk": true,
+     "threadOk": true
+    }
+   }
+  }
+ },
+ "candidate": {
+  "commit": "7fd9691",
+  "addonSha256": "6f0b4685403d7de1cd37a88798ff83f146465c9e6102ba152f8815d80fee72c1",
+  "batches": {
+   "c1-batch1": {
+    "1": {
+     "samples": [
+      26644,
+      26780,
+      26723,
+      27035,
+      26791
+     ],
+     "medianMs": 26780,
+     "minMs": 26644,
+     "maxMs": 27035,
+     "hashOk": true,
+     "threadOk": true
+    },
+    "2": {
+     "samples": [
+      22993,
+      23173,
+      22696,
+      22804,
+      22811
+     ],
+     "medianMs": 22811,
+     "minMs": 22696,
+     "maxMs": 23173,
+     "hashOk": true,
+     "threadOk": true
+    },
+    "4": {
+     "samples": [
+      19513,
+      19828,
+      19524,
+      19734,
+      19535
+     ],
+     "medianMs": 19535,
+     "minMs": 19513,
+     "maxMs": 19828,
+     "hashOk": true,
+     "threadOk": true
+    },
+    "8": {
+     "samples": [
+      18178,
+      18356,
+      18075,
+      18011,
+      18357
+     ],
+     "medianMs": 18178,
+     "minMs": 18011,
+     "maxMs": 18357,
+     "hashOk": true,
+     "threadOk": true
+    },
+    "15": {
+     "samples": [
+      18402,
+      18831,
+      18229,
+      18094,
+      18632
+     ],
+     "medianMs": 18402,
+     "minMs": 18094,
+     "maxMs": 18831,
+     "hashOk": true,
+     "threadOk": true
+    },
+    "auto": {
+     "samples": [
+      18381,
+      18201,
+      18514,
+      18286,
+      18117
+     ],
+     "medianMs": 18286,
+     "minMs": 18117,
+     "maxMs": 18514,
+     "hashOk": true,
+     "threadOk": true
+    }
+   },
+   "c1-batch2": {
+    "1": {
+     "samples": [
+      27274,
+      26757,
+      27296,
+      26722,
+      27144
+     ],
+     "medianMs": 27144,
+     "minMs": 26722,
+     "maxMs": 27296,
+     "hashOk": true,
+     "threadOk": true
+    },
+    "2": {
+     "samples": [
+      22742,
+      22902,
+      23041,
+      22788,
+      22761
+     ],
+     "medianMs": 22788,
+     "minMs": 22742,
+     "maxMs": 23041,
+     "hashOk": true,
+     "threadOk": true
+    },
+    "4": {
+     "samples": [
+      19486,
+      19518,
+      19627,
+      19493,
+      19689
+     ],
+     "medianMs": 19518,
+     "minMs": 19486,
+     "maxMs": 19689,
+     "hashOk": true,
+     "threadOk": true
+    },
+    "8": {
+     "samples": [
+      18136,
+      18346,
+      18444,
+      18137,
+      18059
+     ],
+     "medianMs": 18137,
+     "minMs": 18059,
+     "maxMs": 18444,
+     "hashOk": true,
+     "threadOk": true
+    },
+    "15": {
+     "samples": [
+      18434,
+      18530,
+      18749,
+      18457,
+      18836
+     ],
+     "medianMs": 18530,
+     "minMs": 18434,
+     "maxMs": 18836,
+     "hashOk": true,
+     "threadOk": true
+    },
+    "auto": {
+     "samples": [
+      18113,
+      18110,
+      18477,
+      18213,
+      17989
+     ],
+     "medianMs": 18113,
+     "minMs": 17989,
+     "maxMs": 18477,
+     "hashOk": true,
+     "threadOk": true
+    }
+   }
+  }
+ },
+ "improvementAtAutoDefault": {
+  "batch1": 27,
+  "batch2": 27.9
+ },
+ "peakRssKb": {
+  "baseline": {
+   "rss-rust-T1": 332100,
+   "rss-rust-T15": 327416,
+   "rss-rust-T8": 331768,
+   "rss-rust-auto": 321056,
+   "rss-ts-default": 880244
+  },
+  "candidate": {
+   "rss-rust-T1": 312828,
+   "rss-rust-T15": 325248,
+   "rss-rust-T8": 323736,
+   "rss-rust-auto": 325600
+  }
+ }
+}

@@ -29,7 +29,10 @@ use crate::domain::IrregularLayoutScoreSummary;
 /// about one of the two events does not have to implement the other --
 /// mirroring the TS side's independent `options?.field?.(...)` optional
 /// chaining at every call site.
-pub trait IrregularComputeEventSink {
+/// `Send` is a supertrait because the job coordinator runs inside the
+/// job-owned Rayon pool (`boundary::parallel::JobPool::run_scoped`), so the
+/// sink crosses onto a pool worker thread for the duration of one job.
+pub trait IrregularComputeEventSink: Send {
     /// TS: `input.options?.emitStateSnapshot?.(snapshot, beamWidth)`
     /// (`:1205`).
     fn emit_state_snapshot(&mut self, _snapshot: &IrregularStateSnapshot, _beam_width: f64) {}

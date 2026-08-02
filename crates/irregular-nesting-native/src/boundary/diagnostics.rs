@@ -25,10 +25,18 @@ use crate::search::layout_scorer::FreeMaterialCacheTelemetry;
 #[serde(rename_all = "camelCase")]
 pub struct JobDiagnostics {
     pub backend_version: String,
-    /// Rayon pool size this run used. The automatic default reserves one
-    /// OS-visible CPU outside the job-owned pool for the native coordinator
-    /// and Electron; an explicit override or environment setting may differ.
+    /// The Rayon pool size this run actually used: the built pool's live
+    /// worker count (`ThreadPool::current_num_threads`), not the requested
+    /// value. Differs from `thread_count_requested` exactly when the
+    /// pool-build fallback degraded to a single-thread pool.
     pub thread_count_used: u32,
+    /// The resolved requested pool size (explicit override, the
+    /// `MIN_PLANE_IRREGULAR_NATIVE_THREADS` environment variable, or the
+    /// automatic default that reserves one OS-visible CPU outside the
+    /// job-owned pool for the native coordinator and Electron). Benchmark
+    /// validation must reject samples where this differs from
+    /// `thread_count_used`.
+    pub thread_count_requested: u32,
     pub wall_clock_ms: f64,
     pub cache_telemetry: CacheTelemetrySnapshot,
     pub free_material_cache_telemetry: FreeMaterialCacheTelemetry,
@@ -106,9 +114,15 @@ mod tests {
 
     #[test]
     fn records_and_reads_back_the_last_job_diagnostics() {
+        // The two thread counts are deliberately different here: the JSON
+        // must carry the actual pool size and the resolved requested size
+        // as two independent fields, so a pool-build-fallback divergence
+        // is visible to benchmark validation instead of being flattened
+        // into one echoed number.
         record_last_job_diagnostics(JobDiagnostics {
             backend_version: "0.1.0".to_string(),
             thread_count_used: 1,
+            thread_count_requested: 8,
             wall_clock_ms: 12.5,
             cache_telemetry: CacheTelemetrySnapshot::default(),
             free_material_cache_telemetry: FreeMaterialCacheTelemetry::default(),
@@ -117,6 +131,7 @@ mod tests {
         let parsed: serde_json::Value = serde_json::from_str(&json).expect("valid JSON");
         assert_eq!(parsed["backendVersion"], serde_json::json!("0.1.0"));
         assert_eq!(parsed["threadCountUsed"], serde_json::json!(1));
+        assert_eq!(parsed["threadCountRequested"], serde_json::json!(8));
         assert!(parsed["processLifecycle"]["terminalCleanupHooksFired"]
             .as_u64()
             .is_some());

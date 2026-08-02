@@ -29,15 +29,23 @@
 //!   asks for ("no Rayon worker thread ever executes work tagged with a
 //!   different job's ID"), not merely an informal claim; see this module's
 //!   tests.
-//! - **`with_job_pool` degrades to inline execution when no pool is
-//!   installed.** Every unit test in this crate that calls a
-//!   Rayon-touching function directly (bypassing `run_job` entirely, e.g.
-//!   `nfp_ifp::candidates`'s own test module) still gets correct,
-//!   deterministic results: the closure just runs on the calling thread,
-//!   with no `ThreadPool::install` in the picture at all. This is not a
-//!   parallelism opportunity lost in tests -- it is the same code path a
-//!   1-thread job pool would produce, modulo which OS thread physically
-//!   executes it, which is never observable in this crate's output.
+//! - **No pool installed means no Rayon at all, not inline `par_iter`.**
+//!   `with_job_pool`'s no-pool fallback runs the closure inline on the
+//!   calling thread -- which is only safe for closures that do not
+//!   themselves start a parallel iterator. A `par_iter()` inside an
+//!   inline-executed closure dispatches onto Rayon's ambient global
+//!   registry (lazily created, process-wide, shared across jobs), which
+//!   this contract forbids. Whole-batch parallel sites therefore go
+//!   through [`map_slice_with_job_pool`] (or their own explicit
+//!   [`has_job_pool`] branch, as `search::strict_decoder`'s chunked
+//!   scoring loop does), which degrades to ordinary serial iteration when
+//!   no pool is installed. `tests/no_pool_global_rayon_containment.rs`
+//!   proves the whole no-pool pipeline never initializes the global
+//!   registry. Direct-call unit tests (bypassing `run_job` entirely, e.g.
+//!   `nfp_ifp::candidates`'s own test module) thus get serial, correct,
+//!   deterministic results -- the same output a 1-thread job pool would
+//!   produce, modulo which OS thread physically executes it, which is
+//!   never observable in this crate's output.
 //!
 //! # Thread-count resolution
 //!
@@ -116,24 +124,53 @@ fn default_thread_count_from_available(available_cpu_count: usize) -> usize {
 /// Builds a job-owned `rayon::ThreadPool` sized to `thread_count`. Falls
 /// back to a single-thread pool if pool construction itself fails
 /// (OS thread-spawn failure -- unlikely, but a diagnostics/performance
-/// feature must never be the reason a job fails outright).
+/// feature must never be the reason a job fails outright). Callers that
+/// report pool size must read it back from the returned pool
+/// (`ThreadPool::current_num_threads`), never assume the requested count
+/// was honored: the fallback path deliberately builds fewer workers than
+/// requested.
 pub fn build_job_thread_pool(thread_count: usize) -> rayon::ThreadPool {
     let tag = NEXT_POOL_TAG.fetch_add(1, AtomicOrdering::Relaxed);
+    build_job_thread_pool_via(thread_count, |count| try_build_pool(count, tag))
+}
+
+/// The one real pool constructor: every job pool (primary and fallback
+/// alike) is built here, tagged for the isolation proof this module's tests
+/// rely on.
+fn try_build_pool(
+    thread_count: usize,
+    tag: u64,
+) -> Result<rayon::ThreadPool, rayon::ThreadPoolBuildError> {
     rayon::ThreadPoolBuilder::new()
         .num_threads(thread_count)
         .start_handler(move |_worker_index: usize| {
             WORKER_POOL_TAG.with(|cell| cell.set(tag));
         })
         .build()
-        .unwrap_or_else(|_| {
-            rayon::ThreadPoolBuilder::new()
-                .num_threads(1)
-                .start_handler(move |_worker_index: usize| {
-                    WORKER_POOL_TAG.with(|cell| cell.set(tag));
-                })
-                .build()
-                .expect("a single-threaded Rayon pool always builds")
-        })
+}
+
+/// The fallback policy, separated from the real constructor so the
+/// otherwise-unreachable failure branch is testable with an injected
+/// failing builder: try the requested size once, then degrade to a
+/// single-thread pool.
+fn build_job_thread_pool_via(
+    thread_count: usize,
+    build: impl Fn(usize) -> Result<rayon::ThreadPool, rayon::ThreadPoolBuildError>,
+) -> rayon::ThreadPool {
+    build(thread_count)
+        .unwrap_or_else(|_| build(1).expect("a single-threaded Rayon pool always builds"))
+}
+
+/// A job pool's two thread counts as one non-semantic, diagnostics-only
+/// snapshot: `requested` is the resolved requested size
+/// ([`resolve_thread_count`]); `actual` is the built pool's live worker
+/// count. They differ exactly when the pool-build fallback fired. Benchmark
+/// validation must reject samples where the two diverge.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JobThreadCounts {
+    pub requested: usize,
+    pub actual: usize,
 }
 
 /// RAII guard returned by [`JobPool::install`]. Clears this OS thread's
@@ -153,12 +190,18 @@ impl Drop for JobPoolGuard {
     }
 }
 
-/// A job-owned Rayon pool plus the resolved thread count that produced it
-/// (the value `boundary::diagnostics::JobDiagnostics::thread_count_used`
-/// reports).
+/// A job-owned Rayon pool plus both thread counts a diagnostics consumer
+/// needs to trust a measurement: the *resolved requested* count
+/// (override/env/automatic default -- what we asked
+/// [`build_job_thread_pool`] for) and the *actual* live pool size read back
+/// from the built pool. The two differ exactly when the pool-build fallback
+/// fired; `boundary::diagnostics::JobDiagnostics` reports both so benchmark
+/// validation can reject requested-versus-actual mismatches instead of
+/// silently attributing multi-thread timings to a one-thread pool.
 pub struct JobPool {
     pool: Arc<rayon::ThreadPool>,
-    thread_count: usize,
+    requested_thread_count: usize,
+    actual_thread_count: usize,
 }
 
 impl JobPool {
@@ -166,27 +209,83 @@ impl JobPool {
     /// -- call [`Self::install`] on the job's coordinating thread to make
     /// [`with_job_pool`] reach it.
     pub fn new(override_count: Option<usize>) -> Self {
-        let thread_count = resolve_thread_count(override_count);
+        let requested_thread_count = resolve_thread_count(override_count);
+        Self::from_pool(
+            build_job_thread_pool(requested_thread_count),
+            requested_thread_count,
+        )
+    }
+
+    fn from_pool(pool: rayon::ThreadPool, requested_thread_count: usize) -> Self {
+        let actual_thread_count = pool.current_num_threads();
         Self {
-            pool: Arc::new(build_job_thread_pool(thread_count)),
-            thread_count,
+            pool: Arc::new(pool),
+            requested_thread_count,
+            actual_thread_count,
         }
     }
 
-    pub fn thread_count(&self) -> usize {
-        self.thread_count
+    /// The resolved requested pool size (override, environment variable, or
+    /// automatic default). What [`build_job_thread_pool`] was asked for.
+    pub fn requested_thread_count(&self) -> usize {
+        self.requested_thread_count
+    }
+
+    /// The live pool's actual worker count, read back from the built pool.
+    /// Equal to [`Self::requested_thread_count`] unless the pool-build
+    /// fallback degraded to a single-thread pool.
+    pub fn actual_thread_count(&self) -> usize {
+        self.actual_thread_count
+    }
+
+    /// Both counts as one copyable snapshot, for `boundary::run_job`'s
+    /// return tuple and the diagnostics sidecar.
+    pub fn thread_counts(&self) -> JobThreadCounts {
+        JobThreadCounts {
+            requested: self.requested_thread_count,
+            actual: self.actual_thread_count,
+        }
     }
 
     /// Installs this pool into the calling OS thread's thread-local slot
-    /// for the lifetime of the returned guard. Must be called from the
-    /// job's single coordinating thread, before any Rayon parallel site
-    /// downstream runs (`boundary::run_job`'s own call site is the only
-    /// production caller).
+    /// for the lifetime of the returned guard, so [`with_job_pool`] and
+    /// [`has_job_pool`] resolve to this pool from that thread.
     pub fn install(&self) -> JobPoolGuard {
         JOB_POOL.with(|slot| {
             *slot.borrow_mut() = Some(Arc::clone(&self.pool));
         });
         JobPoolGuard { _private: () }
+    }
+
+    /// Runs `body` inside this pool (`ThreadPool::install`), with the
+    /// job-pool slot installed on the executing worker for `body`'s whole
+    /// duration. The job's coordinating code thereby runs ON a pool worker,
+    /// so every nested [`with_job_pool`] call resolves to the same pool the
+    /// current thread already belongs to and Rayon executes it inline --
+    /// no cross-thread injection, wakeup, or join handshake per call.
+    ///
+    /// This exists because the per-call dispatch cost of entering the pool
+    /// from an outside coordinating thread is large in aggregate: the
+    /// strict decoder alone crosses `with_job_pool` once per bounded
+    /// scoring chunk (thousands of times per job), and the measured cost of
+    /// those handshakes on the C1 Mixed-61 case was ~6.7 s per job at one
+    /// thread (run_mixed61 example, no-pool 25.8 s vs 1-worker pool
+    /// 32.5 s). Running the whole job body inside one install collapses
+    /// every nested entry to an inline call while leaving each parallel
+    /// site's chunking, replay order, and serial fallback untouched.
+    ///
+    /// During parallel sections the executing worker participates in the
+    /// parallel iterator exactly where the outside coordinator would have
+    /// parked waiting, so effective parallel width is unchanged.
+    pub fn run_scoped<R, F>(&self, body: F) -> R
+    where
+        F: FnOnce() -> R + Send,
+        R: Send,
+    {
+        self.pool.install(|| {
+            let _guard = self.install();
+            body()
+        })
     }
 }
 
@@ -209,6 +308,80 @@ where
     match pool {
         Some(pool) => pool.install(body),
         None => body(),
+    }
+}
+
+/// Chunked compute-then-replay driver shared by the whole-batch parallel
+/// sites whose serial loops observe a cooperative-cancellation checkpoint
+/// every fixed number of items (the crop enumeration in
+/// `archive::periodic_cells` and the per-point legality loop in
+/// `nfp_ifp::candidates`). Dispatches `items` in bounded `chunk_size`
+/// chunks through the job-owned pool ([`map_slice_with_job_pool`]:
+/// ordinary serial iteration when no pool is installed), observing
+/// `chunk_checkpoint` once per chunk boundary -- reproducing a serial
+/// `index % chunk_size == 0` checkpoint observation ordinal for ordinal --
+/// and replays every chunk completely, in source-ordinal order, before the
+/// next chunk is dispatched, so at most one chunk of outcomes is ever
+/// live. `before_each` fires exactly once per ordinal up to and including
+/// an erroring item and never beyond it; the first error in ordinal order
+/// is returned and no later chunk is dispatched, reproducing the serial
+/// short-circuit exactly.
+pub(crate) fn for_each_chunked_outcome<S, T, E>(
+    items: &[S],
+    chunk_size: usize,
+    mut chunk_checkpoint: impl FnMut() -> Result<(), E>,
+    compute: impl Fn(&S) -> Result<Option<T>, E> + Sync + Send,
+    mut before_each: impl FnMut(&S),
+    mut replay: impl FnMut(&S, T),
+) -> Result<(), E>
+where
+    S: Sync,
+    T: Send,
+    E: Send,
+{
+    for chunk in items.chunks(chunk_size) {
+        chunk_checkpoint()?;
+        let outcomes = map_slice_with_job_pool(chunk, &compute);
+        for (item, outcome) in chunk.iter().zip(outcomes) {
+            before_each(item);
+            if let Some(value) = outcome? {
+                replay(item, value);
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Order-preserving per-item map over `items`: dispatched across the
+/// installed job-owned pool when one exists, ordinary serial iteration when
+/// none does.
+///
+/// This is the required shape for a whole-batch parallel site (contrast
+/// with `search::strict_decoder`'s chunked scoring loop, which owns its own
+/// `has_job_pool` branch for the same reason): wrapping a bare `par_iter()`
+/// in [`with_job_pool`] alone is NOT enough, because `with_job_pool`'s
+/// no-pool fallback runs the closure inline on the calling thread and a
+/// parallel iterator inside that closure would then dispatch onto Rayon's
+/// ambient global registry -- a pool this crate never owns, shared across
+/// jobs, forbidden by this module's top doc. The explicit [`has_job_pool`]
+/// branch here guarantees the no-pool path never touches Rayon at all
+/// (proven by `tests/no_pool_global_rayon_containment.rs` and this module's
+/// own unit tests).
+///
+/// Output order is the input slice order in both branches (`par_iter`'s
+/// indexed collect preserves input order regardless of completion order),
+/// so ordinal = input index is the stable-index scheme for every caller.
+pub fn map_slice_with_job_pool<T, R, F>(items: &[T], map: F) -> Vec<R>
+where
+    T: Sync,
+    R: Send,
+    F: Fn(&T) -> R + Sync + Send,
+{
+    use rayon::prelude::*;
+    if has_job_pool() {
+        with_job_pool(|| items.par_iter().map(&map).collect())
+    } else {
+        items.iter().map(map).collect()
     }
 }
 
@@ -258,6 +431,130 @@ mod tests {
     fn with_job_pool_runs_inline_when_no_pool_is_installed() {
         let result = with_job_pool(|| 1 + 1);
         assert_eq!(result, 2);
+    }
+
+    #[test]
+    fn map_slice_runs_serially_without_an_installed_pool() {
+        let items: Vec<usize> = (0..64).collect();
+        let observations =
+            map_slice_with_job_pool(&items, |value| (*value, rayon::current_thread_index()));
+        assert!(
+            observations.iter().all(|(_, index)| index.is_none()),
+            "without an installed job pool, no item may execute on any Rayon worker \
+             thread (global registry included): {observations:?}"
+        );
+        let values: Vec<usize> = observations.into_iter().map(|(value, _)| value).collect();
+        assert_eq!(values, items, "serial branch must preserve input order");
+    }
+
+    #[test]
+    fn map_slice_dispatches_to_the_installed_pool_and_preserves_order() {
+        let job_pool = JobPool::new(Some(4));
+        let _guard = job_pool.install();
+        let items: Vec<usize> = (0..64).collect();
+        let observations =
+            map_slice_with_job_pool(&items, |value| (*value * 2, rayon::current_thread_index()));
+        assert!(
+            observations.iter().all(|(_, index)| index.is_some()),
+            "with an installed job pool, every item must execute on one of its worker \
+             threads, never inline on the coordinating thread"
+        );
+        let values: Vec<usize> = observations.into_iter().map(|(value, _)| value).collect();
+        let expected: Vec<usize> = items.iter().map(|value| value * 2).collect();
+        assert_eq!(
+            values, expected,
+            "parallel branch must preserve input order regardless of completion order"
+        );
+    }
+
+    /// A builder that fails for every multi-thread request and succeeds only
+    /// for the single-thread fallback, producing a real
+    /// `ThreadPoolBuildError` through Rayon's own `spawn_handler` seam.
+    fn failing_multi_thread_builder(
+        thread_count: usize,
+    ) -> Result<rayon::ThreadPool, rayon::ThreadPoolBuildError> {
+        let builder = rayon::ThreadPoolBuilder::new().num_threads(thread_count);
+        if thread_count > 1 {
+            builder
+                .spawn_handler(|_thread| Err(std::io::Error::other("forced spawn failure")))
+                .build()
+        } else {
+            builder.build()
+        }
+    }
+
+    #[test]
+    fn pool_build_fallback_degrades_to_a_single_thread_pool() {
+        let pool = build_job_thread_pool_via(8, failing_multi_thread_builder);
+        assert_eq!(
+            pool.current_num_threads(),
+            1,
+            "a failed multi-thread pool build must fall back to a genuine 1-worker pool"
+        );
+    }
+
+    #[test]
+    fn job_pool_reports_actual_count_separately_from_requested_after_fallback() {
+        let requested = 8;
+        let pool = build_job_thread_pool_via(requested, failing_multi_thread_builder);
+        let job_pool = JobPool::from_pool(pool, requested);
+        assert_eq!(job_pool.requested_thread_count(), requested);
+        assert_eq!(
+            job_pool.actual_thread_count(),
+            1,
+            "diagnostics must expose the live pool size, not echo the requested count, \
+             when the pool-build fallback fired"
+        );
+    }
+
+    #[test]
+    fn job_pool_actual_count_matches_requested_when_the_build_succeeds() {
+        let job_pool = JobPool::new(Some(3));
+        assert_eq!(job_pool.requested_thread_count(), 3);
+        assert_eq!(job_pool.actual_thread_count(), 3);
+    }
+
+    #[test]
+    fn run_scoped_executes_on_a_pool_worker_with_the_slot_installed() {
+        let job_pool = JobPool::new(Some(2));
+        let (worker_index, slot_installed, parallel_observations) = job_pool.run_scoped(|| {
+            use rayon::prelude::*;
+            let parallel_observations: Vec<bool> = with_job_pool(|| {
+                (0..16)
+                    .into_par_iter()
+                    .map(|_| rayon::current_thread_index().is_some())
+                    .collect()
+            });
+            (
+                rayon::current_thread_index(),
+                has_job_pool(),
+                parallel_observations,
+            )
+        });
+        assert!(
+            worker_index.is_some(),
+            "run_scoped must execute its body on a worker of the job pool"
+        );
+        assert!(
+            slot_installed,
+            "the job-pool slot must be installed on the executing worker so nested \
+             with_job_pool calls resolve to this pool"
+        );
+        assert!(
+            parallel_observations.iter().all(|on_worker| *on_worker),
+            "nested parallel work must still run on pool workers"
+        );
+    }
+
+    #[test]
+    fn run_scoped_reinstalls_the_slot_freshly_on_every_run() {
+        let job_pool = JobPool::new(Some(2));
+        for _ in 0..3 {
+            assert!(job_pool.run_scoped(has_job_pool));
+        }
+        // Outside any run_scoped call, this coordinating thread never had
+        // the slot installed at all.
+        assert!(!has_job_pool());
     }
 
     #[test]

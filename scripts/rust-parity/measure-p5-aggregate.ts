@@ -921,14 +921,24 @@ async function withRustThreadSetting<T>(
   }
 }
 
-function nativeThreadCount(): number | undefined {
+interface NativeThreadCounts {
+  readonly used: number | undefined
+  readonly requested: number | undefined
+}
+
+function nativeThreadCounts(): NativeThreadCounts {
   try {
     const parsed = JSON.parse(loadNativeIrregularAddon().getLastJobDiagnostics()) as {
       readonly threadCountUsed?: unknown
+      readonly threadCountRequested?: unknown
     }
-    return typeof parsed.threadCountUsed === 'number' ? parsed.threadCountUsed : undefined
+    return {
+      used: typeof parsed.threadCountUsed === 'number' ? parsed.threadCountUsed : undefined,
+      requested:
+        typeof parsed.threadCountRequested === 'number' ? parsed.threadCountRequested : undefined
+    }
   } catch {
-    return undefined
+    return { used: undefined, requested: undefined }
   }
 }
 
@@ -975,13 +985,34 @@ async function executeBackend(input: {
           input.request.options.irregularSettings ?? GeometrySettings.Make
         )
       )
+      const elapsedMs = Math.max(0, performance.now() - startedAt)
+      const threadCounts = nativeThreadCounts()
+      // Benchmark-sample validity: a run whose actual built pool size
+      // diverged from the resolved requested count (native pool-build
+      // fallback) or whose diagnostics did not report both counts cannot be
+      // attributed to its intended thread cell.
+      if (
+        threadCounts.used === undefined ||
+        threadCounts.requested === undefined ||
+        threadCounts.used !== threadCounts.requested
+      ) {
+        return {
+          elapsedMs,
+          executedBackend: 'rust' as const,
+          result,
+          valid: false,
+          qualityPassed: false,
+          actualThreadCount: threadCounts.used,
+          error: `actual Rayon pool size ${String(threadCounts.used)} diverged from resolved requested count ${String(threadCounts.requested)}`
+        }
+      }
       return {
-        elapsedMs: Math.max(0, performance.now() - startedAt),
+        elapsedMs,
         executedBackend: 'rust' as const,
         result,
         valid: true,
         qualityPassed: validateResult(input.request, result, input.expectation),
-        actualThreadCount: nativeThreadCount()
+        actualThreadCount: threadCounts.used
       }
     })
   } catch (error) {
