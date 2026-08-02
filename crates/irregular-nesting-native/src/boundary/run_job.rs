@@ -90,7 +90,7 @@ pub fn decode_and_route(request_json: &str) -> Result<PreparedRequest, BoundaryE
 pub fn run_job_from_json<'a>(
     request_json: &str,
     event_sink: &'a mut dyn IrregularComputeEventSink,
-    cancellation_reason: Option<&'a mut (dyn FnMut() -> Option<NfpIfpAbortReason> + 'a)>,
+    cancellation_reason: Option<&'a mut (dyn FnMut() -> Option<NfpIfpAbortReason> + Send + 'a)>,
     thread_count_override: Option<usize>,
 ) -> (
     String,
@@ -119,7 +119,7 @@ pub(crate) struct CacheCapOverrides {
 pub(crate) fn run_job_from_json_with_cache_caps_for_test<'a>(
     request_json: &str,
     event_sink: &'a mut dyn IrregularComputeEventSink,
-    cancellation_reason: Option<&'a mut (dyn FnMut() -> Option<NfpIfpAbortReason> + 'a)>,
+    cancellation_reason: Option<&'a mut (dyn FnMut() -> Option<NfpIfpAbortReason> + Send + 'a)>,
     thread_count_override: Option<usize>,
     cache_caps: Option<CacheCapOverrides>,
 ) -> (
@@ -175,7 +175,7 @@ pub(crate) fn run_job_from_json_with_cache_caps_for_test<'a>(
 pub fn run_job<'a>(
     prepared: PreparedRequest,
     event_sink: &'a mut dyn IrregularComputeEventSink,
-    cancellation_reason: Option<&'a mut (dyn FnMut() -> Option<NfpIfpAbortReason> + 'a)>,
+    cancellation_reason: Option<&'a mut (dyn FnMut() -> Option<NfpIfpAbortReason> + Send + 'a)>,
     thread_count_override: Option<usize>,
 ) -> (
     String,
@@ -195,7 +195,7 @@ pub fn run_job<'a>(
 fn run_job_with_cache_caps<'a>(
     prepared: PreparedRequest,
     event_sink: &'a mut dyn IrregularComputeEventSink,
-    cancellation_reason: Option<&'a mut (dyn FnMut() -> Option<NfpIfpAbortReason> + 'a)>,
+    cancellation_reason: Option<&'a mut (dyn FnMut() -> Option<NfpIfpAbortReason> + Send + 'a)>,
     thread_count_override: Option<usize>,
     cache_caps: Option<CacheCapOverrides>,
 ) -> (
@@ -218,15 +218,22 @@ fn run_job_with_cache_caps<'a>(
 
     let job_pool = JobPool::new(thread_count_override);
     let thread_counts = job_pool.thread_counts();
-    let _pool_guard = job_pool.install();
 
-    let outcome = compute_irregular_nesting(
-        &prepared.request,
-        &prepared.settings,
-        &mut options,
-        &mut geometry_cache,
-        &mut free_material_cache,
-    );
+    // The whole job body runs inside the pool (`run_scoped`): the
+    // coordinating code executes on a pool worker with the job-pool slot
+    // installed there, so every nested `with_job_pool` entry is an inline
+    // call on the current pool instead of a per-chunk cross-thread
+    // injection. See `boundary::parallel::JobPool::run_scoped`'s doc for
+    // the measured cost this collapses.
+    let outcome = job_pool.run_scoped(|| {
+        compute_irregular_nesting(
+            &prepared.request,
+            &prepared.settings,
+            &mut options,
+            &mut geometry_cache,
+            &mut free_material_cache,
+        )
+    });
 
     let json = match outcome {
         Ok(result) => {

@@ -33,7 +33,7 @@
 //! namespaces (`get<A>`/`set<A>` are call-site-trusted casts with **no**
 //! runtime shape check — `geometry-caches.md` §3 confirms namespaces 1.1/1.3
 //! store plain objects while 1.2 stores a materialized domain-class
-//! instance). `Box<dyn Any>` plus `downcast_ref` is this crate's equivalent:
+//! instance). `Box<dyn Any + Send>` plus `downcast_ref` is this crate's equivalent:
 //! like the TS `as A | undefined` cast, a namespace/type mismatch is a
 //! caller bug this store does not detect at runtime; unlike TS, an actual
 //! type mismatch here fails the `downcast_ref` cleanly (returns `None`,
@@ -160,7 +160,7 @@ const GEOMETRY_CACHE_DEFAULT_CAP_BYTES: u64 = 56 * 1024 * 1024;
 const HASHMAP_ENTRY_OVERHEAD_BYTES: u64 = 64;
 
 struct GeometryCacheEntry {
-    value: Box<dyn Any>,
+    value: Box<dyn Any + Send>,
     charge_bytes: u64,
     namespace: String,
     recency_node: usize,
@@ -276,7 +276,12 @@ impl GeometryCacheStore {
     /// charge. The store adds serialized-key capacity and metadata/container
     /// overhead, then deterministically evicts least-recent entries as needed.
     /// A single oversized value is rejected without changing unrelated entries.
-    pub fn set<A: 'static>(&mut self, key: &GeometryCacheKey, value: A, value_charge: u64) -> bool {
+    pub fn set<A: 'static + Send>(
+        &mut self,
+        key: &GeometryCacheKey,
+        value: A,
+        value_charge: u64,
+    ) -> bool {
         let serialized = serialize_geometry_cache_key(key);
         let entry_charge =
             conservative_entry_charge(&serialized, key.namespace.capacity(), value_charge);

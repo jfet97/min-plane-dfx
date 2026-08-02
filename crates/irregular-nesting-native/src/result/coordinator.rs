@@ -114,7 +114,7 @@ pub struct ComputeIrregularNestingOptions<'a> {
     /// Native cancellation reason observed at the existing cooperative
     /// checkpoints. `None` keeps the checkpoint live; `Some` preserves whether
     /// worker control requested cancellation or deadline expiry.
-    pub cancellation_reason: Option<&'a mut dyn FnMut() -> Option<NfpIfpAbortReason>>,
+    pub cancellation_reason: Option<&'a mut (dyn FnMut() -> Option<NfpIfpAbortReason> + Send)>,
     /// TS: `options?.focusedCompleteReconstructionControlArm !== 'disable'`.
     /// `true` unless explicitly disabled.
     pub focused_complete_reconstruction_enabled: bool,
@@ -522,7 +522,7 @@ struct CoordinateIntrinsicSharedArchiveInput<'a> {
 fn coordinate_intrinsic_shared_archive(
     input: &CoordinateIntrinsicSharedArchiveInput<'_>,
     event_sink: &mut dyn IrregularComputeEventSink,
-    cancellation_reason: Option<&mut dyn FnMut() -> Option<NfpIfpAbortReason>>,
+    cancellation_reason: Option<&mut (dyn FnMut() -> Option<NfpIfpAbortReason> + Send)>,
     focused_complete_reconstruction_enabled: bool,
     geometry_cache: &mut GeometryCacheStore,
     free_material_cache: &mut FreeMaterialCache,
@@ -1288,7 +1288,7 @@ impl NfpIfpControl for CancellationControl<'_> {
 }
 
 fn cancellation_control<'a>(
-    cancellation_reason: &'a mut (dyn FnMut() -> Option<NfpIfpAbortReason> + 'a),
+    cancellation_reason: &'a mut (dyn FnMut() -> Option<NfpIfpAbortReason> + Send + 'a),
 ) -> CancellationControl<'a> {
     CancellationControl {
         cancellation_reason,

@@ -248,15 +248,44 @@ impl JobPool {
     }
 
     /// Installs this pool into the calling OS thread's thread-local slot
-    /// for the lifetime of the returned guard. Must be called from the
-    /// job's single coordinating thread, before any Rayon parallel site
-    /// downstream runs (`boundary::run_job`'s own call site is the only
-    /// production caller).
+    /// for the lifetime of the returned guard, so [`with_job_pool`] and
+    /// [`has_job_pool`] resolve to this pool from that thread.
     pub fn install(&self) -> JobPoolGuard {
         JOB_POOL.with(|slot| {
             *slot.borrow_mut() = Some(Arc::clone(&self.pool));
         });
         JobPoolGuard { _private: () }
+    }
+
+    /// Runs `body` inside this pool (`ThreadPool::install`), with the
+    /// job-pool slot installed on the executing worker for `body`'s whole
+    /// duration. The job's coordinating code thereby runs ON a pool worker,
+    /// so every nested [`with_job_pool`] call resolves to the same pool the
+    /// current thread already belongs to and Rayon executes it inline --
+    /// no cross-thread injection, wakeup, or join handshake per call.
+    ///
+    /// This exists because the per-call dispatch cost of entering the pool
+    /// from an outside coordinating thread is large in aggregate: the
+    /// strict decoder alone crosses `with_job_pool` once per bounded
+    /// scoring chunk (thousands of times per job), and the measured cost of
+    /// those handshakes on the C1 Mixed-61 case was ~6.7 s per job at one
+    /// thread (run_mixed61 example, no-pool 25.8 s vs 1-worker pool
+    /// 32.5 s). Running the whole job body inside one install collapses
+    /// every nested entry to an inline call while leaving each parallel
+    /// site's chunking, replay order, and serial fallback untouched.
+    ///
+    /// During parallel sections the executing worker participates in the
+    /// parallel iterator exactly where the outside coordinator would have
+    /// parked waiting, so effective parallel width is unchanged.
+    pub fn run_scoped<R, F>(&self, body: F) -> R
+    where
+        F: FnOnce() -> R + Send,
+        R: Send,
+    {
+        self.pool.install(|| {
+            let _guard = self.install();
+            body()
+        })
     }
 }
 
@@ -442,6 +471,49 @@ mod tests {
         let job_pool = JobPool::new(Some(3));
         assert_eq!(job_pool.requested_thread_count(), 3);
         assert_eq!(job_pool.actual_thread_count(), 3);
+    }
+
+    #[test]
+    fn run_scoped_executes_on_a_pool_worker_with_the_slot_installed() {
+        let job_pool = JobPool::new(Some(2));
+        let (worker_index, slot_installed, parallel_observations) = job_pool.run_scoped(|| {
+            use rayon::prelude::*;
+            let parallel_observations: Vec<bool> = with_job_pool(|| {
+                (0..16)
+                    .into_par_iter()
+                    .map(|_| rayon::current_thread_index().is_some())
+                    .collect()
+            });
+            (
+                rayon::current_thread_index(),
+                has_job_pool(),
+                parallel_observations,
+            )
+        });
+        assert!(
+            worker_index.is_some(),
+            "run_scoped must execute its body on a worker of the job pool"
+        );
+        assert!(
+            slot_installed,
+            "the job-pool slot must be installed on the executing worker so nested \
+             with_job_pool calls resolve to this pool"
+        );
+        assert!(
+            parallel_observations.iter().all(|on_worker| *on_worker),
+            "nested parallel work must still run on pool workers"
+        );
+    }
+
+    #[test]
+    fn run_scoped_reinstalls_the_slot_freshly_on_every_run() {
+        let job_pool = JobPool::new(Some(2));
+        for _ in 0..3 {
+            assert!(job_pool.run_scoped(has_job_pool));
+        }
+        // Outside any run_scoped call, this coordinating thread never had
+        // the slot installed at all.
+        assert!(!has_job_pool());
     }
 
     #[test]

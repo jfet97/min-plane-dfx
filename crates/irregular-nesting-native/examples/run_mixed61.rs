@@ -190,20 +190,27 @@ fn main() {
         let mut geometry_cache = GeometryCacheStore::new();
         let mut free_material_cache = FreeMaterialCache::new();
 
-        // One fresh job-owned pool per repeat iteration, matching
-        // `boundary::run_job` constructing exactly one `JobPool` per job
-        // (never reused across jobs, never the ambient global Rayon pool).
+        // One fresh job-owned pool per repeat iteration, entered exactly
+        // the way `boundary::run_job` enters it (`JobPool::run_scoped`:
+        // the whole job body executes on a pool worker with the job-pool
+        // slot installed there, so nested `with_job_pool` entries are
+        // inline). Omitting `--threads` runs the true no-pool serial path.
         let job_pool = threads.map(|count| JobPool::new(Some(count)));
-        let _pool_guard = job_pool.as_ref().map(JobPool::install);
 
         let started = Instant::now();
-        let result = compute_irregular_nesting(
-            &request,
-            &settings,
-            &mut options,
-            &mut geometry_cache,
-            &mut free_material_cache,
-        )
+        let mut run_body = || {
+            compute_irregular_nesting(
+                &request,
+                &settings,
+                &mut options,
+                &mut geometry_cache,
+                &mut free_material_cache,
+            )
+        };
+        let result = match &job_pool {
+            Some(pool) => pool.run_scoped(run_body),
+            None => (run_body)(),
+        }
         .unwrap_or_else(|error| panic!("compute_irregular_nesting failed: {error:?}"));
         let elapsed = started.elapsed();
 
