@@ -85,7 +85,7 @@ async function main(): Promise<void> {
     sheet,
     options: new NestingOptions({
       ...decoded.options,
-      timeoutMs: 0,
+      timeoutMs: 180000,
       historyMode: 'off',
       irregularSettings: settings
     })
