@@ -1,9 +1,19 @@
 //! Unified streamed event delivery over one [`ThreadsafeFunction`] callback.
 //!
-//! Every event is produced on the job's single coordinator thread. The sink
-//! owns the only ordinal sequence, including the terminal marker, and records
-//! the first N-API delivery status failure for `boundary::job` to expose in its
-//! final envelope after it has attempted terminal delivery.
+//! Every event is produced by the job's single, strictly serial
+//! coordinating execution context. Since `JobPool::run_scoped`
+//! (`boundary::parallel`) that context executes on one worker of the
+//! job-owned Rayon pool for the duration of `compute_irregular_nesting`
+//! (the libuv thread that entered `run_job` blocks in
+//! `ThreadPool::install` meanwhile); `ThreadsafeFunction` is designed for
+//! invocation from arbitrary non-JS threads, so which OS thread runs the
+//! serial coordinating code is not observable in event content or order.
+//! Parallel worker closures never own or call the sink. The terminal
+//! emission and its acknowledgement handshake (`emit_terminal_and_wait`)
+//! run on the original libuv thread, after the job body has returned. The
+//! sink owns the only ordinal sequence, including the terminal marker, and
+//! records the first N-API delivery status failure for `boundary::job` to
+//! expose in its final envelope after it has attempted terminal delivery.
 
 use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
 use std::sync::{Arc, OnceLock};

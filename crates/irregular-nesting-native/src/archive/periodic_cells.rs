@@ -1879,7 +1879,14 @@ fn compute_periodic_crop(
 /// selection, semantically load-bearing first-occurrence identity dedup,
 /// output order) before dispatching the next. Cancellation is observed at
 /// chunk boundaries; an abort surfaces as the same whole-call `Err` as
-/// before, with no partial output.
+/// before, with no partial output. This is deliberately coarser than the
+/// serial loop's historical observation points (per rows value, per crop,
+/// and per coordinate inside each crop's legality build): worst-case
+/// uninterruptible work is one chunk of crops, each bounded by the
+/// family's piece count (q x member_count sheetless legality checks per
+/// crop, q itself at most the family size), millisecond-scale for real
+/// workloads. Abort classification and the no-partial-output contract are
+/// unchanged.
 pub fn enumerate_intrinsic_periodic_cell_crops(
     cell: &IntrinsicPeriodicCell,
     family_members: &[IrregularPreparedPiece],

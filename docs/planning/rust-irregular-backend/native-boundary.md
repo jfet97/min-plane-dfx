@@ -1090,8 +1090,18 @@ semantics.
 ## 11. Threading and ownership rules for the unified event channel
 
 - The one `ThreadsafeFunction` is invoked only by the job's single
-  coordinator thread. Rayon work reduces to that thread before event
-  emission; no Rayon closure may own or call the sink.
+  coordinating execution context. Since `JobPool::run_scoped` landed, the
+  job body (and therefore that context) executes on one worker of the
+  job-owned Rayon pool while the libuv thread that entered `run_job` blocks
+  in `ThreadPool::install`; `ThreadsafeFunction` is explicitly designed for
+  invocation from arbitrary non-JS threads, the sink's ordinal sequence
+  remains owned by that one strictly serial execution context, and the
+  terminal emission plus acknowledgement handshake
+  (`emit_terminal_and_wait`) still runs on the original libuv thread after
+  `run_scoped` returns. Parallel worker closures (candidate scoring, crop
+  and point payloads, NFP precompute, piece preparation) still never own or
+  call the sink; every event emission happens in the serial coordinating
+  code between parallel dispatches.
 - The addon retains no raw N-API `Env` on coordinator or Rayon threads. Only
   the `ThreadsafeFunction` and owned Rust data cross to the coordinator.
 - The TypeScript callback is synchronous at the N-API boundary. It validates
