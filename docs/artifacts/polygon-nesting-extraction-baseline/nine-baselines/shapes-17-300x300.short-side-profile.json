@@ -1,0 +1,863 @@
+{
+  "fixture": "shapes-17",
+  "objectiveProfile": "short-side",
+  "sheet": {
+    "width": 300,
+    "height": 300
+  },
+  "sourceCommit": "fbee6648522f01b98c5f3cc5fcdc7d9f0ff11210",
+  "runtime": {
+    "elapsedMs": 1771.194875,
+    "node": "v24.11.1",
+    "v8": "13.6.233.10-node.28"
+  },
+  "result": {
+    "placedCount": 5,
+    "placedPieceIds": [
+      "shapes-17-13",
+      "shapes-17-15",
+      "shapes-17-4",
+      "shapes-17-6",
+      "shapes-17-7"
+    ],
+    "unplacedCount": 12,
+    "unplacedPieceIds": [
+      "shapes-17-14",
+      "shapes-17-1",
+      "shapes-17-2",
+      "shapes-17-3",
+      "shapes-17-5",
+      "shapes-17-8",
+      "shapes-17-9",
+      "shapes-17-10",
+      "shapes-17-11",
+      "shapes-17-12",
+      "shapes-17-16",
+      "shapes-17-17"
+    ],
+    "collisionIdentitySha256": "5d1412d3c3591612bffa40a451ab8f60e5cafaa6ad69ae1aaecaf18653067d9c",
+    "fittedCanonicalSha256": "454ed333f6e94089e94f5569ef6ac7f53c43d9a95862a05abca18d214104a005",
+    "canonicalTopology": {
+      "enclosedCavityCount": 0,
+      "largestOccupiedHullGapRatio": 0.1880920762755608,
+      "occupiedEnvelopeAspectRatio": 1.0146996150906127,
+      "positiveContactComponentCount": 5,
+      "isolatedPieceCount": 5,
+      "largestPositiveContactComponentSize": 1,
+      "largestPositiveContactComponentRatio": 0.2
+    },
+    "bounds": {
+      "width": 295.654,
+      "height": 300,
+      "area": 88696.2,
+      "span": 595.654
+    },
+    "score": {
+      "unplacedCount": 12,
+      "sharedCollisionBoundaryLengthMm": 0,
+      "sharedCollisionBoundaryContactUnits": 0,
+      "sharedCollisionBoundaryContactBand": 0,
+      "nearCompleteStructuralContactCount": 0,
+      "dominantNearCompleteStructuralContactCount": 0,
+      "largestNetFreeMaterialRegionAreaMm2": 23992.91214699998,
+      "freeMaterialRegionCount": 1,
+      "freeMaterialHoleCount": 3,
+      "freeMaterialSliverMetric": 406.8960812641762,
+      "collisionBoundsWorstNormalizedSheetConsumption": 1,
+      "collisionBoundsNormalizedSpanSum": 1.9855133333333335,
+      "collisionBoundsAreaMm2": 88696.2,
+      "collisionBoundsSpanMm": 595.654,
+      "occupiedHullWasteRatio": 0.188092,
+      "collisionBoundsBottomMm": 0,
+      "collisionBoundsLeftMm": 0,
+      "freeMaterialSnapshot": {
+        "sheet": {
+          "width": 300,
+          "height": 300,
+          "label": "300x300"
+        },
+        "regions": [
+          {
+            "boundary": {
+              "points": [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 300,
+                  "y": 0
+                },
+                {
+                  "x": 300,
+                  "y": 300
+                },
+                {
+                  "x": 163.699,
+                  "y": 300
+                },
+                {
+                  "x": 253.232,
+                  "y": 279.566
+                },
+                {
+                  "x": 293.077,
+                  "y": 196.825
+                },
+                {
+                  "x": 253.231,
+                  "y": 114.084
+                },
+                {
+                  "x": 163.698,
+                  "y": 93.649
+                },
+                {
+                  "x": 91.899,
+                  "y": 150.908
+                },
+                {
+                  "x": 91.899,
+                  "y": 242.743
+                },
+                {
+                  "x": 163.699,
+                  "y": 300
+                },
+                {
+                  "x": 115.756,
+                  "y": 300
+                },
+                {
+                  "x": 57.878,
+                  "y": 161.093
+                },
+                {
+                  "x": 0,
+                  "y": 300
+                }
+              ]
+            },
+            "holes": [
+              {
+                "points": [
+                  {
+                    "x": 62.304,
+                    "y": 0
+                  },
+                  {
+                    "x": 56.686,
+                    "y": 0.386
+                  },
+                  {
+                    "x": 51.14,
+                    "y": 1.538
+                  },
+                  {
+                    "x": 45.737,
+                    "y": 3.432
+                  },
+                  {
+                    "x": 40.534,
+                    "y": 6.038
+                  },
+                  {
+                    "x": 35.586,
+                    "y": 9.315
+                  },
+                  {
+                    "x": 30.936,
+                    "y": 13.217
+                  },
+                  {
+                    "x": 26.62,
+                    "y": 17.698
+                  },
+                  {
+                    "x": 22.673,
+                    "y": 22.708
+                  },
+                  {
+                    "x": 19.119,
+                    "y": 28.194
+                  },
+                  {
+                    "x": 15.988,
+                    "y": 34.108
+                  },
+                  {
+                    "x": 13.299,
+                    "y": 40.389
+                  },
+                  {
+                    "x": 11.04,
+                    "y": 47.075
+                  },
+                  {
+                    "x": 8.052,
+                    "y": 60.864
+                  },
+                  {
+                    "x": 7.039,
+                    "y": 75.264
+                  },
+                  {
+                    "x": 8.052,
+                    "y": 89.664
+                  },
+                  {
+                    "x": 11.04,
+                    "y": 103.453
+                  },
+                  {
+                    "x": 13.299,
+                    "y": 110.139
+                  },
+                  {
+                    "x": 15.988,
+                    "y": 116.42
+                  },
+                  {
+                    "x": 19.119,
+                    "y": 122.334
+                  },
+                  {
+                    "x": 22.673,
+                    "y": 127.82
+                  },
+                  {
+                    "x": 26.62,
+                    "y": 132.83
+                  },
+                  {
+                    "x": 30.936,
+                    "y": 137.311
+                  },
+                  {
+                    "x": 35.586,
+                    "y": 141.213
+                  },
+                  {
+                    "x": 40.534,
+                    "y": 144.49
+                  },
+                  {
+                    "x": 45.737,
+                    "y": 147.096
+                  },
+                  {
+                    "x": 51.14,
+                    "y": 148.99
+                  },
+                  {
+                    "x": 56.686,
+                    "y": 150.142
+                  },
+                  {
+                    "x": 62.304,
+                    "y": 150.528
+                  },
+                  {
+                    "x": 67.922,
+                    "y": 150.142
+                  },
+                  {
+                    "x": 73.468,
+                    "y": 148.99
+                  },
+                  {
+                    "x": 78.871,
+                    "y": 147.096
+                  },
+                  {
+                    "x": 84.074,
+                    "y": 144.49
+                  },
+                  {
+                    "x": 89.022,
+                    "y": 141.213
+                  },
+                  {
+                    "x": 93.672,
+                    "y": 137.311
+                  },
+                  {
+                    "x": 97.988,
+                    "y": 132.83
+                  },
+                  {
+                    "x": 101.935,
+                    "y": 127.82
+                  },
+                  {
+                    "x": 105.489,
+                    "y": 122.334
+                  },
+                  {
+                    "x": 108.62,
+                    "y": 116.42
+                  },
+                  {
+                    "x": 111.309,
+                    "y": 110.139
+                  },
+                  {
+                    "x": 113.568,
+                    "y": 103.453
+                  },
+                  {
+                    "x": 116.556,
+                    "y": 89.664
+                  },
+                  {
+                    "x": 117.569,
+                    "y": 75.264
+                  },
+                  {
+                    "x": 116.556,
+                    "y": 60.864
+                  },
+                  {
+                    "x": 113.568,
+                    "y": 47.075
+                  },
+                  {
+                    "x": 111.309,
+                    "y": 40.389
+                  },
+                  {
+                    "x": 108.62,
+                    "y": 34.108
+                  },
+                  {
+                    "x": 105.489,
+                    "y": 28.194
+                  },
+                  {
+                    "x": 101.935,
+                    "y": 22.708
+                  },
+                  {
+                    "x": 97.988,
+                    "y": 17.698
+                  },
+                  {
+                    "x": 93.672,
+                    "y": 13.217
+                  },
+                  {
+                    "x": 89.022,
+                    "y": 9.315
+                  },
+                  {
+                    "x": 84.074,
+                    "y": 6.038
+                  },
+                  {
+                    "x": 78.871,
+                    "y": 3.432
+                  },
+                  {
+                    "x": 73.468,
+                    "y": 1.538
+                  },
+                  {
+                    "x": 67.922,
+                    "y": 0.386
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 117.569,
+                    "y": 0
+                  },
+                  {
+                    "x": 117.569,
+                    "y": 111.59
+                  },
+                  {
+                    "x": 133.606,
+                    "y": 110.01
+                  },
+                  {
+                    "x": 143.975,
+                    "y": 106.865
+                  },
+                  {
+                    "x": 153.532,
+                    "y": 101.756
+                  },
+                  {
+                    "x": 161.908,
+                    "y": 94.882
+                  },
+                  {
+                    "x": 168.782,
+                    "y": 86.506
+                  },
+                  {
+                    "x": 173.891,
+                    "y": 76.949
+                  },
+                  {
+                    "x": 177.036,
+                    "y": 66.58
+                  },
+                  {
+                    "x": 178.098,
+                    "y": 55.795
+                  },
+                  {
+                    "x": 177.036,
+                    "y": 45.01
+                  },
+                  {
+                    "x": 173.891,
+                    "y": 34.641
+                  },
+                  {
+                    "x": 168.782,
+                    "y": 25.084
+                  },
+                  {
+                    "x": 161.908,
+                    "y": 16.708
+                  },
+                  {
+                    "x": 153.532,
+                    "y": 9.834
+                  },
+                  {
+                    "x": 143.975,
+                    "y": 4.725
+                  },
+                  {
+                    "x": 133.606,
+                    "y": 1.58
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 203.777,
+                    "y": 0
+                  },
+                  {
+                    "x": 203.777,
+                    "y": 97.128
+                  },
+                  {
+                    "x": 295.654,
+                    "y": 128.629
+                  },
+                  {
+                    "x": 295.654,
+                    "y": 31.502
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "diagnostics": []
+      },
+      "placementOrder": [
+        "shapes-17-13",
+        "shapes-17-15",
+        "shapes-17-4",
+        "shapes-17-6",
+        "shapes-17-7"
+      ],
+      "unplacedSourcePieceIds": [
+        "shapes-17-14",
+        "shapes-17-1",
+        "shapes-17-2",
+        "shapes-17-3",
+        "shapes-17-5",
+        "shapes-17-8",
+        "shapes-17-9",
+        "shapes-17-10",
+        "shapes-17-11",
+        "shapes-17-12",
+        "shapes-17-16",
+        "shapes-17-17"
+      ]
+    },
+    "portfolio": {
+      "status": "completed",
+      "terminationReason": "shared_archive_completed",
+      "source": "shared-archive",
+      "placements": [
+        {
+          "pieceId": "shapes-17-13",
+          "sourcePieceId": "shapes-17-13",
+          "placementReference": {
+            "x": -6.454,
+            "y": -9.036
+          },
+          "transform": {
+            "translateX": 341.593,
+            "translateY": 95.816,
+            "rotationDeg": 144.46245935768658,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "shapes-17-15",
+          "sourcePieceId": "shapes-17-15",
+          "placementReference": {
+            "x": -5.175791218182361,
+            "y": -5.829
+          },
+          "transform": {
+            "translateX": 63.109999999999985,
+            "translateY": 277.042,
+            "rotationDeg": 192.85694639567663,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "shapes-17-4",
+          "sourcePieceId": "shapes-17-4",
+          "placementReference": {
+            "x": -5.795,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 117.56899999999999,
+            "translateY": 111.59,
+            "rotationDeg": 270,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "shapes-17-6",
+          "sourcePieceId": "shapes-17-6",
+          "placementReference": {
+            "x": -5.265,
+            "y": -5.264
+          },
+          "transform": {
+            "translateX": 7.038999999999987,
+            "translateY": 0,
+            "rotationDeg": 0,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "shapes-17-7",
+          "sourcePieceId": "shapes-17-7",
+          "placementReference": {
+            "x": -7.878,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 115.756,
+            "translateY": 300,
+            "rotationDeg": 180,
+            "mirrored": false
+          }
+        }
+      ],
+      "unplacedPieceIds": [
+        "shapes-17-14",
+        "shapes-17-1",
+        "shapes-17-2",
+        "shapes-17-3",
+        "shapes-17-5",
+        "shapes-17-8",
+        "shapes-17-9",
+        "shapes-17-10",
+        "shapes-17-11",
+        "shapes-17-12",
+        "shapes-17-16",
+        "shapes-17-17"
+      ],
+      "score": {
+        "unplacedCount": 12,
+        "sharedCollisionBoundaryLengthMm": 0,
+        "sharedCollisionBoundaryContactUnits": 0,
+        "sharedCollisionBoundaryContactBand": 0,
+        "nearCompleteStructuralContactCount": 0,
+        "dominantNearCompleteStructuralContactCount": 0,
+        "largestNetFreeMaterialRegionAreaMm2": 23992.91214699998,
+        "freeMaterialRegionCount": 1,
+        "freeMaterialHoleCount": 3,
+        "freeMaterialSliverMetric": 406.8960812641762,
+        "collisionBoundsWorstNormalizedSheetConsumption": 1,
+        "collisionBoundsNormalizedSpanSum": 1.9855133333333335,
+        "collisionBoundsAreaMm2": 88696.2,
+        "collisionBoundsSpanMm": 595.654
+      },
+      "diagnostics": [
+        {
+          "code": "intrinsic_short_side_selected",
+          "message": "selected terminal contact-strip construction (5d1412d3c3591612bffa40a451ab8f60e5cafaa6ad69ae1aaecaf18653067d9c)"
+        }
+      ]
+    },
+    "focusedCompleteReconstructionTrace": {
+      "version": "intrinsic-focused-complete-reconstruction-v1",
+      "status": "skipped-preflight-proven-impossible",
+      "consumedCandidateEvaluations": 0,
+      "candidateEvaluationAccountingComplete": true,
+      "runtimeMs": 0,
+      "outputInfluence": "none"
+    },
+    "intrinsicShortSideObserverTrace": {
+      "version": "intrinsic-short-side-observer-v6",
+      "status": "skipped-no-settled-complete-endpoints",
+      "outputInfluence": "none",
+      "requestedSheetWidthMm": 300,
+      "requestedSheetHeightMm": 300,
+      "requestedLongAxisMm": 300,
+      "requestedShortAxisMm": 300,
+      "requestedLongAxis": "width",
+      "productionShortAxisSpanMm": 299.575,
+      "productionMaximumSideMm": 299.575,
+      "productionEnvelopeAreaMm2": 87791.951625,
+      "productionShortAxisSpanGrid": 299575,
+      "productionMaximumSideGrid": 299575,
+      "productionEnvelopeAreaGrid2": "87791951625",
+      "settledEndpointCount": 0,
+      "evaluatedOrientationCount": 0,
+      "cavityHullGuardEligibleEndpointCount": 0,
+      "geometricParetoEligibleEndpointCount": 0,
+      "placementEvaluations": 0,
+      "candidateEvaluations": 0,
+      "runtimeMs": 0.4034590000001117,
+      "runtimeBudgetExceeded": false,
+      "serializedTraceBytes": 810,
+      "endpoints": [],
+      "rankedCanonicalGeometryHashes": []
+    },
+    "intrinsicShortSidePairFoldTrace": {
+      "version": "intrinsic-short-side-terminal-observer-v6",
+      "status": "accepted",
+      "outputInfluence": "selected",
+      "executionModel": "single-process-sequential",
+      "requestedShortAxisMm": 300,
+      "requestedLongAxisMm": 300,
+      "prescribedRotationDeg": 90,
+      "productionShortAxisSpanMm": 299.575,
+      "productionMaximumSideMm": 299.575,
+      "productionEnvelopeAreaMm2": 87791.951625,
+      "productionShortAxisSpanGrid": 299575,
+      "productionMaximumSideGrid": 299575,
+      "productionEnvelopeAreaGrid2": "87791951625",
+      "transformEvaluations": 40,
+      "expectedPairCount": 10,
+      "evaluatedPairCount": 10,
+      "constructionKind": "contact-strip",
+      "rowCount": 0,
+      "placedCount": 5,
+      "usedShortAxisSpanMm": 300,
+      "usedLongAxisDepthMm": 295.654,
+      "envelopeAreaMm2": 88696.2,
+      "usedShortAxisSpanGrid": 300000,
+      "usedLongAxisDepthGrid": 295654,
+      "envelopeAreaGrid2": "88696200000",
+      "collisionMaterialDoubledAreaGrid2": "132014175706",
+      "canonicalGeometryHash": "5d1412d3c3591612bffa40a451ab8f60e5cafaa6ad69ae1aaecaf18653067d9c",
+      "admission": {
+        "exactLegal": true,
+        "allPiecesPlaced": true,
+        "fillRatio": 1,
+        "depthWithinProductionMaximumSide": true,
+        "projectionCoverageRatio": 1,
+        "projectionComponentCount": 1,
+        "enclosedCavityCount": 0,
+        "collisionEnvelopeDensity": 0.7441929626410151,
+        "shortAxisSpanGainFactor": 1.001418676458316,
+        "envelopeAreaCostFactor": 1.0102999005975224,
+        "directionallyEfficient": false,
+        "envelopeAreaCostWithinProductionBound": true,
+        "accepted": true
+      },
+      "interlocking": {
+        "largestOccupiedHullGapRatio": 0.1880920762755608,
+        "largestOccupiedHullGapDoubledAreaGrid2": "30583296062",
+        "occupiedHullDoubledAreaGrid2": "162597471768",
+        "isolatedPieceCount": 5,
+        "positiveContactComponentCount": 5,
+        "largestPositiveContactComponentSize": 1,
+        "sharedBoundaryLengthMm": 0
+      },
+      "envelopeAreaCostVetoObserved": false,
+      "envelopeAreaCostVetoes": [],
+      "contactStrip": {
+        "version": "intrinsic-short-side-contact-strip-v3",
+        "status": "constructed",
+        "executionModel": "single-process-sequential",
+        "selectionPolicy": "depth-first",
+        "orderPolicy": "piece-id-ascending",
+        "stripShortAxisMm": 300,
+        "stripLongAxisMm": 300,
+        "transformEvaluations": 40,
+        "candidateEvaluations": 156,
+        "backtrackCount": 0,
+        "reusedPrefixPlacements": 0,
+        "placedCount": 5,
+        "requestedCount": 5,
+        "runtimeMs": 12.523791000000074,
+        "peakRssDeltaBytes": 245760
+      },
+      "contactStripLanes": [
+        {
+          "version": "intrinsic-short-side-contact-strip-v3",
+          "status": "no-legal-placement",
+          "executionModel": "single-process-sequential",
+          "selectionPolicy": "depth-first",
+          "orderPolicy": "prepared",
+          "stripShortAxisMm": 300,
+          "stripLongAxisMm": 300,
+          "transformEvaluations": 32,
+          "candidateEvaluations": 129,
+          "backtrackCount": 0,
+          "reusedPrefixPlacements": 0,
+          "placedCount": 3,
+          "requestedCount": 5,
+          "runtimeMs": 7.945749999999862,
+          "peakRssDeltaBytes": 180224,
+          "failureReason": "piece shapes-17-7 has no legal contact placement inside the requested short-axis strip."
+        },
+        {
+          "version": "intrinsic-short-side-contact-strip-v3",
+          "status": "no-legal-placement",
+          "executionModel": "single-process-sequential",
+          "selectionPolicy": "contact-first",
+          "orderPolicy": "prepared",
+          "stripShortAxisMm": 300,
+          "stripLongAxisMm": 300,
+          "transformEvaluations": 32,
+          "candidateEvaluations": 129,
+          "backtrackCount": 0,
+          "reusedPrefixPlacements": 0,
+          "placedCount": 3,
+          "requestedCount": 5,
+          "runtimeMs": 26.948082999999997,
+          "peakRssDeltaBytes": 327680,
+          "failureReason": "piece shapes-17-7 has no legal contact placement inside the requested short-axis strip."
+        },
+        {
+          "version": "intrinsic-short-side-contact-strip-v3",
+          "status": "no-legal-placement",
+          "executionModel": "single-process-sequential",
+          "selectionPolicy": "depth-first",
+          "orderPolicy": "reverse",
+          "stripShortAxisMm": 300,
+          "stripLongAxisMm": 300,
+          "transformEvaluations": 40,
+          "candidateEvaluations": 263,
+          "backtrackCount": 0,
+          "reusedPrefixPlacements": 0,
+          "placedCount": 4,
+          "requestedCount": 5,
+          "runtimeMs": 12.034917000000178,
+          "peakRssDeltaBytes": 344064,
+          "failureReason": "piece shapes-17-15 has no legal contact placement inside the requested short-axis strip."
+        },
+        {
+          "version": "intrinsic-short-side-contact-strip-v3",
+          "status": "constructed",
+          "executionModel": "single-process-sequential",
+          "selectionPolicy": "depth-first",
+          "orderPolicy": "piece-id-ascending",
+          "stripShortAxisMm": 300,
+          "stripLongAxisMm": 300,
+          "transformEvaluations": 40,
+          "candidateEvaluations": 156,
+          "backtrackCount": 0,
+          "reusedPrefixPlacements": 0,
+          "placedCount": 5,
+          "requestedCount": 5,
+          "runtimeMs": 12.523791000000074,
+          "peakRssDeltaBytes": 245760
+        }
+      ],
+      "contactStripPromotion": {
+        "contactStripSummary": {
+          "usedShortAxisSpanMm": 300,
+          "usedLongAxisDepthMm": 295.654,
+          "envelopeAreaMm2": 88696.2,
+          "usedShortAxisSpanGrid": 300000,
+          "usedLongAxisDepthGrid": 295654,
+          "envelopeAreaGrid2": "88696200000",
+          "collisionMaterialDoubledAreaGrid2": "132014175706",
+          "admission": {
+            "exactLegal": true,
+            "allPiecesPlaced": true,
+            "fillRatio": 1,
+            "depthWithinProductionMaximumSide": true,
+            "projectionCoverageRatio": 1,
+            "projectionComponentCount": 1,
+            "enclosedCavityCount": 0,
+            "collisionEnvelopeDensity": 0.7441929626410151,
+            "shortAxisSpanGainFactor": 1.001418676458316,
+            "envelopeAreaCostFactor": 1.0102999005975224,
+            "directionallyEfficient": false,
+            "envelopeAreaCostWithinProductionBound": true,
+            "accepted": true
+          },
+          "interlocking": {
+            "largestOccupiedHullGapRatio": 0.1880920762755608,
+            "largestOccupiedHullGapDoubledAreaGrid2": "30583296062",
+            "occupiedHullDoubledAreaGrid2": "162597471768",
+            "isolatedPieceCount": 5,
+            "positiveContactComponentCount": 5,
+            "largestPositiveContactComponentSize": 1,
+            "sharedBoundaryLengthMm": 0
+          },
+          "status": "accepted"
+        },
+        "contactStripAdmitted": true,
+        "promoted": false
+      },
+      "runtimeMs": 62.95375000000013,
+      "peakRssDeltaBytes": 1294336,
+      "serializedTraceBytes": 5289
+    }
+  },
+  "workerOutput": {
+    "strategyId": "irregular-convex-compact-short-side",
+    "strategyLabel": "Irregular convex Compact Short Side",
+    "historyFrameCount": 0
+  },
+  "checks": {
+    "collisionIdentity": true,
+    "fittedCanonical": true,
+    "placedCount": true,
+    "unplacedCount": true,
+    "exactPiecePartition": true,
+    "area": true,
+    "canonicalCavities": true,
+    "runtime": true,
+    "schedulerChronology": true,
+    "productionStrategyIdentity": true,
+    "focusedTracePresent": true,
+    "focusedStatus": true,
+    "focusedEvaluations": true,
+    "focusedSourceHash": true,
+    "focusedCandidateHash": true,
+    "focusedSelectedHash": true,
+    "focusedInfluence": true,
+    "focusedAccounting": true,
+    "focusedFailureReason": true,
+    "shortSideObserverTracePresent": true,
+    "shortSideObserverOutputInfluence": true,
+    "shortSideObserverRuntimeBudget": true,
+    "shortSideObserverContract": true,
+    "shortSidePairFoldTracePresent": true,
+    "shortSidePairFoldOutputInfluence": true,
+    "shortSidePairFoldBudget": true,
+    "shortSidePairFoldContract": true,
+    "shortSideProfileMaterialized": true,
+    "shortSideProfileExactPiecePartition": true,
+    "shortSideProfileDirectionalContract": true
+  },
+  "passed": true,
+  "svgPath": "shapes-17-300x300.short-side-profile.svg"
+}

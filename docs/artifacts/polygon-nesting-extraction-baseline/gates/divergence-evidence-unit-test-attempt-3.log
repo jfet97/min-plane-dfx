@@ -1,0 +1,10 @@
+$ PATH=/nix/store/h57ln4r40qr349z1r8ri90n9i9xid3r5-nodejs-24.11.1/bin:$PATH pnpm exec vitest run tests/unit/baselineDivergenceEvidence.test.ts
+
+ RUN  v2.1.9 /Users/andreasimonecosta/Documents/Work/min-plane-dfx/.claude/worktrees/polygon-nesting-extraction
+
+ ✓ tests/unit/baselineDivergenceEvidence.test.ts (5 tests) 2ms
+
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+   Start at  22:22:50
+   Duration  572ms (transform 272ms, setup 0ms, collect 440ms, tests 2ms, environment 0ms, prepare 22ms)

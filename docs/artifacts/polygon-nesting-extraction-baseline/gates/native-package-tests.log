@@ -1,0 +1,58 @@
+Command: pnpm test:native:package
+Working directory: /Users/andreasimonecosta/Documents/Work/min-plane-dfx/.claude/worktrees/polygon-nesting-extraction
+Start timestamp: 2026-08-03T18:22:14Z
+Status: running
+
+===== stdout and stderr =====
+$ node --test crates/irregular-nesting-native/scripts/build-native.test.mjs scripts/verify-native-license-compliance.test.mjs scripts/verify-native-package-layout.test.mjs scripts/verify-packaged-native-load.test.mjs
+✔ maps every supported deployment platform to its Cargo target (0.830167ms)
+✔ uses platform and architecture in each staged addon filename (0.06975ms)
+✔ resolves explicit Cargo target triples before staging their addon (0.074125ms)
+✔ discovers release and development artifacts in Cargo target triple directories (0.245167ms)
+✔ passes the mapped Cargo target explicitly for every deployment build (0.087125ms)
+✔ rejects unsupported targets before Cargo executes (0.150708ms)
+✔ stages a macOS addon that dyld can load after copying the Cargo artifact (577.848375ms)
+✔ keeps the upstream copyright and license reference in every Clipper2 derivative (1.020083ms)
+✔ copies the complete vendored Clipper2 license byte for byte (0.55175ms)
+✔ preserves legal asset bytes on Windows checkouts (12.57825ms)
+✔ attributes Clipper2 and points to the complete package license from NOTICE (0.115167ms)
+✔ publishes the complete Clipper2 license in the native package tarball (500.816208ms)
+✔ copies native legal notices into Electron resources (0.495541ms)
+✔ runs license compliance checks through the native packaging contract suite (0.157541ms)
+✔ declares the native workspace package as a production dependency (0.478792ms)
+✔ exposes the Node packaging contract suite through the root scripts (0.095167ms)
+✔ publishes the loader, target binaries, and notices from the native package (0.31525ms)
+✔ includes a distributable native package notice (512.173542ms)
+✔ loads the addon by package name without checkout-relative fallbacks (0.859792ms)
+✔ keeps native package loader failures independent from checkout paths (0.094041ms)
+✔ stages only distributable native package files before Electron packaging (0.908791ms)
+✔ staged Electron package contains no Rust workspace or target files (4.531958ms)
+✔ requires the real addon integration and package contract suites in native CI (1.260709ms)
+✔ requires packaged native loading on every supported native runner (0.338166ms)
+✔ runs the full strict differential matrix only on scheduled and manual CI (0.1125ms)
+✔ keeps exact differential output visible while making quality acceptance blocking (1.694084ms)
+✔ surfaces accepted diagnostic divergence from successful differential rows (0.105625ms)
+✔ characterizes standard hypot on every packaged native target (0.080333ms)
+✔ packages the fail-closed P5 Linux container runner and controlled-host contract (1.02575ms)
+✔ runs the packaged Electron executable as Node against the packaged app path (392.431083ms)
+✔ rejects a native package resolved outside the packaged app (360.366458ms)
+✔ resolves relative packaged paths before launching Electron (221.38375ms)
+✔ fails the packaged verifier when nativeCapability is malformed (223.496292ms)
+✔ fails the packaged verifier when the Clipper2 license is absent (198.315083ms)
+✔ fails the packaged verifier when the Clipper2 license bytes changed (202.71875ms)
+✔ fails the packaged verifier when the native NOTICE is absent (214.0935ms)
+✔ fails the packaged verifier when the native NOTICE bytes changed (211.772958ms)
+ℹ tests 37
+ℹ suites 0
+ℹ pass 37
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2066.18675
+
+===== gate metadata =====
+End timestamp: 2026-08-03T18:22:16Z
+Duration milliseconds: 2287
+Exit code: 0
+Status: passed

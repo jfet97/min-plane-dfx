@@ -1,0 +1,9 @@
+Evidence type: accepted Node runtime environment correction
+Recorded timestamp: 2026-08-03T18:43:06Z
+Working directory: /Users/andreasimonecosta/Documents/Work/min-plane-dfx/.claude/worktrees/polygon-nesting-extraction
+Environment correction: PATH=/nix/store/h57ln4r40qr349z1r8ri90n9i9xid3r5-nodejs-24.11.1/bin:$PATH
+Repository required version: 24.11.1
+Corrected direct Node version: v24.11.1
+Corrected pnpm shebang Node version: v24.11.1
+pnpm version: 11.8.0
+Status: ready for remaining Node and pnpm gates

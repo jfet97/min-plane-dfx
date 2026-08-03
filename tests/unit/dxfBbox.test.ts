@@ -243,7 +243,7 @@ describe('unionBounds', () => {
 
 describe('importDxfFile', () => {
   it('groups supported entities from one DXF file into one selectable imported piece', async () => {
-    const dir = join(tmpdir(), `min-plane-dxf-import-${randomUUID()}`)
+    const dir = join(tmpdir(), `min-plane-dfx-import-${randomUUID()}`)
     const path = join(dir, 'rectangle.dxf')
     const dxf =
       baseOpen() +
@@ -270,7 +270,7 @@ describe('importDxfFile', () => {
   })
 
   it('normalizes fractional DXF bounds into an integer millimeter container', async () => {
-    const dir = join(tmpdir(), `min-plane-dxf-import-${randomUUID()}`)
+    const dir = join(tmpdir(), `min-plane-dfx-import-${randomUUID()}`)
     const path = join(dir, 'fractional.dxf')
     const dxf =
       baseOpen() +

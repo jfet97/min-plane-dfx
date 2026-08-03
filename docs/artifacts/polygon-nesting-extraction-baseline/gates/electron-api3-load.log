@@ -1,0 +1,29 @@
+Command: ELECTRON_RUN_AS_NODE=1 pnpm exec electron -e "const c=require('./crates/irregular-nesting-native/npm/index.cjs').nativeCapability(); if(c.apiVersion!==3) throw new Error(JSON.stringify(c))"
+Working directory: /Users/andreasimonecosta/Documents/Work/min-plane-dfx/.claude/worktrees/polygon-nesting-extraction
+Start timestamp: 2026-08-03T18:23:04Z
+Status: running
+
+===== stdout and stderr =====
+/Users/andreasimonecosta/Documents/Work/min-plane-dfx/.claude/worktrees/polygon-nesting-extraction/node_modules/.pnpm/electron@33.4.11/node_modules/electron/index.js:17
+    throw new Error('Electron failed to install correctly, please delete node_modules/electron and try installing again');
+    ^
+
+Error: Electron failed to install correctly, please delete node_modules/electron and try installing again
+    at getElectronPath (/Users/andreasimonecosta/Documents/Work/min-plane-dfx/.claude/worktrees/polygon-nesting-extraction/node_modules/.pnpm/electron@33.4.11/node_modules/electron/index.js:17:11)
+    at Object.<anonymous> (/Users/andreasimonecosta/Documents/Work/min-plane-dfx/.claude/worktrees/polygon-nesting-extraction/node_modules/.pnpm/electron@33.4.11/node_modules/electron/index.js:21:18)
+    at Module._compile (node:internal/modules/cjs/loader:1854:14)
+    at Object..js (node:internal/modules/cjs/loader:1985:10)
+    at Module.load (node:internal/modules/cjs/loader:1577:32)
+    at Module._load (node:internal/modules/cjs/loader:1379:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.require (node:internal/modules/cjs/loader:1600:12)
+    at require (node:internal/modules/helpers:153:16)
+    at Object.<anonymous> (/Users/andreasimonecosta/Documents/Work/min-plane-dfx/.claude/worktrees/polygon-nesting-extraction/node_modules/.pnpm/electron@33.4.11/node_modules/electron/cli.js:5:18)
+
+Node.js v24.16.0
+
+===== gate metadata =====
+End timestamp: 2026-08-03T18:23:05Z
+Duration milliseconds: 590
+Exit code: 1
+Status: failed

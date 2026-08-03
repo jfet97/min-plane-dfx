@@ -515,7 +515,7 @@ async function addDxfFixtureCases(): Promise<void> {
     pair(20, 20)
   ].join('')
 
-  const directory = mkdtempSync(join(tmpdir(), 'min-plane-dxf-collision-builder-dump-'))
+  const directory = mkdtempSync(join(tmpdir(), 'min-plane-dfx-collision-builder-dump-'))
   try {
     const bulgePath = join(directory, 'bulge-square.dxf')
     writeFileSync(bulgePath, dxfText(bulgeSquare), 'utf8')

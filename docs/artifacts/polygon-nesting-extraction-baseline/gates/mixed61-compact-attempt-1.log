@@ -1,0 +1,17 @@
+Command: pnpm gate:mixed61-compact --output docs/artifacts/polygon-nesting-extraction-baseline/mixed61
+Working directory: /Users/andreasimonecosta/Documents/Work/min-plane-dfx/.claude/worktrees/polygon-nesting-extraction
+Environment: Node 24.11.1 bin prepended to PATH
+Start timestamp: 2026-08-03T19:39:20Z
+Status: running
+
+===== stdout and stderr =====
+$ pnpm corpus:sheet-invariance --case mixed-61 --sheets 2000x2700 --allow-single-sheet --strict --expected-canonical-sha256 ef2b783ae12491d2a80a12ef94d1bb2801c13cbd43aeb6e2c1cc00d86828fd3b --maximum-area-mm2 391606 --maximum-canonical-cavities 0 --maximum-elapsed-ms 330000 --output docs/artifacts/polygon-nesting-extraction-baseline/mixed61
+$ tsx --tsconfig tsconfig.node.json scripts/irregular-sheet-invariance.ts --case mixed-61 --sheets 2000x2700 --allow-single-sheet --strict --expected-canonical-sha256 ef2b783ae12491d2a80a12ef94d1bb2801c13cbd43aeb6e2c1cc00d86828fd3b --maximum-area-mm2 391606 --maximum-canonical-cavities 0 --maximum-elapsed-ms 330000 --output docs/artifacts/polygon-nesting-extraction-baseline/mixed61
+{"caseId":"mixed-61","geometryEquivalent":null,"qualityAccepted":true,"qualityChecks":[{"sheet":{"width":2000,"height":2700},"canonicalHash":true,"area":true,"canonicalCavities":true,"runtime":true}],"runs":[{"sheet":{"width":2000,"height":2700},"elapsedMs":32142.075,"placedCount":61,"unplacedCount":0,"bounds":{"minX":0,"minY":0,"width":622.202,"height":629.387,"shortSide":622.202,"longSide":629.387,"area":391605.85017399996,"span":1251.589},"canonicalSha256":"ef2b783ae12491d2a80a12ef94d1bb2801c13cbd43aeb6e2c1cc00d86828fd3b","canonicalRotationDeg":0,"canonicalTopology":{"enclosedCavityCount":0,"largestOccupiedHullGapRatio":0.13724449834128455,"occupiedEnvelopeAspectRatio":1.0115476967287151,"positiveContactComponentCount":18,"isolatedPieceCount":7,"largestPositiveContactComponentSize":14,"largestPositiveContactComponentRatio":0.22950819672131148},"score":{"occupiedHullWasteRatio":0.16115069735546944,"nearCompleteStructuralContactCount":14,"dominantNearCompleteStructuralContactCount":2,"sharedCollisionBoundaryContactUnits":31.850192361135615,"freeMaterialHoleCount":14},"artifactPath":"docs/artifacts/polygon-nesting-extraction-baseline/mixed61/mixed-61-2000x2700.svg"}]}
+{"reportPath":"docs/artifacts/polygon-nesting-extraction-baseline/mixed61/report.json","passed":true}
+
+===== gate metadata =====
+End timestamp: 2026-08-03T19:39:52Z
+Duration milliseconds: 32837
+Exit code: 0
+Status: passed

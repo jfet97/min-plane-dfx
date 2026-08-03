@@ -868,7 +868,7 @@ async function addRealFixtureCases(): Promise<void> {
       pair(42, Math.PI * 2)
     ].join('')
 
-    const directory = mkdtempSync(join(tmpdir(), 'min-plane-dxf-flatten-dump-'))
+    const directory = mkdtempSync(join(tmpdir(), 'min-plane-dfx-flatten-dump-'))
     try {
       const bulgePath = join(directory, 'bulge.dxf')
       writeFileSync(bulgePath, dxfText(bulgePolyline), 'utf8')

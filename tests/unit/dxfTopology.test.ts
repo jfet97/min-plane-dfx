@@ -74,7 +74,7 @@ async function withImportedDxf(
   entities: ReadonlyArray<string>,
   assertion: (path: string) => Promise<void>
 ): Promise<void> {
-  const directory = await mkdtemp(join(tmpdir(), `min-plane-dxf-topology-${randomUUID()}-`))
+  const directory = await mkdtemp(join(tmpdir(), `min-plane-dfx-topology-${randomUUID()}-`))
   const path = join(directory, 'topology.dxf')
   try {
     await mkdir(directory, { recursive: true })

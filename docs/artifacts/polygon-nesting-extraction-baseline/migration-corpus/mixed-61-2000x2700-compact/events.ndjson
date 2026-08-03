@@ -1,0 +1,5 @@
+{"kind":"portfolio-progress","ordinal":0,"progress":{"phase":"shared_archive","elapsedMs":0.0}}
+{"kind":"portfolio-progress","ordinal":1,"progress":{"phase":"shared_archive","elapsedMs":0.0}}
+{"kind":"portfolio-progress","ordinal":2,"progress":{"phase":"shared_archive","elapsedMs":0.0}}
+{"kind":"portfolio-progress","ordinal":3,"progress":{"phase":"completed","bestScore":{"unplacedCount":0.0,"sharedCollisionBoundaryLengthMm":2370.6020000000003,"sharedCollisionBoundaryContactUnits":31.850192361135615,"sharedCollisionBoundaryContactBand":31.0,"nearCompleteStructuralContactCount":14.0,"dominantNearCompleteStructuralContactCount":2.0,"largestNetFreeMaterialRegionAreaMm2":5084345.249503501,"freeMaterialRegionCount":6.0,"freeMaterialHoleCount":14.0,"canonicalEnclosedCavityCount":0.0,"freeMaterialSliverMetric":11301451.399040373,"collisionBoundsWorstNormalizedSheetConsumption":0.311101,"collisionBoundsNormalizedSpanSum":0.5442072962962963,"collisionBoundsAreaMm2":391605.85017399996,"collisionBoundsSpanMm":1251.589},"elapsedMs":0.0}}
+{"kind":"terminal","ordinal":4}

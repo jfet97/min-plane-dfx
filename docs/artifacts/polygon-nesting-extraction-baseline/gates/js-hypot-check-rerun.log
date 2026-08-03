@@ -1,0 +1,14 @@
+Command: pnpm exec tsx --tsconfig tsconfig.node.json scripts/rust-parity/dump-js-hypot.ts --check
+Working directory: /Users/andreasimonecosta/Documents/Work/min-plane-dfx/.claude/worktrees/polygon-nesting-extraction
+Environment: PATH=/nix/store/h57ln4r40qr349z1r8ri90n9i9xid3r5-nodejs-24.11.1/bin:$PATH
+Start timestamp: 2026-08-03T18:43:25Z
+Status: running
+
+===== stdout and stderr =====
+verified /Users/andreasimonecosta/Documents/Work/min-plane-dfx/.claude/worktrees/polygon-nesting-extraction/crates/irregular-nesting-native/tests/vectors/js-hypot.json (21696 vectors, sha256 bc444e7d2813fb2a7faa150ab03fa1c92e2be28e4c26971ad3796de5c491a266)
+
+===== gate metadata =====
+End timestamp: 2026-08-03T18:43:25Z
+Duration milliseconds: 335
+Exit code: 0
+Status: passed

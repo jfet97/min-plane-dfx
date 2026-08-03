@@ -1,0 +1,3620 @@
+{
+  "placedCollisionGeometries": [
+    {
+      "placement": {
+        "pieceId": "triangle-copy-1",
+        "sourcePieceId": "triangle-copy-1",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 0,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "triangle-copy-1",
+        "transform": {
+          "index": 0,
+          "rotationDeg": 0,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 44.144,
+              "y": 0
+            },
+            {
+              "x": 88.288,
+              "y": 75.675
+            },
+            {
+              "x": 0,
+              "y": 75.675
+            }
+          ]
+        },
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "maxX": 88.288,
+          "maxY": 75.675
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "triangle-copy-2",
+        "sourcePieceId": "triangle-copy-2",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 88.288,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "triangle-copy-2",
+        "transform": {
+          "index": 0,
+          "rotationDeg": 0,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 44.144,
+              "y": 0
+            },
+            {
+              "x": 88.288,
+              "y": 75.675
+            },
+            {
+              "x": 0,
+              "y": 75.675
+            }
+          ]
+        },
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "maxX": 88.288,
+          "maxY": 75.675
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "triangle-copy-3",
+        "sourcePieceId": "triangle-copy-3",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 176.576,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "triangle-copy-3",
+        "transform": {
+          "index": 0,
+          "rotationDeg": 0,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 44.144,
+              "y": 0
+            },
+            {
+              "x": 88.288,
+              "y": 75.675
+            },
+            {
+              "x": 0,
+              "y": 75.675
+            }
+          ]
+        },
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "maxX": 88.288,
+          "maxY": 75.675
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "triangle-copy-4",
+        "sourcePieceId": "triangle-copy-4",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 264.864,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "triangle-copy-4",
+        "transform": {
+          "index": 0,
+          "rotationDeg": 0,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 44.144,
+              "y": 0
+            },
+            {
+              "x": 88.288,
+              "y": 75.675
+            },
+            {
+              "x": 0,
+              "y": 75.675
+            }
+          ]
+        },
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "maxX": 88.288,
+          "maxY": 75.675
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "triangle-copy-5",
+        "sourcePieceId": "triangle-copy-5",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 353.152,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "triangle-copy-5",
+        "transform": {
+          "index": 0,
+          "rotationDeg": 0,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 44.144,
+              "y": 0
+            },
+            {
+              "x": 88.288,
+              "y": 75.675
+            },
+            {
+              "x": 0,
+              "y": 75.675
+            }
+          ]
+        },
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "maxX": 88.288,
+          "maxY": 75.675
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "triangle-copy-6",
+        "sourcePieceId": "triangle-copy-6",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 441.44,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "triangle-copy-6",
+        "transform": {
+          "index": 0,
+          "rotationDeg": 0,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 44.144,
+              "y": 0
+            },
+            {
+              "x": 88.288,
+              "y": 75.675
+            },
+            {
+              "x": 0,
+              "y": 75.675
+            }
+          ]
+        },
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "maxX": 88.288,
+          "maxY": 75.675
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "triangle-copy-7",
+        "sourcePieceId": "triangle-copy-7",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 529.728,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "triangle-copy-7",
+        "transform": {
+          "index": 0,
+          "rotationDeg": 0,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 44.144,
+              "y": 0
+            },
+            {
+              "x": 88.288,
+              "y": 75.675
+            },
+            {
+              "x": 0,
+              "y": 75.675
+            }
+          ]
+        },
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "maxX": 88.288,
+          "maxY": 75.675
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "triangle-copy-8",
+        "sourcePieceId": "triangle-copy-8",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 618.016,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "triangle-copy-8",
+        "transform": {
+          "index": 0,
+          "rotationDeg": 0,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 44.144,
+              "y": 0
+            },
+            {
+              "x": 88.288,
+              "y": 75.675
+            },
+            {
+              "x": 0,
+              "y": 75.675
+            }
+          ]
+        },
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "maxX": 88.288,
+          "maxY": 75.675
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "triangle-copy-9",
+        "sourcePieceId": "triangle-copy-9",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 706.304,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "triangle-copy-9",
+        "transform": {
+          "index": 0,
+          "rotationDeg": 0,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 44.144,
+              "y": 0
+            },
+            {
+              "x": 88.288,
+              "y": 75.675
+            },
+            {
+              "x": 0,
+              "y": 75.675
+            }
+          ]
+        },
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "maxX": 88.288,
+          "maxY": 75.675
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "triangle-copy-10",
+        "sourcePieceId": "triangle-copy-10",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 794.592,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "triangle-copy-10",
+        "transform": {
+          "index": 0,
+          "rotationDeg": 0,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 44.144,
+              "y": 0
+            },
+            {
+              "x": 88.288,
+              "y": 75.675
+            },
+            {
+              "x": 0,
+              "y": 75.675
+            }
+          ]
+        },
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "maxX": 88.288,
+          "maxY": 75.675
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "triangle-copy-11",
+        "sourcePieceId": "triangle-copy-11",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 882.88,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "triangle-copy-11",
+        "transform": {
+          "index": 0,
+          "rotationDeg": 0,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 44.144,
+              "y": 0
+            },
+            {
+              "x": 88.288,
+              "y": 75.675
+            },
+            {
+              "x": 0,
+              "y": 75.675
+            }
+          ]
+        },
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "maxX": 88.288,
+          "maxY": 75.675
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "triangle-copy-12",
+        "sourcePieceId": "triangle-copy-12",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 971.168,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "triangle-copy-12",
+        "transform": {
+          "index": 0,
+          "rotationDeg": 0,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 44.144,
+              "y": 0
+            },
+            {
+              "x": 88.288,
+              "y": 75.675
+            },
+            {
+              "x": 0,
+              "y": 75.675
+            }
+          ]
+        },
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "maxX": 88.288,
+          "maxY": 75.675
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "triangle-copy-13",
+        "sourcePieceId": "triangle-copy-13",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 1059.456,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "triangle-copy-13",
+        "transform": {
+          "index": 0,
+          "rotationDeg": 0,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 44.144,
+              "y": 0
+            },
+            {
+              "x": 88.288,
+              "y": 75.675
+            },
+            {
+              "x": 0,
+              "y": 75.675
+            }
+          ]
+        },
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "maxX": 88.288,
+          "maxY": 75.675
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "triangle-copy-14",
+        "sourcePieceId": "triangle-copy-14",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 1147.744,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "triangle-copy-14",
+        "transform": {
+          "index": 0,
+          "rotationDeg": 0,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 44.144,
+              "y": 0
+            },
+            {
+              "x": 88.288,
+              "y": 75.675
+            },
+            {
+              "x": 0,
+              "y": 75.675
+            }
+          ]
+        },
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "maxX": 88.288,
+          "maxY": 75.675
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "triangle-copy-15",
+        "sourcePieceId": "triangle-copy-15",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 1236.032,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "triangle-copy-15",
+        "transform": {
+          "index": 0,
+          "rotationDeg": 0,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 44.144,
+              "y": 0
+            },
+            {
+              "x": 88.288,
+              "y": 75.675
+            },
+            {
+              "x": 0,
+              "y": 75.675
+            }
+          ]
+        },
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "maxX": 88.288,
+          "maxY": 75.675
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "triangle-copy-16",
+        "sourcePieceId": "triangle-copy-16",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 1324.32,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "triangle-copy-16",
+        "transform": {
+          "index": 0,
+          "rotationDeg": 0,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 44.144,
+              "y": 0
+            },
+            {
+              "x": 88.288,
+              "y": 75.675
+            },
+            {
+              "x": 0,
+              "y": 75.675
+            }
+          ]
+        },
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "maxX": 88.288,
+          "maxY": 75.675
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "triangle-copy-17",
+        "sourcePieceId": "triangle-copy-17",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 1412.608,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "triangle-copy-17",
+        "transform": {
+          "index": 0,
+          "rotationDeg": 0,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 44.144,
+              "y": 0
+            },
+            {
+              "x": 88.288,
+              "y": 75.675
+            },
+            {
+              "x": 0,
+              "y": 75.675
+            }
+          ]
+        },
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "maxX": 88.288,
+          "maxY": 75.675
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "triangle-copy-18",
+        "sourcePieceId": "triangle-copy-18",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 1500.896,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "triangle-copy-18",
+        "transform": {
+          "index": 0,
+          "rotationDeg": 0,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 44.144,
+              "y": 0
+            },
+            {
+              "x": 88.288,
+              "y": 75.675
+            },
+            {
+              "x": 0,
+              "y": 75.675
+            }
+          ]
+        },
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "maxX": 88.288,
+          "maxY": 75.675
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "triangle-copy-19",
+        "sourcePieceId": "triangle-copy-19",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 1589.184,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "triangle-copy-19",
+        "transform": {
+          "index": 0,
+          "rotationDeg": 0,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 44.144,
+              "y": 0
+            },
+            {
+              "x": 88.288,
+              "y": 75.675
+            },
+            {
+              "x": 0,
+              "y": 75.675
+            }
+          ]
+        },
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "maxX": 88.288,
+          "maxY": 75.675
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "triangle-copy-20",
+        "sourcePieceId": "triangle-copy-20",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 1677.472,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "triangle-copy-20",
+        "transform": {
+          "index": 0,
+          "rotationDeg": 0,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 44.144,
+              "y": 0
+            },
+            {
+              "x": 88.288,
+              "y": 75.675
+            },
+            {
+              "x": 0,
+              "y": 75.675
+            }
+          ]
+        },
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "maxX": 88.288,
+          "maxY": 75.675
+        }
+      }
+    }
+  ],
+  "score": {
+    "unplacedCount": 0,
+    "sharedCollisionBoundaryLengthMm": 0,
+    "sharedCollisionBoundaryContactUnits": 0,
+    "sharedCollisionBoundaryContactBand": 0,
+    "nearCompleteStructuralContactCount": 0,
+    "dominantNearCompleteStructuralContactCount": 0,
+    "largestNetFreeMaterialRegionAreaMm2": 5333188.056,
+    "freeMaterialRegionCount": 1,
+    "freeMaterialHoleCount": 20,
+    "freeMaterialSliverMetric": 40.35350532304838,
+    "collisionBoundsWorstNormalizedSheetConsumption": 0.88288,
+    "collisionBoundsNormalizedSpanSum": 0.9109077777777778,
+    "collisionBoundsAreaMm2": 133623.888,
+    "collisionBoundsSpanMm": 1841.435,
+    "occupiedHullWasteRatio": 0.487179,
+    "collisionBoundsBottomMm": 0,
+    "collisionBoundsLeftMm": 0,
+    "freeMaterialSnapshot": {
+      "sheet": {
+        "width": 2000,
+        "height": 2700,
+        "label": "2000x2700"
+      },
+      "regions": [
+        {
+          "boundary": {
+            "points": [
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 2000,
+                "y": 0
+              },
+              {
+                "x": 2000,
+                "y": 2700
+              },
+              {
+                "x": 0,
+                "y": 2700
+              }
+            ]
+          },
+          "holes": [
+            {
+              "points": [
+                {
+                  "x": 44.144,
+                  "y": 0
+                },
+                {
+                  "x": 0,
+                  "y": 75.675
+                },
+                {
+                  "x": 88.288,
+                  "y": 75.675
+                }
+              ]
+            },
+            {
+              "points": [
+                {
+                  "x": 132.432,
+                  "y": 0
+                },
+                {
+                  "x": 88.288,
+                  "y": 75.675
+                },
+                {
+                  "x": 176.576,
+                  "y": 75.675
+                }
+              ]
+            },
+            {
+              "points": [
+                {
+                  "x": 220.72,
+                  "y": 0
+                },
+                {
+                  "x": 176.576,
+                  "y": 75.675
+                },
+                {
+                  "x": 264.864,
+                  "y": 75.675
+                }
+              ]
+            },
+            {
+              "points": [
+                {
+                  "x": 309.008,
+                  "y": 0
+                },
+                {
+                  "x": 264.864,
+                  "y": 75.675
+                },
+                {
+                  "x": 353.152,
+                  "y": 75.675
+                }
+              ]
+            },
+            {
+              "points": [
+                {
+                  "x": 397.296,
+                  "y": 0
+                },
+                {
+                  "x": 353.152,
+                  "y": 75.675
+                },
+                {
+                  "x": 441.44,
+                  "y": 75.675
+                }
+              ]
+            },
+            {
+              "points": [
+                {
+                  "x": 485.584,
+                  "y": 0
+                },
+                {
+                  "x": 441.44,
+                  "y": 75.675
+                },
+                {
+                  "x": 529.728,
+                  "y": 75.675
+                }
+              ]
+            },
+            {
+              "points": [
+                {
+                  "x": 573.872,
+                  "y": 0
+                },
+                {
+                  "x": 529.728,
+                  "y": 75.675
+                },
+                {
+                  "x": 618.016,
+                  "y": 75.675
+                }
+              ]
+            },
+            {
+              "points": [
+                {
+                  "x": 662.16,
+                  "y": 0
+                },
+                {
+                  "x": 618.016,
+                  "y": 75.675
+                },
+                {
+                  "x": 706.304,
+                  "y": 75.675
+                }
+              ]
+            },
+            {
+              "points": [
+                {
+                  "x": 750.448,
+                  "y": 0
+                },
+                {
+                  "x": 706.304,
+                  "y": 75.675
+                },
+                {
+                  "x": 794.592,
+                  "y": 75.675
+                }
+              ]
+            },
+            {
+              "points": [
+                {
+                  "x": 838.736,
+                  "y": 0
+                },
+                {
+                  "x": 794.592,
+                  "y": 75.675
+                },
+                {
+                  "x": 882.88,
+                  "y": 75.675
+                }
+              ]
+            },
+            {
+              "points": [
+                {
+                  "x": 927.024,
+                  "y": 0
+                },
+                {
+                  "x": 882.88,
+                  "y": 75.675
+                },
+                {
+                  "x": 971.168,
+                  "y": 75.675
+                }
+              ]
+            },
+            {
+              "points": [
+                {
+                  "x": 1015.312,
+                  "y": 0
+                },
+                {
+                  "x": 971.168,
+                  "y": 75.675
+                },
+                {
+                  "x": 1059.456,
+                  "y": 75.675
+                }
+              ]
+            },
+            {
+              "points": [
+                {
+                  "x": 1103.6,
+                  "y": 0
+                },
+                {
+                  "x": 1059.456,
+                  "y": 75.675
+                },
+                {
+                  "x": 1147.744,
+                  "y": 75.675
+                }
+              ]
+            },
+            {
+              "points": [
+                {
+                  "x": 1191.888,
+                  "y": 0
+                },
+                {
+                  "x": 1147.744,
+                  "y": 75.675
+                },
+                {
+                  "x": 1236.032,
+                  "y": 75.675
+                }
+              ]
+            },
+            {
+              "points": [
+                {
+                  "x": 1280.176,
+                  "y": 0
+                },
+                {
+                  "x": 1236.032,
+                  "y": 75.675
+                },
+                {
+                  "x": 1324.32,
+                  "y": 75.675
+                }
+              ]
+            },
+            {
+              "points": [
+                {
+                  "x": 1368.464,
+                  "y": 0
+                },
+                {
+                  "x": 1324.32,
+                  "y": 75.675
+                },
+                {
+                  "x": 1412.608,
+                  "y": 75.675
+                }
+              ]
+            },
+            {
+              "points": [
+                {
+                  "x": 1456.752,
+                  "y": 0
+                },
+                {
+                  "x": 1412.608,
+                  "y": 75.675
+                },
+                {
+                  "x": 1500.896,
+                  "y": 75.675
+                }
+              ]
+            },
+            {
+              "points": [
+                {
+                  "x": 1545.04,
+                  "y": 0
+                },
+                {
+                  "x": 1500.896,
+                  "y": 75.675
+                },
+                {
+                  "x": 1589.184,
+                  "y": 75.675
+                }
+              ]
+            },
+            {
+              "points": [
+                {
+                  "x": 1633.328,
+                  "y": 0
+                },
+                {
+                  "x": 1589.184,
+                  "y": 75.675
+                },
+                {
+                  "x": 1677.472,
+                  "y": 75.675
+                }
+              ]
+            },
+            {
+              "points": [
+                {
+                  "x": 1721.616,
+                  "y": 0
+                },
+                {
+                  "x": 1677.472,
+                  "y": 75.675
+                },
+                {
+                  "x": 1765.76,
+                  "y": 75.675
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "diagnostics": []
+    },
+    "placementOrder": [
+      "triangle-copy-1",
+      "triangle-copy-2",
+      "triangle-copy-3",
+      "triangle-copy-4",
+      "triangle-copy-5",
+      "triangle-copy-6",
+      "triangle-copy-7",
+      "triangle-copy-8",
+      "triangle-copy-9",
+      "triangle-copy-10",
+      "triangle-copy-11",
+      "triangle-copy-12",
+      "triangle-copy-13",
+      "triangle-copy-14",
+      "triangle-copy-15",
+      "triangle-copy-16",
+      "triangle-copy-17",
+      "triangle-copy-18",
+      "triangle-copy-19",
+      "triangle-copy-20"
+    ],
+    "unplacedSourcePieceIds": []
+  },
+  "unplacedPieceIds": [],
+  "diagnostics": [
+    {
+      "code": "intrinsic_shared_archive_completed",
+      "message": "shared archive selected periodic-P2 from 10 exact endpoints"
+    },
+    {
+      "code": "capacity_preflight_inconclusive",
+      "message": "proof-only capacity preflight was inconclusive; complete mode ran unchanged"
+    },
+    {
+      "code": "complete_archive_fitted",
+      "message": "complete endpoint 371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127 fits the requested sheet; scheduled capacity prework had already settled as observer-only work"
+    },
+    {
+      "code": "intrinsic_short_side_selected",
+      "message": "selected admitted multi-row-shelf construction 7a79ebd40029094854748d569acb52f95f32a96e71b3b674941ba7f20f9cfe15"
+    }
+  ],
+  "sortedPieceIds": [
+    "triangle-copy-1",
+    "triangle-copy-2",
+    "triangle-copy-3",
+    "triangle-copy-4",
+    "triangle-copy-5",
+    "triangle-copy-6",
+    "triangle-copy-7",
+    "triangle-copy-8",
+    "triangle-copy-9",
+    "triangle-copy-10",
+    "triangle-copy-11",
+    "triangle-copy-12",
+    "triangle-copy-13",
+    "triangle-copy-14",
+    "triangle-copy-15",
+    "triangle-copy-16",
+    "triangle-copy-17",
+    "triangle-copy-18",
+    "triangle-copy-19",
+    "triangle-copy-20"
+  ],
+  "stateSnapshots": [],
+  "beamWidth": 8,
+  "portfolio": {
+    "status": "completed",
+    "terminationReason": "shared_archive_completed",
+    "source": "shared-archive",
+    "placements": [
+      {
+        "pieceId": "triangle-copy-1",
+        "sourcePieceId": "triangle-copy-1",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 0,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "triangle-copy-2",
+        "sourcePieceId": "triangle-copy-2",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 88.288,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "triangle-copy-3",
+        "sourcePieceId": "triangle-copy-3",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 176.576,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "triangle-copy-4",
+        "sourcePieceId": "triangle-copy-4",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 264.864,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "triangle-copy-5",
+        "sourcePieceId": "triangle-copy-5",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 353.152,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "triangle-copy-6",
+        "sourcePieceId": "triangle-copy-6",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 441.44,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "triangle-copy-7",
+        "sourcePieceId": "triangle-copy-7",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 529.728,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "triangle-copy-8",
+        "sourcePieceId": "triangle-copy-8",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 618.016,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "triangle-copy-9",
+        "sourcePieceId": "triangle-copy-9",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 706.304,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "triangle-copy-10",
+        "sourcePieceId": "triangle-copy-10",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 794.592,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "triangle-copy-11",
+        "sourcePieceId": "triangle-copy-11",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 882.88,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "triangle-copy-12",
+        "sourcePieceId": "triangle-copy-12",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 971.168,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "triangle-copy-13",
+        "sourcePieceId": "triangle-copy-13",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 1059.456,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "triangle-copy-14",
+        "sourcePieceId": "triangle-copy-14",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 1147.744,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "triangle-copy-15",
+        "sourcePieceId": "triangle-copy-15",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 1236.032,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "triangle-copy-16",
+        "sourcePieceId": "triangle-copy-16",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 1324.32,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "triangle-copy-17",
+        "sourcePieceId": "triangle-copy-17",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 1412.608,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "triangle-copy-18",
+        "sourcePieceId": "triangle-copy-18",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 1500.896,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "triangle-copy-19",
+        "sourcePieceId": "triangle-copy-19",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 1589.184,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "triangle-copy-20",
+        "sourcePieceId": "triangle-copy-20",
+        "placementReference": {
+          "x": -9.144,
+          "y": -10.423
+        },
+        "transform": {
+          "translateX": 1677.472,
+          "translateY": 0,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      }
+    ],
+    "unplacedPieceIds": [],
+    "score": {
+      "unplacedCount": 0,
+      "sharedCollisionBoundaryLengthMm": 0,
+      "sharedCollisionBoundaryContactUnits": 0,
+      "sharedCollisionBoundaryContactBand": 0,
+      "nearCompleteStructuralContactCount": 0,
+      "dominantNearCompleteStructuralContactCount": 0,
+      "largestNetFreeMaterialRegionAreaMm2": 5333188.056,
+      "freeMaterialRegionCount": 1,
+      "freeMaterialHoleCount": 20,
+      "freeMaterialSliverMetric": 40.35350532304838,
+      "collisionBoundsWorstNormalizedSheetConsumption": 0.88288,
+      "collisionBoundsNormalizedSpanSum": 0.9109077777777778,
+      "collisionBoundsAreaMm2": 133623.888,
+      "collisionBoundsSpanMm": 1841.435
+    },
+    "diagnostics": [
+      {
+        "code": "intrinsic_short_side_selected",
+        "message": "selected terminal multi-row-shelf construction (7a79ebd40029094854748d569acb52f95f32a96e71b3b674941ba7f20f9cfe15)"
+      }
+    ]
+  },
+  "intrinsicAnytimeSchedulerTrace": {
+    "version": "intrinsic-anytime-scheduler-v1",
+    "coldQuantumDepths": 4,
+    "coldStartStatus": "paused",
+    "coldStartCompletedDepths": 4,
+    "coldStartConsumedPlacementEvaluations": 2533,
+    "coldCheckpointReused": false,
+    "warmPrefixEndpointsAdmitted": false,
+    "cancellationReason": "complete-endpoint-fitted",
+    "quanta": [
+      {
+        "ordinal": 0,
+        "cohort": "partial",
+        "producerRole": "capacity-cold",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 1,
+        "cohort": "complete",
+        "producerRole": "legacy-complete",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 2,
+        "cohort": "partial",
+        "producerRole": "capacity-cold",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 3,
+        "cohort": "complete",
+        "producerRole": "legacy-complete",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 4,
+        "cohort": "partial",
+        "producerRole": "capacity-cold",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 5,
+        "cohort": "complete",
+        "producerRole": "legacy-complete",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 6,
+        "cohort": "partial",
+        "producerRole": "capacity-cold",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 7,
+        "cohort": "complete",
+        "producerRole": "legacy-complete",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 8,
+        "cohort": "partial",
+        "producerRole": "capacity-cold",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 9,
+        "cohort": "complete",
+        "producerRole": "legacy-complete",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 10,
+        "cohort": "partial",
+        "producerRole": "capacity-cold",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 11,
+        "cohort": "complete",
+        "producerRole": "legacy-complete",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 12,
+        "cohort": "partial",
+        "producerRole": "capacity-cold",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 13,
+        "cohort": "complete",
+        "producerRole": "legacy-complete",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 14,
+        "cohort": "partial",
+        "producerRole": "capacity-cold",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 15,
+        "cohort": "complete",
+        "producerRole": "legacy-complete",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 16,
+        "cohort": "partial",
+        "producerRole": "capacity-cold",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 17,
+        "cohort": "complete",
+        "producerRole": "legacy-complete",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 18,
+        "cohort": "partial",
+        "producerRole": "capacity-cold",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 19,
+        "cohort": "complete",
+        "producerRole": "legacy-complete",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 20,
+        "cohort": "partial",
+        "producerRole": "capacity-cold",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 21,
+        "cohort": "complete",
+        "producerRole": "legacy-complete",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 22,
+        "cohort": "partial",
+        "producerRole": "capacity-cold",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 23,
+        "cohort": "complete",
+        "producerRole": "legacy-complete",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 24,
+        "cohort": "partial",
+        "producerRole": "capacity-cold",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 25,
+        "cohort": "complete",
+        "producerRole": "legacy-complete",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 26,
+        "cohort": "partial",
+        "producerRole": "capacity-cold",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 27,
+        "cohort": "complete",
+        "producerRole": "legacy-complete",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 28,
+        "cohort": "partial",
+        "producerRole": "capacity-cold",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 29,
+        "cohort": "complete",
+        "producerRole": "legacy-complete",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 30,
+        "cohort": "partial",
+        "producerRole": "capacity-cold",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 31,
+        "cohort": "complete",
+        "producerRole": "legacy-complete",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 32,
+        "cohort": "partial",
+        "producerRole": "capacity-cold",
+        "outcome": "settled"
+      },
+      {
+        "ordinal": 33,
+        "cohort": "complete",
+        "producerRole": "legacy-complete",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 34,
+        "cohort": "complete",
+        "producerRole": "legacy-complete",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 35,
+        "cohort": "complete",
+        "producerRole": "legacy-complete",
+        "outcome": "checkpointed"
+      },
+      {
+        "ordinal": 36,
+        "cohort": "complete",
+        "producerRole": "legacy-complete",
+        "outcome": "settled"
+      }
+    ]
+  },
+  "focusedCompleteReconstructionTrace": {
+    "version": "intrinsic-focused-complete-reconstruction-v1",
+    "status": "duplicate-order",
+    "sourceCanonicalGeometryHash": "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127",
+    "selectedCanonicalGeometryHash": "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127",
+    "consumedCandidateEvaluations": 0,
+    "candidateEvaluationAccountingComplete": true,
+    "runtimeMs": 0.33816699999988487,
+    "outputInfluence": "protected-fallback"
+  },
+  "intrinsicShortSideObserverTrace": {
+    "candidateEvaluations": 0,
+    "cavityHullGuardEligibleEndpointCount": 3,
+    "directionalAdmissionTerms": {
+      "depthWithinProductionMaximumSide": true,
+      "envelopeAreaCostWithinProductionBound": true,
+      "shortEdgeFillAdmitted": false,
+      "shortfallHalved": false
+    },
+    "endpoints": [
+      {
+        "archiveIndex": 0,
+        "canonicalGeometryHash": "7c6cde904a5a7abc9894573ea1212a5395ac89c0869fe9ce169c85d8fff62b41",
+        "cavityHullGuardEligible": false,
+        "geometricParetoEligible": false,
+        "q0": {
+          "canonicalGeometryHash": "7c6cde904a5a7abc9894573ea1212a5395ac89c0869fe9ce169c85d8fff62b41",
+          "cavityCount": 0,
+          "cohesionDeficit": 2.875,
+          "cohesionDeficitDenominator": "8",
+          "cohesionDeficitNumerator": "23",
+          "cohesionPasses": false,
+          "comparisonTuple": [
+            0,
+            1658.215,
+            337.138,
+            0,
+            0.3312548377545349,
+            1,
+            2.875,
+            115228.71133,
+            341.785,
+            678.923,
+            -2,
+            -3,
+            -2.976906823522997,
+            -262.825,
+            "7c6cde904a5a7abc9894573ea1212a5395ac89c0869fe9ce169c85d8fff62b41"
+          ],
+          "contactUnits": 2.976906823522997,
+          "dominantStructuralContacts": 2,
+          "exactLegal": true,
+          "hullGapDoubledAreaGrid2": "66189013267",
+          "hullGapRatio": 0.3312548377545349,
+          "intrinsicEnvelopeAreaGrid2": "115228711330",
+          "intrinsicEnvelopeAreaMm2": 115228.71133,
+          "intrinsicEnvelopeMaximumSideGrid": 341785,
+          "intrinsicEnvelopeMaximumSideMm": 341.785,
+          "intrinsicEnvelopeSpanGrid": 678923,
+          "intrinsicEnvelopeSpanMm": 678.923,
+          "occupiedHullDoubledAreaGrid2": "199812970931",
+          "requestedLongAxisUsedSpanGrid": 337138,
+          "requestedLongAxisUsedSpanMm": 337.138,
+          "requestedShortAxisShortfallGrid": 1658215,
+          "requestedShortAxisShortfallMm": 1658.215,
+          "rotationDeg": 0,
+          "sharedBoundaryLengthMm": 262.825,
+          "totalStructuralContacts": 3,
+          "usedHeightMm": 337.138,
+          "usedWidthMm": 341.785
+        },
+        "q90": {
+          "canonicalGeometryHash": "7c6cde904a5a7abc9894573ea1212a5395ac89c0869fe9ce169c85d8fff62b41",
+          "cavityCount": 0,
+          "cohesionDeficit": 2.875,
+          "cohesionDeficitDenominator": "8",
+          "cohesionDeficitNumerator": "23",
+          "cohesionPasses": false,
+          "comparisonTuple": [
+            0,
+            1662.862,
+            341.785,
+            0,
+            0.3312548377545349,
+            1,
+            2.875,
+            115228.71133,
+            341.785,
+            678.923,
+            -2,
+            -3,
+            -2.976906823522997,
+            -262.825,
+            "7c6cde904a5a7abc9894573ea1212a5395ac89c0869fe9ce169c85d8fff62b41"
+          ],
+          "contactUnits": 2.976906823522997,
+          "dominantStructuralContacts": 2,
+          "exactLegal": true,
+          "hullGapDoubledAreaGrid2": "66189013267",
+          "hullGapRatio": 0.3312548377545349,
+          "intrinsicEnvelopeAreaGrid2": "115228711330",
+          "intrinsicEnvelopeAreaMm2": 115228.71133,
+          "intrinsicEnvelopeMaximumSideGrid": 341785,
+          "intrinsicEnvelopeMaximumSideMm": 341.785,
+          "intrinsicEnvelopeSpanGrid": 678923,
+          "intrinsicEnvelopeSpanMm": 678.923,
+          "occupiedHullDoubledAreaGrid2": "199812970931",
+          "requestedLongAxisUsedSpanGrid": 341785,
+          "requestedLongAxisUsedSpanMm": 341.785,
+          "requestedShortAxisShortfallGrid": 1662862,
+          "requestedShortAxisShortfallMm": 1662.862,
+          "rotationDeg": 90,
+          "sharedBoundaryLengthMm": 262.825,
+          "totalStructuralContacts": 3,
+          "usedHeightMm": 341.785,
+          "usedWidthMm": 337.138
+        },
+        "role": "legacy-absolute-envelope",
+        "selected": {
+          "canonicalGeometryHash": "7c6cde904a5a7abc9894573ea1212a5395ac89c0869fe9ce169c85d8fff62b41",
+          "cavityCount": 0,
+          "cohesionDeficit": 2.875,
+          "cohesionDeficitDenominator": "8",
+          "cohesionDeficitNumerator": "23",
+          "cohesionPasses": false,
+          "comparisonTuple": [
+            0,
+            1658.215,
+            337.138,
+            0,
+            0.3312548377545349,
+            1,
+            2.875,
+            115228.71133,
+            341.785,
+            678.923,
+            -2,
+            -3,
+            -2.976906823522997,
+            -262.825,
+            "7c6cde904a5a7abc9894573ea1212a5395ac89c0869fe9ce169c85d8fff62b41"
+          ],
+          "contactUnits": 2.976906823522997,
+          "dominantStructuralContacts": 2,
+          "exactLegal": true,
+          "hullGapDoubledAreaGrid2": "66189013267",
+          "hullGapRatio": 0.3312548377545349,
+          "intrinsicEnvelopeAreaGrid2": "115228711330",
+          "intrinsicEnvelopeAreaMm2": 115228.71133,
+          "intrinsicEnvelopeMaximumSideGrid": 341785,
+          "intrinsicEnvelopeMaximumSideMm": 341.785,
+          "intrinsicEnvelopeSpanGrid": 678923,
+          "intrinsicEnvelopeSpanMm": 678.923,
+          "occupiedHullDoubledAreaGrid2": "199812970931",
+          "requestedLongAxisUsedSpanGrid": 337138,
+          "requestedLongAxisUsedSpanMm": 337.138,
+          "requestedShortAxisShortfallGrid": 1658215,
+          "requestedShortAxisShortfallMm": 1658.215,
+          "rotationDeg": 0,
+          "sharedBoundaryLengthMm": 262.825,
+          "totalStructuralContacts": 3,
+          "usedHeightMm": 337.138,
+          "usedWidthMm": 341.785
+        },
+        "selectedRotationDeg": 0
+      },
+      {
+        "archiveIndex": 1,
+        "canonicalGeometryHash": "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127",
+        "cavityHullGuardEligible": true,
+        "geometricParetoEligible": true,
+        "q0": {
+          "canonicalGeometryHash": "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127",
+          "cavityCount": 0,
+          "cohesionDeficit": 1.375,
+          "cohesionDeficitDenominator": "8",
+          "cohesionDeficitNumerator": "11",
+          "cohesionPasses": false,
+          "comparisonTuple": [
+            0,
+            1512.017,
+            152.522,
+            0,
+            0.029710516900773094,
+            1,
+            1.375,
+            74428.143126,
+            487.983,
+            640.505,
+            0,
+            0,
+            -4.395927678620074,
+            -388.10699999999997,
+            "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127"
+          ],
+          "contactUnits": 4.395927678620074,
+          "dominantStructuralContacts": 0,
+          "exactLegal": true,
+          "hullGapDoubledAreaGrid2": "4224096790",
+          "hullGapRatio": 0.029710516900773094,
+          "intrinsicEnvelopeAreaGrid2": "74428143126",
+          "intrinsicEnvelopeAreaMm2": 74428.143126,
+          "intrinsicEnvelopeMaximumSideGrid": 487983,
+          "intrinsicEnvelopeMaximumSideMm": 487.983,
+          "intrinsicEnvelopeSpanGrid": 640505,
+          "intrinsicEnvelopeSpanMm": 640.505,
+          "occupiedHullDoubledAreaGrid2": "142175136303",
+          "requestedLongAxisUsedSpanGrid": 152522,
+          "requestedLongAxisUsedSpanMm": 152.522,
+          "requestedShortAxisShortfallGrid": 1512017,
+          "requestedShortAxisShortfallMm": 1512.017,
+          "rotationDeg": 0,
+          "sharedBoundaryLengthMm": 388.10699999999997,
+          "totalStructuralContacts": 0,
+          "usedHeightMm": 152.522,
+          "usedWidthMm": 487.983
+        },
+        "q90": {
+          "canonicalGeometryHash": "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127",
+          "cavityCount": 0,
+          "cohesionDeficit": 1.375,
+          "cohesionDeficitDenominator": "8",
+          "cohesionDeficitNumerator": "11",
+          "cohesionPasses": false,
+          "comparisonTuple": [
+            0,
+            1847.478,
+            487.983,
+            0,
+            0.029710516900773094,
+            1,
+            1.375,
+            74428.143126,
+            487.983,
+            640.505,
+            0,
+            0,
+            -4.395927678620074,
+            -388.10699999999997,
+            "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127"
+          ],
+          "contactUnits": 4.395927678620074,
+          "dominantStructuralContacts": 0,
+          "exactLegal": true,
+          "hullGapDoubledAreaGrid2": "4224096790",
+          "hullGapRatio": 0.029710516900773094,
+          "intrinsicEnvelopeAreaGrid2": "74428143126",
+          "intrinsicEnvelopeAreaMm2": 74428.143126,
+          "intrinsicEnvelopeMaximumSideGrid": 487983,
+          "intrinsicEnvelopeMaximumSideMm": 487.983,
+          "intrinsicEnvelopeSpanGrid": 640505,
+          "intrinsicEnvelopeSpanMm": 640.505,
+          "occupiedHullDoubledAreaGrid2": "142175136303",
+          "requestedLongAxisUsedSpanGrid": 487983,
+          "requestedLongAxisUsedSpanMm": 487.983,
+          "requestedShortAxisShortfallGrid": 1847478,
+          "requestedShortAxisShortfallMm": 1847.478,
+          "rotationDeg": 90,
+          "sharedBoundaryLengthMm": 388.10699999999997,
+          "totalStructuralContacts": 0,
+          "usedHeightMm": 487.983,
+          "usedWidthMm": 152.522
+        },
+        "role": "periodic-P2",
+        "selected": {
+          "canonicalGeometryHash": "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127",
+          "cavityCount": 0,
+          "cohesionDeficit": 1.375,
+          "cohesionDeficitDenominator": "8",
+          "cohesionDeficitNumerator": "11",
+          "cohesionPasses": false,
+          "comparisonTuple": [
+            0,
+            1512.017,
+            152.522,
+            0,
+            0.029710516900773094,
+            1,
+            1.375,
+            74428.143126,
+            487.983,
+            640.505,
+            0,
+            0,
+            -4.395927678620074,
+            -388.10699999999997,
+            "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127"
+          ],
+          "contactUnits": 4.395927678620074,
+          "dominantStructuralContacts": 0,
+          "exactLegal": true,
+          "hullGapDoubledAreaGrid2": "4224096790",
+          "hullGapRatio": 0.029710516900773094,
+          "intrinsicEnvelopeAreaGrid2": "74428143126",
+          "intrinsicEnvelopeAreaMm2": 74428.143126,
+          "intrinsicEnvelopeMaximumSideGrid": 487983,
+          "intrinsicEnvelopeMaximumSideMm": 487.983,
+          "intrinsicEnvelopeSpanGrid": 640505,
+          "intrinsicEnvelopeSpanMm": 640.505,
+          "occupiedHullDoubledAreaGrid2": "142175136303",
+          "requestedLongAxisUsedSpanGrid": 152522,
+          "requestedLongAxisUsedSpanMm": 152.522,
+          "requestedShortAxisShortfallGrid": 1512017,
+          "requestedShortAxisShortfallMm": 1512.017,
+          "rotationDeg": 0,
+          "sharedBoundaryLengthMm": 388.10699999999997,
+          "totalStructuralContacts": 0,
+          "usedHeightMm": 152.522,
+          "usedWidthMm": 487.983
+        },
+        "selectedRotationDeg": 0,
+        "sourceId": "raw-witness:P2:x:88972/1,0/1;0/1,76261/1:[\"0,0;0,87609;76261,43123\",\"0,176581;0,88972;76261,132095\",\"0,176581;76261,133458;76261,221067\",\"0,177944;0,265553;76261,221067\",\"0,265553;76261,222430;76261,310039\",\"0,266916;0,354525;76261,310039\",\"0,354525;76261,311402;76261,399011\",\"0,355888;0,443497;76261,399011\",\"0,443497;76261,400374;76261,487983\",\"0,87609;76261,132095;76261,44486\",\"152522,132095;152522,44486;76261,87609\",\"152522,132095;76261,176581;76261,88972\",\"152522,133458;152522,221067;76261,176581\",\"152522,221067;76261,177944;76261,265553\",\"152522,222430;152522,310039;76261,265553\",\"152522,310039;76261,266916;76261,354525\",\"152522,311402;152522,399011;76261,354525\",\"152522,399011;76261,355888;76261,443497\",\"152522,400374;152522,487983;76261,443497\",\"152522,43123;76261,0;76261,87609\"]"
+      },
+      {
+        "archiveIndex": 2,
+        "canonicalGeometryHash": "4b87d6df47fdf2246c6d2d8d9ad6c201d75f33e4f29072be0a64dc5d217e206f",
+        "cavityHullGuardEligible": true,
+        "geometricParetoEligible": true,
+        "q0": {
+          "canonicalGeometryHash": "4b87d6df47fdf2246c6d2d8d9ad6c201d75f33e4f29072be0a64dc5d217e206f",
+          "cavityCount": 0,
+          "cohesionDeficit": 1.5,
+          "cohesionDeficitDenominator": "2",
+          "cohesionDeficitNumerator": "3",
+          "cohesionPasses": false,
+          "comparisonTuple": [
+            0,
+            1605.078,
+            228.786,
+            0,
+            0.08690173010305187,
+            1,
+            1.5,
+            90352.62469200001,
+            394.922,
+            623.7080000000001,
+            0,
+            0,
+            -5.4499911861065735,
+            -481.16799999999995,
+            "4b87d6df47fdf2246c6d2d8d9ad6c201d75f33e4f29072be0a64dc5d217e206f"
+          ],
+          "contactUnits": 5.4499911861065735,
+          "dominantStructuralContacts": 0,
+          "exactLegal": true,
+          "hullGapDoubledAreaGrid2": "13363088379",
+          "hullGapRatio": 0.08690173010305187,
+          "intrinsicEnvelopeAreaGrid2": "90352624692",
+          "intrinsicEnvelopeAreaMm2": 90352.62469200001,
+          "intrinsicEnvelopeMaximumSideGrid": 394922,
+          "intrinsicEnvelopeMaximumSideMm": 394.922,
+          "intrinsicEnvelopeSpanGrid": 623708,
+          "intrinsicEnvelopeSpanMm": 623.7080000000001,
+          "occupiedHullDoubledAreaGrid2": "153772408940",
+          "requestedLongAxisUsedSpanGrid": 228786,
+          "requestedLongAxisUsedSpanMm": 228.786,
+          "requestedShortAxisShortfallGrid": 1605078,
+          "requestedShortAxisShortfallMm": 1605.078,
+          "rotationDeg": 0,
+          "sharedBoundaryLengthMm": 481.16799999999995,
+          "totalStructuralContacts": 0,
+          "usedHeightMm": 228.786,
+          "usedWidthMm": 394.922
+        },
+        "q90": {
+          "canonicalGeometryHash": "4b87d6df47fdf2246c6d2d8d9ad6c201d75f33e4f29072be0a64dc5d217e206f",
+          "cavityCount": 0,
+          "cohesionDeficit": 1.5,
+          "cohesionDeficitDenominator": "2",
+          "cohesionDeficitNumerator": "3",
+          "cohesionPasses": false,
+          "comparisonTuple": [
+            0,
+            1771.214,
+            394.922,
+            0,
+            0.08690173010305187,
+            1,
+            1.5,
+            90352.62469200001,
+            394.922,
+            623.7080000000001,
+            0,
+            0,
+            -5.4499911861065735,
+            -481.16799999999995,
+            "4b87d6df47fdf2246c6d2d8d9ad6c201d75f33e4f29072be0a64dc5d217e206f"
+          ],
+          "contactUnits": 5.4499911861065735,
+          "dominantStructuralContacts": 0,
+          "exactLegal": true,
+          "hullGapDoubledAreaGrid2": "13363088379",
+          "hullGapRatio": 0.08690173010305187,
+          "intrinsicEnvelopeAreaGrid2": "90352624692",
+          "intrinsicEnvelopeAreaMm2": 90352.62469200001,
+          "intrinsicEnvelopeMaximumSideGrid": 394922,
+          "intrinsicEnvelopeMaximumSideMm": 394.922,
+          "intrinsicEnvelopeSpanGrid": 623708,
+          "intrinsicEnvelopeSpanMm": 623.7080000000001,
+          "occupiedHullDoubledAreaGrid2": "153772408940",
+          "requestedLongAxisUsedSpanGrid": 394922,
+          "requestedLongAxisUsedSpanMm": 394.922,
+          "requestedShortAxisShortfallGrid": 1771214,
+          "requestedShortAxisShortfallMm": 1771.214,
+          "rotationDeg": 90,
+          "sharedBoundaryLengthMm": 481.16799999999995,
+          "totalStructuralContacts": 0,
+          "usedHeightMm": 394.922,
+          "usedWidthMm": 228.786
+        },
+        "role": "periodic-P2",
+        "selected": {
+          "canonicalGeometryHash": "4b87d6df47fdf2246c6d2d8d9ad6c201d75f33e4f29072be0a64dc5d217e206f",
+          "cavityCount": 0,
+          "cohesionDeficit": 1.5,
+          "cohesionDeficitDenominator": "2",
+          "cohesionDeficitNumerator": "3",
+          "cohesionPasses": false,
+          "comparisonTuple": [
+            0,
+            1605.078,
+            228.786,
+            0,
+            0.08690173010305187,
+            1,
+            1.5,
+            90352.62469200001,
+            394.922,
+            623.7080000000001,
+            0,
+            0,
+            -5.4499911861065735,
+            -481.16799999999995,
+            "4b87d6df47fdf2246c6d2d8d9ad6c201d75f33e4f29072be0a64dc5d217e206f"
+          ],
+          "contactUnits": 5.4499911861065735,
+          "dominantStructuralContacts": 0,
+          "exactLegal": true,
+          "hullGapDoubledAreaGrid2": "13363088379",
+          "hullGapRatio": 0.08690173010305187,
+          "intrinsicEnvelopeAreaGrid2": "90352624692",
+          "intrinsicEnvelopeAreaMm2": 90352.62469200001,
+          "intrinsicEnvelopeMaximumSideGrid": 394922,
+          "intrinsicEnvelopeMaximumSideMm": 394.922,
+          "intrinsicEnvelopeSpanGrid": 623708,
+          "intrinsicEnvelopeSpanMm": 623.7080000000001,
+          "occupiedHullDoubledAreaGrid2": "153772408940",
+          "requestedLongAxisUsedSpanGrid": 228786,
+          "requestedLongAxisUsedSpanMm": 228.786,
+          "requestedShortAxisShortfallGrid": 1605078,
+          "requestedShortAxisShortfallMm": 1605.078,
+          "rotationDeg": 0,
+          "sharedBoundaryLengthMm": 481.16799999999995,
+          "totalStructuralContacts": 0,
+          "usedHeightMm": 228.786,
+          "usedWidthMm": 394.922
+        },
+        "selectedRotationDeg": 0,
+        "sourceId": "raw-witness:P2:x:87609/1,0/1;0/1,76262/1:[\"0,0;44486,76261;87609,0\",\"0,76262;44486,152523;87609,76262\",\"132095,152523;175218,76262;87609,76262\",\"132095,152524;175218,76262;219704,152524\",\"132095,152524;44486,152524;87609,76262\",\"132095,76261;175218,0;87609,0\",\"132095,76262;175218,0;219704,76262\",\"132095,76262;44486,76262;87609,0\",\"175218,0;219704,76261;262827,0\",\"175218,152524;219704,228785;262827,152524\",\"175218,76262;219704,152523;262827,76262\",\"219704,152524;262827,76262;307313,152524\",\"219704,228786;262827,152524;307313,228786\",\"219704,76262;262827,0;307313,76262\",\"262827,0;307313,76261;350436,0\",\"262827,152524;307313,228785;350436,152524\",\"262827,76262;307313,152523;350436,76262\",\"307313,152524;350436,76262;394922,152524\",\"307313,228786;350436,152524;394922,228786\",\"307313,76262;350436,0;394922,76262\"]"
+      },
+      {
+        "archiveIndex": 3,
+        "canonicalGeometryHash": "ace7d11d9267bc56095696c23fd095796160a08b70fae025b993c62a4d6edb81",
+        "cavityHullGuardEligible": false,
+        "geometricParetoEligible": false,
+        "q0": {
+          "canonicalGeometryHash": "ace7d11d9267bc56095696c23fd095796160a08b70fae025b993c62a4d6edb81",
+          "cavityCount": 0,
+          "cohesionDeficit": 2.875,
+          "cohesionDeficitDenominator": "8",
+          "cohesionDeficitNumerator": "23",
+          "cohesionPasses": false,
+          "comparisonTuple": [
+            0,
+            1652.998,
+            337.071,
+            0,
+            0.3705751025529532,
+            1,
+            2.875,
+            116964.311142,
+            347.002,
+            684.0730000000001,
+            -2,
+            -2,
+            -2,
+            -176.576,
+            "ace7d11d9267bc56095696c23fd095796160a08b70fae025b993c62a4d6edb81"
+          ],
+          "contactUnits": 2,
+          "dominantStructuralContacts": 2,
+          "exactLegal": true,
+          "hullGapDoubledAreaGrid2": "78671342227",
+          "hullGapRatio": 0.3705751025529532,
+          "intrinsicEnvelopeAreaGrid2": "116964311142",
+          "intrinsicEnvelopeAreaMm2": 116964.311142,
+          "intrinsicEnvelopeMaximumSideGrid": 347002,
+          "intrinsicEnvelopeMaximumSideMm": 347.002,
+          "intrinsicEnvelopeSpanGrid": 684073,
+          "intrinsicEnvelopeSpanMm": 684.0730000000001,
+          "occupiedHullDoubledAreaGrid2": "212295272092",
+          "requestedLongAxisUsedSpanGrid": 337071,
+          "requestedLongAxisUsedSpanMm": 337.071,
+          "requestedShortAxisShortfallGrid": 1652998,
+          "requestedShortAxisShortfallMm": 1652.998,
+          "rotationDeg": 0,
+          "sharedBoundaryLengthMm": 176.576,
+          "totalStructuralContacts": 2,
+          "usedHeightMm": 337.071,
+          "usedWidthMm": 347.002
+        },
+        "q90": {
+          "canonicalGeometryHash": "ace7d11d9267bc56095696c23fd095796160a08b70fae025b993c62a4d6edb81",
+          "cavityCount": 0,
+          "cohesionDeficit": 2.875,
+          "cohesionDeficitDenominator": "8",
+          "cohesionDeficitNumerator": "23",
+          "cohesionPasses": false,
+          "comparisonTuple": [
+            0,
+            1662.929,
+            347.002,
+            0,
+            0.3705751025529532,
+            1,
+            2.875,
+            116964.311142,
+            347.002,
+            684.0730000000001,
+            -2,
+            -2,
+            -2,
+            -176.576,
+            "ace7d11d9267bc56095696c23fd095796160a08b70fae025b993c62a4d6edb81"
+          ],
+          "contactUnits": 2,
+          "dominantStructuralContacts": 2,
+          "exactLegal": true,
+          "hullGapDoubledAreaGrid2": "78671342227",
+          "hullGapRatio": 0.3705751025529532,
+          "intrinsicEnvelopeAreaGrid2": "116964311142",
+          "intrinsicEnvelopeAreaMm2": 116964.311142,
+          "intrinsicEnvelopeMaximumSideGrid": 347002,
+          "intrinsicEnvelopeMaximumSideMm": 347.002,
+          "intrinsicEnvelopeSpanGrid": 684073,
+          "intrinsicEnvelopeSpanMm": 684.0730000000001,
+          "occupiedHullDoubledAreaGrid2": "212295272092",
+          "requestedLongAxisUsedSpanGrid": 347002,
+          "requestedLongAxisUsedSpanMm": 347.002,
+          "requestedShortAxisShortfallGrid": 1662929,
+          "requestedShortAxisShortfallMm": 1662.929,
+          "rotationDeg": 90,
+          "sharedBoundaryLengthMm": 176.576,
+          "totalStructuralContacts": 2,
+          "usedHeightMm": 347.002,
+          "usedWidthMm": 337.071
+        },
+        "role": "canonical-grid",
+        "selected": {
+          "canonicalGeometryHash": "ace7d11d9267bc56095696c23fd095796160a08b70fae025b993c62a4d6edb81",
+          "cavityCount": 0,
+          "cohesionDeficit": 2.875,
+          "cohesionDeficitDenominator": "8",
+          "cohesionDeficitNumerator": "23",
+          "cohesionPasses": false,
+          "comparisonTuple": [
+            0,
+            1652.998,
+            337.071,
+            0,
+            0.3705751025529532,
+            1,
+            2.875,
+            116964.311142,
+            347.002,
+            684.0730000000001,
+            -2,
+            -2,
+            -2,
+            -176.576,
+            "ace7d11d9267bc56095696c23fd095796160a08b70fae025b993c62a4d6edb81"
+          ],
+          "contactUnits": 2,
+          "dominantStructuralContacts": 2,
+          "exactLegal": true,
+          "hullGapDoubledAreaGrid2": "78671342227",
+          "hullGapRatio": 0.3705751025529532,
+          "intrinsicEnvelopeAreaGrid2": "116964311142",
+          "intrinsicEnvelopeAreaMm2": 116964.311142,
+          "intrinsicEnvelopeMaximumSideGrid": 347002,
+          "intrinsicEnvelopeMaximumSideMm": 347.002,
+          "intrinsicEnvelopeSpanGrid": 684073,
+          "intrinsicEnvelopeSpanMm": 684.0730000000001,
+          "occupiedHullDoubledAreaGrid2": "212295272092",
+          "requestedLongAxisUsedSpanGrid": 337071,
+          "requestedLongAxisUsedSpanMm": 337.071,
+          "requestedShortAxisShortfallGrid": 1652998,
+          "requestedShortAxisShortfallMm": 1652.998,
+          "rotationDeg": 0,
+          "sharedBoundaryLengthMm": 176.576,
+          "totalStructuralContacts": 2,
+          "usedHeightMm": 337.071,
+          "usedWidthMm": 347.002
+        },
+        "selectedRotationDeg": 0
+      },
+      {
+        "archiveIndex": 4,
+        "canonicalGeometryHash": "066cfeb3c532991f57c393a0bb7d9f9ac5238251c3708aafe9068205a457411e",
+        "cavityHullGuardEligible": true,
+        "geometricParetoEligible": false,
+        "q0": {
+          "canonicalGeometryHash": "066cfeb3c532991f57c393a0bb7d9f9ac5238251c3708aafe9068205a457411e",
+          "cavityCount": 0,
+          "cohesionDeficit": 1.5,
+          "cohesionDeficitDenominator": "2",
+          "cohesionDeficitNumerator": "3",
+          "cohesionPasses": false,
+          "comparisonTuple": [
+            0,
+            1605.078,
+            228.786,
+            0,
+            0.10896357947112485,
+            1,
+            1.5,
+            90352.62469200001,
+            394.922,
+            623.7080000000001,
+            0,
+            0,
+            -5.4499911861065735,
+            -481.16799999999995,
+            "066cfeb3c532991f57c393a0bb7d9f9ac5238251c3708aafe9068205a457411e"
+          ],
+          "contactUnits": 5.4499911861065735,
+          "dominantStructuralContacts": 0,
+          "exactLegal": true,
+          "hullGapDoubledAreaGrid2": "16755592102",
+          "hullGapRatio": 0.10896357947112485,
+          "intrinsicEnvelopeAreaGrid2": "90352624692",
+          "intrinsicEnvelopeAreaMm2": 90352.62469200001,
+          "intrinsicEnvelopeMaximumSideGrid": 394922,
+          "intrinsicEnvelopeMaximumSideMm": 394.922,
+          "intrinsicEnvelopeSpanGrid": 623708,
+          "intrinsicEnvelopeSpanMm": 623.7080000000001,
+          "occupiedHullDoubledAreaGrid2": "153772408940",
+          "requestedLongAxisUsedSpanGrid": 228786,
+          "requestedLongAxisUsedSpanMm": 228.786,
+          "requestedShortAxisShortfallGrid": 1605078,
+          "requestedShortAxisShortfallMm": 1605.078,
+          "rotationDeg": 0,
+          "sharedBoundaryLengthMm": 481.16799999999995,
+          "totalStructuralContacts": 0,
+          "usedHeightMm": 228.786,
+          "usedWidthMm": 394.922
+        },
+        "q90": {
+          "canonicalGeometryHash": "066cfeb3c532991f57c393a0bb7d9f9ac5238251c3708aafe9068205a457411e",
+          "cavityCount": 0,
+          "cohesionDeficit": 1.5,
+          "cohesionDeficitDenominator": "2",
+          "cohesionDeficitNumerator": "3",
+          "cohesionPasses": false,
+          "comparisonTuple": [
+            0,
+            1771.214,
+            394.922,
+            0,
+            0.10896357947112485,
+            1,
+            1.5,
+            90352.62469200001,
+            394.922,
+            623.7080000000001,
+            0,
+            0,
+            -5.4499911861065735,
+            -481.16799999999995,
+            "066cfeb3c532991f57c393a0bb7d9f9ac5238251c3708aafe9068205a457411e"
+          ],
+          "contactUnits": 5.4499911861065735,
+          "dominantStructuralContacts": 0,
+          "exactLegal": true,
+          "hullGapDoubledAreaGrid2": "16755592102",
+          "hullGapRatio": 0.10896357947112485,
+          "intrinsicEnvelopeAreaGrid2": "90352624692",
+          "intrinsicEnvelopeAreaMm2": 90352.62469200001,
+          "intrinsicEnvelopeMaximumSideGrid": 394922,
+          "intrinsicEnvelopeMaximumSideMm": 394.922,
+          "intrinsicEnvelopeSpanGrid": 623708,
+          "intrinsicEnvelopeSpanMm": 623.7080000000001,
+          "occupiedHullDoubledAreaGrid2": "153772408940",
+          "requestedLongAxisUsedSpanGrid": 394922,
+          "requestedLongAxisUsedSpanMm": 394.922,
+          "requestedShortAxisShortfallGrid": 1771214,
+          "requestedShortAxisShortfallMm": 1771.214,
+          "rotationDeg": 90,
+          "sharedBoundaryLengthMm": 481.16799999999995,
+          "totalStructuralContacts": 0,
+          "usedHeightMm": 394.922,
+          "usedWidthMm": 228.786
+        },
+        "role": "periodic-P2",
+        "selected": {
+          "canonicalGeometryHash": "066cfeb3c532991f57c393a0bb7d9f9ac5238251c3708aafe9068205a457411e",
+          "cavityCount": 0,
+          "cohesionDeficit": 1.5,
+          "cohesionDeficitDenominator": "2",
+          "cohesionDeficitNumerator": "3",
+          "cohesionPasses": false,
+          "comparisonTuple": [
+            0,
+            1605.078,
+            228.786,
+            0,
+            0.10896357947112485,
+            1,
+            1.5,
+            90352.62469200001,
+            394.922,
+            623.7080000000001,
+            0,
+            0,
+            -5.4499911861065735,
+            -481.16799999999995,
+            "066cfeb3c532991f57c393a0bb7d9f9ac5238251c3708aafe9068205a457411e"
+          ],
+          "contactUnits": 5.4499911861065735,
+          "dominantStructuralContacts": 0,
+          "exactLegal": true,
+          "hullGapDoubledAreaGrid2": "16755592102",
+          "hullGapRatio": 0.10896357947112485,
+          "intrinsicEnvelopeAreaGrid2": "90352624692",
+          "intrinsicEnvelopeAreaMm2": 90352.62469200001,
+          "intrinsicEnvelopeMaximumSideGrid": 394922,
+          "intrinsicEnvelopeMaximumSideMm": 394.922,
+          "intrinsicEnvelopeSpanGrid": 623708,
+          "intrinsicEnvelopeSpanMm": 623.7080000000001,
+          "occupiedHullDoubledAreaGrid2": "153772408940",
+          "requestedLongAxisUsedSpanGrid": 228786,
+          "requestedLongAxisUsedSpanMm": 228.786,
+          "requestedShortAxisShortfallGrid": 1605078,
+          "requestedShortAxisShortfallMm": 1605.078,
+          "rotationDeg": 0,
+          "sharedBoundaryLengthMm": 481.16799999999995,
+          "totalStructuralContacts": 0,
+          "usedHeightMm": 228.786,
+          "usedWidthMm": 394.922
+        },
+        "selectedRotationDeg": 0,
+        "sourceId": "raw-witness:P2:x:87609/1,0/1;0/1,76262/1:[\"0,0;44486,76261;87609,0\",\"0,152524;44486,228785;87609,152524\",\"0,76262;44486,152523;87609,76262\",\"132095,152523;175218,76262;87609,76262\",\"132095,152524;175218,76262;219704,152524\",\"132095,152524;44486,152524;87609,76262\",\"132095,228785;175218,152524;87609,152524\",\"132095,228786;175218,152524;219704,228786\",\"132095,228786;44486,228786;87609,152524\",\"132095,76261;175218,0;87609,0\",\"132095,76262;175218,0;219704,76262\",\"132095,76262;44486,76262;87609,0\",\"175218,152524;219704,228785;262827,152524\",\"175218,76262;219704,152523;262827,76262\",\"219704,152524;262827,76262;307313,152524\",\"219704,228786;262827,152524;307313,228786\",\"262827,152524;307313,228785;350436,152524\",\"262827,76262;307313,152523;350436,76262\",\"307313,152524;350436,76262;394922,152524\",\"307313,228786;350436,152524;394922,228786\"]"
+      },
+      {
+        "archiveIndex": 5,
+        "canonicalGeometryHash": "1170d5406aa5e3f464e479b81865389411bba086eb6ecf37bd1047171ac31e4c",
+        "cavityHullGuardEligible": false,
+        "geometricParetoEligible": false,
+        "q0": {
+          "canonicalGeometryHash": "1170d5406aa5e3f464e479b81865389411bba086eb6ecf37bd1047171ac31e4c",
+          "cavityCount": 0,
+          "cohesionDeficit": 2.375,
+          "cohesionDeficitDenominator": "8",
+          "cohesionDeficitNumerator": "19",
+          "cohesionPasses": false,
+          "comparisonTuple": [
+            0,
+            1560.592,
+            305.046,
+            0,
+            0.5007766797765806,
+            1,
+            2.375,
+            134039.652768,
+            439.408,
+            744.454,
+            -5,
+            -5,
+            -4.946116639367935,
+            -436.68199999999996,
+            "1170d5406aa5e3f464e479b81865389411bba086eb6ecf37bd1047171ac31e4c"
+          ],
+          "contactUnits": 4.946116639367935,
+          "dominantStructuralContacts": 5,
+          "exactLegal": true,
+          "hullGapDoubledAreaGrid2": "134039652768",
+          "hullGapRatio": 0.5007766797765806,
+          "intrinsicEnvelopeAreaGrid2": "134039652768",
+          "intrinsicEnvelopeAreaMm2": 134039.652768,
+          "intrinsicEnvelopeMaximumSideGrid": 439408,
+          "intrinsicEnvelopeMaximumSideMm": 439.408,
+          "intrinsicEnvelopeSpanGrid": 744454,
+          "intrinsicEnvelopeSpanMm": 744.454,
+          "occupiedHullDoubledAreaGrid2": "267663527838",
+          "requestedLongAxisUsedSpanGrid": 305046,
+          "requestedLongAxisUsedSpanMm": 305.046,
+          "requestedShortAxisShortfallGrid": 1560592,
+          "requestedShortAxisShortfallMm": 1560.592,
+          "rotationDeg": 0,
+          "sharedBoundaryLengthMm": 436.68199999999996,
+          "totalStructuralContacts": 5,
+          "usedHeightMm": 305.046,
+          "usedWidthMm": 439.408
+        },
+        "q90": {
+          "canonicalGeometryHash": "1170d5406aa5e3f464e479b81865389411bba086eb6ecf37bd1047171ac31e4c",
+          "cavityCount": 0,
+          "cohesionDeficit": 2.375,
+          "cohesionDeficitDenominator": "8",
+          "cohesionDeficitNumerator": "19",
+          "cohesionPasses": false,
+          "comparisonTuple": [
+            0,
+            1694.954,
+            439.408,
+            0,
+            0.5007766797765806,
+            1,
+            2.375,
+            134039.652768,
+            439.408,
+            744.454,
+            -5,
+            -5,
+            -4.946116639367935,
+            -436.68199999999996,
+            "1170d5406aa5e3f464e479b81865389411bba086eb6ecf37bd1047171ac31e4c"
+          ],
+          "contactUnits": 4.946116639367935,
+          "dominantStructuralContacts": 5,
+          "exactLegal": true,
+          "hullGapDoubledAreaGrid2": "134039652768",
+          "hullGapRatio": 0.5007766797765806,
+          "intrinsicEnvelopeAreaGrid2": "134039652768",
+          "intrinsicEnvelopeAreaMm2": 134039.652768,
+          "intrinsicEnvelopeMaximumSideGrid": 439408,
+          "intrinsicEnvelopeMaximumSideMm": 439.408,
+          "intrinsicEnvelopeSpanGrid": 744454,
+          "intrinsicEnvelopeSpanMm": 744.454,
+          "occupiedHullDoubledAreaGrid2": "267663527838",
+          "requestedLongAxisUsedSpanGrid": 439408,
+          "requestedLongAxisUsedSpanMm": 439.408,
+          "requestedShortAxisShortfallGrid": 1694954,
+          "requestedShortAxisShortfallMm": 1694.954,
+          "rotationDeg": 90,
+          "sharedBoundaryLengthMm": 436.68199999999996,
+          "totalStructuralContacts": 5,
+          "usedHeightMm": 439.408,
+          "usedWidthMm": 305.046
+        },
+        "role": "periodic-P2",
+        "selected": {
+          "canonicalGeometryHash": "1170d5406aa5e3f464e479b81865389411bba086eb6ecf37bd1047171ac31e4c",
+          "cavityCount": 0,
+          "cohesionDeficit": 2.375,
+          "cohesionDeficitDenominator": "8",
+          "cohesionDeficitNumerator": "19",
+          "cohesionPasses": false,
+          "comparisonTuple": [
+            0,
+            1560.592,
+            305.046,
+            0,
+            0.5007766797765806,
+            1,
+            2.375,
+            134039.652768,
+            439.408,
+            744.454,
+            -5,
+            -5,
+            -4.946116639367935,
+            -436.68199999999996,
+            "1170d5406aa5e3f464e479b81865389411bba086eb6ecf37bd1047171ac31e4c"
+          ],
+          "contactUnits": 4.946116639367935,
+          "dominantStructuralContacts": 5,
+          "exactLegal": true,
+          "hullGapDoubledAreaGrid2": "134039652768",
+          "hullGapRatio": 0.5007766797765806,
+          "intrinsicEnvelopeAreaGrid2": "134039652768",
+          "intrinsicEnvelopeAreaMm2": 134039.652768,
+          "intrinsicEnvelopeMaximumSideGrid": 439408,
+          "intrinsicEnvelopeMaximumSideMm": 439.408,
+          "intrinsicEnvelopeSpanGrid": 744454,
+          "intrinsicEnvelopeSpanMm": 744.454,
+          "occupiedHullDoubledAreaGrid2": "267663527838",
+          "requestedLongAxisUsedSpanGrid": 305046,
+          "requestedLongAxisUsedSpanMm": 305.046,
+          "requestedShortAxisShortfallGrid": 1560592,
+          "requestedShortAxisShortfallMm": 1560.592,
+          "rotationDeg": 0,
+          "sharedBoundaryLengthMm": 436.68199999999996,
+          "totalStructuralContacts": 5,
+          "usedHeightMm": 305.046,
+          "usedWidthMm": 439.408
+        },
+        "selectedRotationDeg": 0,
+        "sourceId": "raw-witness:P2:x:87609/1,0/1;0/1,152523/1:[\"0,0;44486,76261;87609,0\",\"0,152523;44486,228784;87609,152523\",\"132095,228784;175218,152523;87609,152523\",\"132095,228784;176581,305046;88972,305046\",\"132095,76261;175218,0;87609,0\",\"132095,76261;176581,152523;88972,152523\",\"1363,152523;44486,76261;88972,152523\",\"1363,305046;44486,228784;88972,305046\",\"175218,0;219704,76261;262827,0\",\"175218,152523;219704,228784;262827,152523\",\"176581,152523;219704,76261;264190,152523\",\"176581,305046;219704,228784;264190,305046\",\"262827,0;307313,76261;350436,0\",\"262827,152523;307313,228784;350436,152523\",\"264190,152523;307313,76261;351799,152523\",\"264190,305046;307313,228784;351799,305046\",\"350436,0;394922,76261;438045,0\",\"350436,152523;394922,228784;438045,152523\",\"351799,152523;394922,76261;439408,152523\",\"351799,305046;394922,228784;439408,305046\"]"
+      },
+      {
+        "archiveIndex": 6,
+        "canonicalGeometryHash": "6760002589323060d144b06a82264e1cca79370be8d3d4d2fc2ea4a920832ca7",
+        "cavityHullGuardEligible": false,
+        "geometricParetoEligible": false,
+        "q0": {
+          "canonicalGeometryHash": "6760002589323060d144b06a82264e1cca79370be8d3d4d2fc2ea4a920832ca7",
+          "cavityCount": 0,
+          "cohesionDeficit": 1.804680033563974,
+          "cohesionDeficitDenominator": "141043589448",
+          "cohesionDeficitNumerator": "254538549739",
+          "cohesionPasses": false,
+          "comparisonTuple": [
+            0,
+            1515.437,
+            228.199,
+            0,
+            0.2894520050345961,
+            1,
+            1.804680033563974,
+            110576.792037,
+            484.563,
+            712.762,
+            -10,
+            -10,
+            -9.923092606016672,
+            -876.0900000000001,
+            "6760002589323060d144b06a82264e1cca79370be8d3d4d2fc2ea4a920832ca7"
+          ],
+          "contactUnits": 9.923092606016672,
+          "dominantStructuralContacts": 10,
+          "exactLegal": true,
+          "hullGapDoubledAreaGrid2": "54433799684",
+          "hullGapRatio": 0.2894520050345961,
+          "intrinsicEnvelopeAreaGrid2": "110576792037",
+          "intrinsicEnvelopeAreaMm2": 110576.792037,
+          "intrinsicEnvelopeMaximumSideGrid": 484563,
+          "intrinsicEnvelopeMaximumSideMm": 484.563,
+          "intrinsicEnvelopeSpanGrid": 712762,
+          "intrinsicEnvelopeSpanMm": 712.762,
+          "occupiedHullDoubledAreaGrid2": "188058119264",
+          "requestedLongAxisUsedSpanGrid": 228199,
+          "requestedLongAxisUsedSpanMm": 228.199,
+          "requestedShortAxisShortfallGrid": 1515437,
+          "requestedShortAxisShortfallMm": 1515.437,
+          "rotationDeg": 0,
+          "sharedBoundaryLengthMm": 876.0900000000001,
+          "totalStructuralContacts": 10,
+          "usedHeightMm": 228.199,
+          "usedWidthMm": 484.563
+        },
+        "q90": {
+          "canonicalGeometryHash": "6760002589323060d144b06a82264e1cca79370be8d3d4d2fc2ea4a920832ca7",
+          "cavityCount": 0,
+          "cohesionDeficit": 1.804680033563974,
+          "cohesionDeficitDenominator": "141043589448",
+          "cohesionDeficitNumerator": "254538549739",
+          "cohesionPasses": false,
+          "comparisonTuple": [
+            0,
+            1771.801,
+            484.563,
+            0,
+            0.2894520050345961,
+            1,
+            1.804680033563974,
+            110576.792037,
+            484.563,
+            712.762,
+            -10,
+            -10,
+            -9.923092606016672,
+            -876.0900000000001,
+            "6760002589323060d144b06a82264e1cca79370be8d3d4d2fc2ea4a920832ca7"
+          ],
+          "contactUnits": 9.923092606016672,
+          "dominantStructuralContacts": 10,
+          "exactLegal": true,
+          "hullGapDoubledAreaGrid2": "54433799684",
+          "hullGapRatio": 0.2894520050345961,
+          "intrinsicEnvelopeAreaGrid2": "110576792037",
+          "intrinsicEnvelopeAreaMm2": 110576.792037,
+          "intrinsicEnvelopeMaximumSideGrid": 484563,
+          "intrinsicEnvelopeMaximumSideMm": 484.563,
+          "intrinsicEnvelopeSpanGrid": 712762,
+          "intrinsicEnvelopeSpanMm": 712.762,
+          "occupiedHullDoubledAreaGrid2": "188058119264",
+          "requestedLongAxisUsedSpanGrid": 484563,
+          "requestedLongAxisUsedSpanMm": 484.563,
+          "requestedShortAxisShortfallGrid": 1771801,
+          "requestedShortAxisShortfallMm": 1771.801,
+          "rotationDeg": 90,
+          "sharedBoundaryLengthMm": 876.0900000000001,
+          "totalStructuralContacts": 10,
+          "usedHeightMm": 484.563,
+          "usedWidthMm": 228.199
+        },
+        "role": "periodic-P2",
+        "selected": {
+          "canonicalGeometryHash": "6760002589323060d144b06a82264e1cca79370be8d3d4d2fc2ea4a920832ca7",
+          "cavityCount": 0,
+          "cohesionDeficit": 1.804680033563974,
+          "cohesionDeficitDenominator": "141043589448",
+          "cohesionDeficitNumerator": "254538549739",
+          "cohesionPasses": false,
+          "comparisonTuple": [
+            0,
+            1515.437,
+            228.199,
+            0,
+            0.2894520050345961,
+            1,
+            1.804680033563974,
+            110576.792037,
+            484.563,
+            712.762,
+            -10,
+            -10,
+            -9.923092606016672,
+            -876.0900000000001,
+            "6760002589323060d144b06a82264e1cca79370be8d3d4d2fc2ea4a920832ca7"
+          ],
+          "contactUnits": 9.923092606016672,
+          "dominantStructuralContacts": 10,
+          "exactLegal": true,
+          "hullGapDoubledAreaGrid2": "54433799684",
+          "hullGapRatio": 0.2894520050345961,
+          "intrinsicEnvelopeAreaGrid2": "110576792037",
+          "intrinsicEnvelopeAreaMm2": 110576.792037,
+          "intrinsicEnvelopeMaximumSideGrid": 484563,
+          "intrinsicEnvelopeMaximumSideMm": 484.563,
+          "intrinsicEnvelopeSpanGrid": 712762,
+          "intrinsicEnvelopeSpanMm": 712.762,
+          "occupiedHullDoubledAreaGrid2": "188058119264",
+          "requestedLongAxisUsedSpanGrid": 228199,
+          "requestedLongAxisUsedSpanMm": 228.199,
+          "requestedShortAxisShortfallGrid": 1515437,
+          "requestedShortAxisShortfallMm": 1515.437,
+          "rotationDeg": 0,
+          "sharedBoundaryLengthMm": 876.0900000000001,
+          "totalStructuralContacts": 10,
+          "usedHeightMm": 228.199,
+          "usedWidthMm": 484.563
+        },
+        "selectedRotationDeg": 0,
+        "sourceId": "raw-witness:P2:x:88288/1,0/1;43123/1,76262/1:[\"0,174534;76262,131411;76262,219020\",\"0,262822;76262,219699;76262,307308\",\"0,351110;76262,307987;76262,395596\",\"0,439398;76262,396275;76262,483884\",\"0,86246;76262,130732;76262,43123\",\"151937,175555;76262,131411;76262,219699\",\"151937,263843;76262,219699;76262,307987\",\"151937,352131;76262,307987;76262,396275\",\"151937,440419;76262,396275;76262,484563\",\"151937,87267;76262,131411;76262,43123\",\"152524,0;152524,87609;76262,43123\",\"152524,0;152524,88288;228199,44144\",\"152524,175897;152524,88288;76262,131411\",\"152524,176576;152524,264185;76262,219699\",\"152524,176576;152524,264864;228199,220720\",\"152524,176576;152524,88288;228199,132432\",\"152524,264864;152524,352473;76262,307987\",\"152524,264864;152524,353152;228199,309008\",\"152524,353152;152524,440761;76262,396275\",\"152524,353152;152524,441440;228199,397296\"]"
+      },
+      {
+        "archiveIndex": 7,
+        "canonicalGeometryHash": "5ad9f7aef0f612bdd9874fe9345208c8b86c445395bfa1ead742fa686acb00ae",
+        "cavityHullGuardEligible": false,
+        "geometricParetoEligible": false,
+        "q0": {
+          "canonicalGeometryHash": "5ad9f7aef0f612bdd9874fe9345208c8b86c445395bfa1ead742fa686acb00ae",
+          "cavityCount": 0,
+          "cohesionDeficit": 2.875,
+          "cohesionDeficitDenominator": "8",
+          "cohesionDeficitNumerator": "23",
+          "cohesionPasses": false,
+          "comparisonTuple": [
+            0,
+            1386.737,
+            305.044,
+            0,
+            0.5454545454545454,
+            1,
+            2.875,
+            187072.198572,
+            613.263,
+            918.307,
+            -8,
+            -8,
+            -7.938487643793615,
+            -700.8720000000001,
+            "5ad9f7aef0f612bdd9874fe9345208c8b86c445395bfa1ead742fa686acb00ae"
+          ],
+          "contactUnits": 7.938487643793615,
+          "dominantStructuralContacts": 8,
+          "exactLegal": true,
+          "hullGapDoubledAreaGrid2": "160347598776",
+          "hullGapRatio": 0.5454545454545454,
+          "intrinsicEnvelopeAreaGrid2": "187072198572",
+          "intrinsicEnvelopeAreaMm2": 187072.198572,
+          "intrinsicEnvelopeMaximumSideGrid": 613263,
+          "intrinsicEnvelopeMaximumSideMm": 613.263,
+          "intrinsicEnvelopeSpanGrid": 918307,
+          "intrinsicEnvelopeSpanMm": 918.307,
+          "occupiedHullDoubledAreaGrid2": "293970597756",
+          "requestedLongAxisUsedSpanGrid": 305044,
+          "requestedLongAxisUsedSpanMm": 305.044,
+          "requestedShortAxisShortfallGrid": 1386737,
+          "requestedShortAxisShortfallMm": 1386.737,
+          "rotationDeg": 0,
+          "sharedBoundaryLengthMm": 700.8720000000001,
+          "totalStructuralContacts": 8,
+          "usedHeightMm": 305.044,
+          "usedWidthMm": 613.263
+        },
+        "q90": {
+          "canonicalGeometryHash": "5ad9f7aef0f612bdd9874fe9345208c8b86c445395bfa1ead742fa686acb00ae",
+          "cavityCount": 0,
+          "cohesionDeficit": 2.875,
+          "cohesionDeficitDenominator": "8",
+          "cohesionDeficitNumerator": "23",
+          "cohesionPasses": false,
+          "comparisonTuple": [
+            0,
+            1694.9560000000001,
+            613.263,
+            0,
+            0.5454545454545454,
+            1,
+            2.875,
+            187072.198572,
+            613.263,
+            918.307,
+            -8,
+            -8,
+            -7.938487643793615,
+            -700.8720000000001,
+            "5ad9f7aef0f612bdd9874fe9345208c8b86c445395bfa1ead742fa686acb00ae"
+          ],
+          "contactUnits": 7.938487643793615,
+          "dominantStructuralContacts": 8,
+          "exactLegal": true,
+          "hullGapDoubledAreaGrid2": "160347598776",
+          "hullGapRatio": 0.5454545454545454,
+          "intrinsicEnvelopeAreaGrid2": "187072198572",
+          "intrinsicEnvelopeAreaMm2": 187072.198572,
+          "intrinsicEnvelopeMaximumSideGrid": 613263,
+          "intrinsicEnvelopeMaximumSideMm": 613.263,
+          "intrinsicEnvelopeSpanGrid": 918307,
+          "intrinsicEnvelopeSpanMm": 918.307,
+          "occupiedHullDoubledAreaGrid2": "293970597756",
+          "requestedLongAxisUsedSpanGrid": 613263,
+          "requestedLongAxisUsedSpanMm": 613.263,
+          "requestedShortAxisShortfallGrid": 1694956,
+          "requestedShortAxisShortfallMm": 1694.9560000000001,
+          "rotationDeg": 90,
+          "sharedBoundaryLengthMm": 700.8720000000001,
+          "totalStructuralContacts": 8,
+          "usedHeightMm": 613.263,
+          "usedWidthMm": 305.044
+        },
+        "role": "periodic-P2",
+        "selected": {
+          "canonicalGeometryHash": "5ad9f7aef0f612bdd9874fe9345208c8b86c445395bfa1ead742fa686acb00ae",
+          "cavityCount": 0,
+          "cohesionDeficit": 2.875,
+          "cohesionDeficitDenominator": "8",
+          "cohesionDeficitNumerator": "23",
+          "cohesionPasses": false,
+          "comparisonTuple": [
+            0,
+            1386.737,
+            305.044,
+            0,
+            0.5454545454545454,
+            1,
+            2.875,
+            187072.198572,
+            613.263,
+            918.307,
+            -8,
+            -8,
+            -7.938487643793615,
+            -700.8720000000001,
+            "5ad9f7aef0f612bdd9874fe9345208c8b86c445395bfa1ead742fa686acb00ae"
+          ],
+          "contactUnits": 7.938487643793615,
+          "dominantStructuralContacts": 8,
+          "exactLegal": true,
+          "hullGapDoubledAreaGrid2": "160347598776",
+          "hullGapRatio": 0.5454545454545454,
+          "intrinsicEnvelopeAreaGrid2": "187072198572",
+          "intrinsicEnvelopeAreaMm2": 187072.198572,
+          "intrinsicEnvelopeMaximumSideGrid": 613263,
+          "intrinsicEnvelopeMaximumSideMm": 613.263,
+          "intrinsicEnvelopeSpanGrid": 918307,
+          "intrinsicEnvelopeSpanMm": 918.307,
+          "occupiedHullDoubledAreaGrid2": "293970597756",
+          "requestedLongAxisUsedSpanGrid": 305044,
+          "requestedLongAxisUsedSpanMm": 305.044,
+          "requestedShortAxisShortfallGrid": 1386737,
+          "requestedShortAxisShortfallMm": 1386.737,
+          "rotationDeg": 0,
+          "sharedBoundaryLengthMm": 700.8720000000001,
+          "totalStructuralContacts": 8,
+          "usedHeightMm": 305.044,
+          "usedWidthMm": 613.263
+        },
+        "selectedRotationDeg": 0,
+        "sourceId": "[\"triangle-20\",\"0,75675;44144,0;88288,75675\"]:P2:P2:0,130732;76261,175218;76261,87609|152522,43123;76261,0;76261,87609:0,-87609;152522,-87609:1"
+      },
+      {
+        "archiveIndex": 8,
+        "canonicalGeometryHash": "fb228b713eb6e02dbe9f93802d256472261358a20c26fe748f633012637df5b7",
+        "cavityHullGuardEligible": false,
+        "geometricParetoEligible": false,
+        "q0": {
+          "canonicalGeometryHash": "fb228b713eb6e02dbe9f93802d256472261358a20c26fe748f633012637df5b7",
+          "cavityCount": 0,
+          "cohesionDeficit": 1.875,
+          "cohesionDeficitDenominator": "8",
+          "cohesionDeficitNumerator": "15",
+          "cohesionPasses": false,
+          "comparisonTuple": [
+            0,
+            486.5,
+            88.288,
+            0,
+            0.5,
+            1,
+            1.875,
+            133623.888,
+            1513.5,
+            1601.788,
+            -9,
+            -9,
+            -9,
+            -794.592,
+            "fb228b713eb6e02dbe9f93802d256472261358a20c26fe748f633012637df5b7"
+          ],
+          "contactUnits": 9,
+          "dominantStructuralContacts": 9,
+          "exactLegal": true,
+          "hullGapDoubledAreaGrid2": "133623888000",
+          "hullGapRatio": 0.5,
+          "intrinsicEnvelopeAreaGrid2": "133623888000",
+          "intrinsicEnvelopeAreaMm2": 133623.888,
+          "intrinsicEnvelopeMaximumSideGrid": 1513500,
+          "intrinsicEnvelopeMaximumSideMm": 1513.5,
+          "intrinsicEnvelopeSpanGrid": 1601788,
+          "intrinsicEnvelopeSpanMm": 1601.788,
+          "occupiedHullDoubledAreaGrid2": "267247776000",
+          "requestedLongAxisUsedSpanGrid": 88288,
+          "requestedLongAxisUsedSpanMm": 88.288,
+          "requestedShortAxisShortfallGrid": 486500,
+          "requestedShortAxisShortfallMm": 486.5,
+          "rotationDeg": 0,
+          "sharedBoundaryLengthMm": 794.592,
+          "totalStructuralContacts": 9,
+          "usedHeightMm": 88.288,
+          "usedWidthMm": 1513.5
+        },
+        "q90": {
+          "canonicalGeometryHash": "fb228b713eb6e02dbe9f93802d256472261358a20c26fe748f633012637df5b7",
+          "cavityCount": 0,
+          "cohesionDeficit": 1.875,
+          "cohesionDeficitDenominator": "8",
+          "cohesionDeficitNumerator": "15",
+          "cohesionPasses": false,
+          "comparisonTuple": [
+            0,
+            1911.712,
+            1513.5,
+            0,
+            0.5,
+            1,
+            1.875,
+            133623.888,
+            1513.5,
+            1601.788,
+            -9,
+            -9,
+            -9,
+            -794.592,
+            "fb228b713eb6e02dbe9f93802d256472261358a20c26fe748f633012637df5b7"
+          ],
+          "contactUnits": 9,
+          "dominantStructuralContacts": 9,
+          "exactLegal": true,
+          "hullGapDoubledAreaGrid2": "133623888000",
+          "hullGapRatio": 0.5,
+          "intrinsicEnvelopeAreaGrid2": "133623888000",
+          "intrinsicEnvelopeAreaMm2": 133623.888,
+          "intrinsicEnvelopeMaximumSideGrid": 1513500,
+          "intrinsicEnvelopeMaximumSideMm": 1513.5,
+          "intrinsicEnvelopeSpanGrid": 1601788,
+          "intrinsicEnvelopeSpanMm": 1601.788,
+          "occupiedHullDoubledAreaGrid2": "267247776000",
+          "requestedLongAxisUsedSpanGrid": 1513500,
+          "requestedLongAxisUsedSpanMm": 1513.5,
+          "requestedShortAxisShortfallGrid": 1911712,
+          "requestedShortAxisShortfallMm": 1911.712,
+          "rotationDeg": 90,
+          "sharedBoundaryLengthMm": 794.592,
+          "totalStructuralContacts": 9,
+          "usedHeightMm": 1513.5,
+          "usedWidthMm": 88.288
+        },
+        "role": "periodic-P2",
+        "selected": {
+          "canonicalGeometryHash": "fb228b713eb6e02dbe9f93802d256472261358a20c26fe748f633012637df5b7",
+          "cavityCount": 0,
+          "cohesionDeficit": 1.875,
+          "cohesionDeficitDenominator": "8",
+          "cohesionDeficitNumerator": "15",
+          "cohesionPasses": false,
+          "comparisonTuple": [
+            0,
+            486.5,
+            88.288,
+            0,
+            0.5,
+            1,
+            1.875,
+            133623.888,
+            1513.5,
+            1601.788,
+            -9,
+            -9,
+            -9,
+            -794.592,
+            "fb228b713eb6e02dbe9f93802d256472261358a20c26fe748f633012637df5b7"
+          ],
+          "contactUnits": 9,
+          "dominantStructuralContacts": 9,
+          "exactLegal": true,
+          "hullGapDoubledAreaGrid2": "133623888000",
+          "hullGapRatio": 0.5,
+          "intrinsicEnvelopeAreaGrid2": "133623888000",
+          "intrinsicEnvelopeAreaMm2": 133623.888,
+          "intrinsicEnvelopeMaximumSideGrid": 1513500,
+          "intrinsicEnvelopeMaximumSideMm": 1513.5,
+          "intrinsicEnvelopeSpanGrid": 1601788,
+          "intrinsicEnvelopeSpanMm": 1601.788,
+          "occupiedHullDoubledAreaGrid2": "267247776000",
+          "requestedLongAxisUsedSpanGrid": 88288,
+          "requestedLongAxisUsedSpanMm": 88.288,
+          "requestedShortAxisShortfallGrid": 486500,
+          "requestedShortAxisShortfallMm": 486.5,
+          "rotationDeg": 0,
+          "sharedBoundaryLengthMm": 794.592,
+          "totalStructuralContacts": 9,
+          "usedHeightMm": 88.288,
+          "usedWidthMm": 1513.5
+        },
+        "selectedRotationDeg": 0,
+        "sourceId": "[\"triangle-20\",\"0,75675;44144,0;88288,75675\"]:P2:P2:0,0;0,88288;75675,44144|151350,0;151350,88288;75675,44144:-151350,0;0,-88288:0"
+      },
+      {
+        "archiveIndex": 9,
+        "canonicalGeometryHash": "90db122c92c22318cf00dfd4215b9c84118a8e54ce740b67a4b1f96354a6326f",
+        "cavityHullGuardEligible": false,
+        "geometricParetoEligible": false,
+        "q0": {
+          "canonicalGeometryHash": "90db122c92c22318cf00dfd4215b9c84118a8e54ce740b67a4b1f96354a6326f",
+          "cavityCount": 0,
+          "cohesionDeficit": 2.875,
+          "cohesionDeficitDenominator": "8",
+          "cohesionDeficitNumerator": "23",
+          "cohesionPasses": false,
+          "comparisonTuple": [
+            0,
+            1386.737,
+            305.044,
+            0,
+            0.5457757596716234,
+            1,
+            2.875,
+            187072.198572,
+            613.263,
+            918.307,
+            -8,
+            -8,
+            -7.938487643793615,
+            -700.8720000000001,
+            "90db122c92c22318cf00dfd4215b9c84118a8e54ce740b67a4b1f96354a6326f"
+          ],
+          "contactUnits": 7.938487643793615,
+          "dominantStructuralContacts": 8,
+          "exactLegal": true,
+          "hullGapDoubledAreaGrid2": "160555486262",
+          "hullGapRatio": 0.5457757596716234,
+          "intrinsicEnvelopeAreaGrid2": "187072198572",
+          "intrinsicEnvelopeAreaMm2": 187072.198572,
+          "intrinsicEnvelopeMaximumSideGrid": 613263,
+          "intrinsicEnvelopeMaximumSideMm": 613.263,
+          "intrinsicEnvelopeSpanGrid": 918307,
+          "intrinsicEnvelopeSpanMm": 918.307,
+          "occupiedHullDoubledAreaGrid2": "294178485242",
+          "requestedLongAxisUsedSpanGrid": 305044,
+          "requestedLongAxisUsedSpanMm": 305.044,
+          "requestedShortAxisShortfallGrid": 1386737,
+          "requestedShortAxisShortfallMm": 1386.737,
+          "rotationDeg": 0,
+          "sharedBoundaryLengthMm": 700.8720000000001,
+          "totalStructuralContacts": 8,
+          "usedHeightMm": 305.044,
+          "usedWidthMm": 613.263
+        },
+        "q90": {
+          "canonicalGeometryHash": "90db122c92c22318cf00dfd4215b9c84118a8e54ce740b67a4b1f96354a6326f",
+          "cavityCount": 0,
+          "cohesionDeficit": 2.875,
+          "cohesionDeficitDenominator": "8",
+          "cohesionDeficitNumerator": "23",
+          "cohesionPasses": false,
+          "comparisonTuple": [
+            0,
+            1694.9560000000001,
+            613.263,
+            0,
+            0.5457757596716234,
+            1,
+            2.875,
+            187072.198572,
+            613.263,
+            918.307,
+            -8,
+            -8,
+            -7.938487643793615,
+            -700.8720000000001,
+            "90db122c92c22318cf00dfd4215b9c84118a8e54ce740b67a4b1f96354a6326f"
+          ],
+          "contactUnits": 7.938487643793615,
+          "dominantStructuralContacts": 8,
+          "exactLegal": true,
+          "hullGapDoubledAreaGrid2": "160555486262",
+          "hullGapRatio": 0.5457757596716234,
+          "intrinsicEnvelopeAreaGrid2": "187072198572",
+          "intrinsicEnvelopeAreaMm2": 187072.198572,
+          "intrinsicEnvelopeMaximumSideGrid": 613263,
+          "intrinsicEnvelopeMaximumSideMm": 613.263,
+          "intrinsicEnvelopeSpanGrid": 918307,
+          "intrinsicEnvelopeSpanMm": 918.307,
+          "occupiedHullDoubledAreaGrid2": "294178485242",
+          "requestedLongAxisUsedSpanGrid": 613263,
+          "requestedLongAxisUsedSpanMm": 613.263,
+          "requestedShortAxisShortfallGrid": 1694956,
+          "requestedShortAxisShortfallMm": 1694.9560000000001,
+          "rotationDeg": 90,
+          "sharedBoundaryLengthMm": 700.8720000000001,
+          "totalStructuralContacts": 8,
+          "usedHeightMm": 613.263,
+          "usedWidthMm": 305.044
+        },
+        "role": "periodic-P2",
+        "selected": {
+          "canonicalGeometryHash": "90db122c92c22318cf00dfd4215b9c84118a8e54ce740b67a4b1f96354a6326f",
+          "cavityCount": 0,
+          "cohesionDeficit": 2.875,
+          "cohesionDeficitDenominator": "8",
+          "cohesionDeficitNumerator": "23",
+          "cohesionPasses": false,
+          "comparisonTuple": [
+            0,
+            1386.737,
+            305.044,
+            0,
+            0.5457757596716234,
+            1,
+            2.875,
+            187072.198572,
+            613.263,
+            918.307,
+            -8,
+            -8,
+            -7.938487643793615,
+            -700.8720000000001,
+            "90db122c92c22318cf00dfd4215b9c84118a8e54ce740b67a4b1f96354a6326f"
+          ],
+          "contactUnits": 7.938487643793615,
+          "dominantStructuralContacts": 8,
+          "exactLegal": true,
+          "hullGapDoubledAreaGrid2": "160555486262",
+          "hullGapRatio": 0.5457757596716234,
+          "intrinsicEnvelopeAreaGrid2": "187072198572",
+          "intrinsicEnvelopeAreaMm2": 187072.198572,
+          "intrinsicEnvelopeMaximumSideGrid": 613263,
+          "intrinsicEnvelopeMaximumSideMm": 613.263,
+          "intrinsicEnvelopeSpanGrid": 918307,
+          "intrinsicEnvelopeSpanMm": 918.307,
+          "occupiedHullDoubledAreaGrid2": "294178485242",
+          "requestedLongAxisUsedSpanGrid": 305044,
+          "requestedLongAxisUsedSpanMm": 305.044,
+          "requestedShortAxisShortfallGrid": 1386737,
+          "requestedShortAxisShortfallMm": 1386.737,
+          "rotationDeg": 0,
+          "sharedBoundaryLengthMm": 700.8720000000001,
+          "totalStructuralContacts": 8,
+          "usedHeightMm": 305.044,
+          "usedWidthMm": 613.263
+        },
+        "selectedRotationDeg": 0,
+        "sourceId": "[\"triangle-20\",\"0,75675;44144,0;88288,75675\"]:P2:P2:0,130732;76261,175218;76261,87609|152522,43123;76261,0;76261,87609:0,-87609;152522,-87609:0"
+      }
+    ],
+    "evaluatedOrientationCount": 20,
+    "geometricParetoEligibleEndpointCount": 2,
+    "outputInfluence": "none",
+    "placementEvaluations": 0,
+    "productionEnvelopeAreaGrid2": "74428143126",
+    "productionEnvelopeAreaMm2": 74428.143126,
+    "productionMaximumSideGrid": 487983,
+    "productionMaximumSideMm": 487.983,
+    "productionShortAxisSpanGrid": 487983,
+    "productionShortAxisSpanMm": 487.983,
+    "rankedCanonicalGeometryHashes": [
+      "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127",
+      "4b87d6df47fdf2246c6d2d8d9ad6c201d75f33e4f29072be0a64dc5d217e206f"
+    ],
+    "requestedLongAxis": "height",
+    "requestedLongAxisMm": 2700,
+    "requestedSheetHeightMm": 2700,
+    "requestedSheetWidthMm": 2000,
+    "requestedShortAxisMm": 2000,
+    "runtimeBudgetExceeded": false,
+    "runtimeMs": 9.421833,
+    "serializedTraceBytes": 43175,
+    "settledEndpointCount": 10,
+    "status": "observed-no-directional-improvement",
+    "version": "intrinsic-short-side-observer-v6"
+  },
+  "intrinsicShortSidePairFoldTrace": {
+    "admission": {
+      "accepted": true,
+      "allPiecesPlaced": true,
+      "collisionEnvelopeDensity": 0.5,
+      "depthWithinProductionMaximumSide": true,
+      "directionallyEfficient": true,
+      "enclosedCavityCount": 0,
+      "envelopeAreaCostFactor": 1.7953408803144135,
+      "envelopeAreaCostWithinProductionBound": false,
+      "exactLegal": true,
+      "fillRatio": 0.88288,
+      "projectionComponentCount": 1,
+      "projectionCoverageRatio": 1,
+      "shortAxisSpanGainFactor": 3.6184867095779976
+    },
+    "canonicalGeometryHash": "7a79ebd40029094854748d569acb52f95f32a96e71b3b674941ba7f20f9cfe15",
+    "collisionMaterialDoubledAreaGrid2": "133623888000",
+    "constructionKind": "multi-row-shelf",
+    "contactStrip": {
+      "backtrackCount": 0,
+      "candidateEvaluations": 2122,
+      "executionModel": "single-process-sequential",
+      "orderPolicy": "prepared",
+      "peakRssDeltaBytes": 0,
+      "placedCount": 20,
+      "requestedCount": 20,
+      "reusedPrefixPlacements": 0,
+      "runtimeMs": 48.2875,
+      "selectionPolicy": "depth-first",
+      "status": "constructed",
+      "stripLongAxisMm": 2700,
+      "stripShortAxisMm": 2000,
+      "transformEvaluations": 160,
+      "version": "intrinsic-short-side-contact-strip-v3"
+    },
+    "contactStripLanes": [
+      {
+        "backtrackCount": 0,
+        "candidateEvaluations": 2122,
+        "executionModel": "single-process-sequential",
+        "orderPolicy": "prepared",
+        "peakRssDeltaBytes": 0,
+        "placedCount": 20,
+        "requestedCount": 20,
+        "reusedPrefixPlacements": 0,
+        "runtimeMs": 48.2875,
+        "selectionPolicy": "depth-first",
+        "status": "constructed",
+        "stripLongAxisMm": 2700,
+        "stripShortAxisMm": 2000,
+        "transformEvaluations": 160,
+        "version": "intrinsic-short-side-contact-strip-v3"
+      },
+      {
+        "backtrackCount": 0,
+        "candidateEvaluations": 1829,
+        "executionModel": "single-process-sequential",
+        "orderPolicy": "prepared",
+        "peakRssDeltaBytes": 0,
+        "placedCount": 20,
+        "requestedCount": 20,
+        "reusedPrefixPlacements": 0,
+        "runtimeMs": 65.993584,
+        "selectionPolicy": "contact-first",
+        "status": "constructed",
+        "stripLongAxisMm": 2700,
+        "stripShortAxisMm": 2000,
+        "transformEvaluations": 160,
+        "version": "intrinsic-short-side-contact-strip-v3"
+      }
+    ],
+    "contactStripPromotion": {
+      "contactStripAdmitted": true,
+      "contactStripSummary": {
+        "admission": {
+          "accepted": true,
+          "allPiecesPlaced": true,
+          "collisionEnvelopeDensity": 0.9523778703317163,
+          "depthWithinProductionMaximumSide": true,
+          "directionallyEfficient": true,
+          "enclosedCavityCount": 0,
+          "envelopeAreaCostFactor": 0.9425570124225431,
+          "envelopeAreaCostWithinProductionBound": true,
+          "exactLegal": true,
+          "fillRatio": 0.4635135,
+          "projectionComponentCount": 1,
+          "projectionCoverageRatio": 1,
+          "shortAxisSpanGainFactor": 1.8997116702835959
+        },
+        "collisionMaterialDoubledAreaGrid2": "133623888000",
+        "envelopeAreaGrid2": "70152768225",
+        "envelopeAreaMm2": 70152.768225,
+        "interlocking": {
+          "isolatedPieceCount": 2,
+          "largestOccupiedHullGapDoubledAreaGrid2": "151350",
+          "largestOccupiedHullGapRatio": 0.000001132652910974614,
+          "largestPositiveContactComponentSize": 10,
+          "occupiedHullDoubledAreaGrid2": "133624342050",
+          "positiveContactComponentCount": 4,
+          "sharedBoundaryLengthMm": 1401.749614023846
+        },
+        "status": "accepted",
+        "usedLongAxisDepthGrid": 75675,
+        "usedLongAxisDepthMm": 75.675,
+        "usedShortAxisSpanGrid": 927027,
+        "usedShortAxisSpanMm": 927.027
+      },
+      "densityNotRegressed": true,
+      "depthNotRegressed": true,
+      "envelopeAreaNotRegressed": true,
+      "fillNotRegressed": false,
+      "hullGapNotRegressed": true,
+      "incumbentConstructionKind": "multi-row-shelf",
+      "isolatedPiecesNotRegressed": true,
+      "largestContactComponentNotRegressed": true,
+      "positiveContactComponentsNotRegressed": true,
+      "promoted": false,
+      "strictlyImproved": true
+    },
+    "envelopeAreaCostVetoObserved": true,
+    "envelopeAreaCostVetoes": [
+      {
+        "admission": {
+          "accepted": true,
+          "allPiecesPlaced": true,
+          "collisionEnvelopeDensity": 0.5,
+          "depthWithinProductionMaximumSide": true,
+          "directionallyEfficient": true,
+          "enclosedCavityCount": 0,
+          "envelopeAreaCostFactor": 1.7953408803144135,
+          "envelopeAreaCostWithinProductionBound": false,
+          "exactLegal": true,
+          "fillRatio": 0.88288,
+          "projectionComponentCount": 1,
+          "projectionCoverageRatio": 1,
+          "shortAxisSpanGainFactor": 3.6184867095779976
+        },
+        "constructionKind": "multi-row-shelf"
+      }
+    ],
+    "envelopeAreaGrid2": "133623888000",
+    "envelopeAreaMm2": 133623.888,
+    "evaluatedPairCount": 190,
+    "executionModel": "single-process-sequential",
+    "expectedPairCount": 190,
+    "interlocking": {
+      "isolatedPieceCount": 20,
+      "largestOccupiedHullGapDoubledAreaGrid2": "126942693600",
+      "largestOccupiedHullGapRatio": 0.48717948717948717,
+      "largestPositiveContactComponentSize": 1,
+      "occupiedHullDoubledAreaGrid2": "260566581600",
+      "positiveContactComponentCount": 20,
+      "sharedBoundaryLengthMm": 0
+    },
+    "outputInfluence": "selected",
+    "peakRssDeltaBytes": 0,
+    "placedCount": 20,
+    "prescribedRotationDeg": 0,
+    "productionEnvelopeAreaGrid2": "74428143126",
+    "productionEnvelopeAreaMm2": 74428.143126,
+    "productionMaximumSideGrid": 487983,
+    "productionMaximumSideMm": 487.983,
+    "productionShortAxisSpanGrid": 487983,
+    "productionShortAxisSpanMm": 487.983,
+    "requestedLongAxisMm": 2700,
+    "requestedShortAxisMm": 2000,
+    "rowCount": 1,
+    "runtimeMs": 118.71625,
+    "serializedTraceBytes": 4876,
+    "status": "accepted",
+    "transformEvaluations": 160,
+    "usedLongAxisDepthGrid": 75675,
+    "usedLongAxisDepthMm": 75.675,
+    "usedShortAxisSpanGrid": 1765760,
+    "usedShortAxisSpanMm": 1765.76,
+    "version": "intrinsic-short-side-terminal-observer-v6"
+  }
+}

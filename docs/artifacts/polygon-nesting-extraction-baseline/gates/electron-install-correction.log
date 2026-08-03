@@ -1,0 +1,23 @@
+Evidence type: confirmed environment correction performed by main session
+Recorded timestamp: 2026-08-03T18:39:25Z
+Working directory: /Users/andreasimonecosta/Documents/Work/min-plane-dfx/.claude/worktrees/polygon-nesting-extraction
+
+Root cause: Electron 33.4.11 uses extract-zip 2.0.1, whose yauzl/fd-slicer extraction path stops partially on Node 24.16.0 and later. The failed install used Node v24.16.0 and left a 256 KiB partial dist with no path.txt or dist/version.
+Accepted CI runtime: Node 24.11.1
+Correction command: /nix/store/h57ln4r40qr349z1r8ri90n9i9xid3r5-nodejs-24.11.1/bin/node node_modules/electron/install.js
+Correction status: passed in main session
+Attempt: 2 for required gate electron-install
+
+===== capture limitations =====
+The correction command's start timestamp, end timestamp, duration, and raw numeric exit code were not captured by the main session. The recorded timestamp above is the evidence-record timestamp and must not be represented as a command start or end time. Passed status is preserved from the main-session record; no unavailable timing precision or raw exit code is fabricated.
+
+===== independently observed corrected state =====
+path.txt: present
+path.txt value: Electron.app/Contents/MacOS/Electron
+dist/version: 33.4.11
+dist file count: 96
+dist KiB: 247836	node_modules/electron/dist
+Node 24.11.1: v24.11.1
+Current shell Node: v24.16.0
+
+Verification: the exact Electron-as-Node API 3 gate passed in electron-api3-load-rerun.log.

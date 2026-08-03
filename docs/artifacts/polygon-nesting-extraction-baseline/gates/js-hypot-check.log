@@ -1,0 +1,23 @@
+Command: pnpm exec tsx --tsconfig tsconfig.node.json scripts/rust-parity/dump-js-hypot.ts --check
+Working directory: /Users/andreasimonecosta/Documents/Work/min-plane-dfx/.claude/worktrees/polygon-nesting-extraction
+Start timestamp: 2026-08-03T18:40:45Z
+Status: running
+
+===== stdout and stderr =====
+/Users/andreasimonecosta/Documents/Work/min-plane-dfx/.claude/worktrees/polygon-nesting-extraction/scripts/rust-parity/dump-js-hypot.ts:25
+  throw new Error(
+        ^
+
+Error: dump-js-hypot.ts requires Node v24.11.1; current runtime is v24.16.0. Activate the repository .node-version before writing or checking the oracle corpus.
+    at <anonymous> (/Users/andreasimonecosta/Documents/Work/min-plane-dfx/.claude/worktrees/polygon-nesting-extraction/scripts/rust-parity/dump-js-hypot.ts:25:9)
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+    at async node:internal/modules/esm/loader:633:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v24.16.0
+
+===== gate metadata =====
+End timestamp: 2026-08-03T18:40:46Z
+Duration milliseconds: 899
+Exit code: 1
+Status: failed

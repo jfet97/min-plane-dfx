@@ -1,0 +1,16 @@
+Command: node crates/irregular-nesting-native/scripts/worker-terminal-lifecycle-probe.mjs cleanup-proof
+Working directory: /Users/andreasimonecosta/Documents/Work/min-plane-dfx/.claude/worktrees/polygon-nesting-extraction
+Start timestamp: 2026-08-03T18:39:53Z
+Status: running
+
+===== stdout and stderr =====
+(node:32507) Warning: File descriptor 13 closed but not opened in unmanaged mode
+(Use `node --trace-warnings ...` to show where the warning was created)
+cleanup-proof-process-lifecycle=1/1
+cleanup-proof-ok
+
+===== gate metadata =====
+End timestamp: 2026-08-03T18:39:53Z
+Duration milliseconds: 63
+Exit code: 0
+Status: passed

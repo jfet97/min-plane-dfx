@@ -1,0 +1,3188 @@
+{
+  "version": 1,
+  "jobId": "run-differential-shapes-17-600x400",
+  "sheet": {
+    "width": 600,
+    "height": 400,
+    "label": "600x400"
+  },
+  "padding": 10,
+  "pieces": [
+    {
+      "id": "shapes-17-1",
+      "sourcePieceId": "shapes-17-1",
+      "interchangeabilityKey": "shapes-17",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 100
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 110,
+        "longestEdge": 110,
+        "area": 12100,
+        "imbalance": 0
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "shapes-17-2",
+      "sourcePieceId": "shapes-17-2",
+      "interchangeabilityKey": "shapes-17",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 100
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 110,
+        "longestEdge": 110,
+        "area": 12100,
+        "imbalance": 0
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "shapes-17-3",
+      "sourcePieceId": "shapes-17-3",
+      "interchangeabilityKey": "shapes-17",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 100
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 110,
+        "longestEdge": 110,
+        "area": 12100,
+        "imbalance": 0
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "shapes-17-4",
+      "sourcePieceId": "shapes-17-4",
+      "interchangeabilityKey": "shapes-17",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 50
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 60,
+        "longestEdge": 110,
+        "area": 6600,
+        "imbalance": 50
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "shapes-17-5",
+      "sourcePieceId": "shapes-17-5",
+      "interchangeabilityKey": "shapes-17",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 100
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 110,
+        "longestEdge": 110,
+        "area": 12100,
+        "imbalance": 0
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "shapes-17-6",
+      "sourcePieceId": "shapes-17-6",
+      "interchangeabilityKey": "shapes-17",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 140
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 150,
+        "longestEdge": 150,
+        "area": 16500,
+        "imbalance": 40
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "shapes-17-7",
+      "sourcePieceId": "shapes-17-7",
+      "interchangeabilityKey": "shapes-17",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 120
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 130,
+        "longestEdge": 130,
+        "area": 14300,
+        "imbalance": 20
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "shapes-17-8",
+      "sourcePieceId": "shapes-17-8",
+      "interchangeabilityKey": "shapes-17",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 100
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 110,
+        "longestEdge": 110,
+        "area": 12100,
+        "imbalance": 0
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "shapes-17-9",
+      "sourcePieceId": "shapes-17-9",
+      "interchangeabilityKey": "shapes-17",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 100
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 110,
+        "longestEdge": 110,
+        "area": 12100,
+        "imbalance": 0
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "shapes-17-10",
+      "sourcePieceId": "shapes-17-10",
+      "interchangeabilityKey": "shapes-17",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 100
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 110,
+        "longestEdge": 110,
+        "area": 12100,
+        "imbalance": 0
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "shapes-17-11",
+      "sourcePieceId": "shapes-17-11",
+      "interchangeabilityKey": "shapes-17",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 100
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 110,
+        "longestEdge": 110,
+        "area": 12100,
+        "imbalance": 0
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "shapes-17-12",
+      "sourcePieceId": "shapes-17-12",
+      "interchangeabilityKey": "shapes-17",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 100
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 110,
+        "longestEdge": 110,
+        "area": 12100,
+        "imbalance": 0
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "shapes-17-13",
+      "sourcePieceId": "shapes-17-13",
+      "interchangeabilityKey": "shapes-17",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 140
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 150,
+        "longestEdge": 150,
+        "area": 16500,
+        "imbalance": 40
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "shapes-17-14",
+      "sourcePieceId": "shapes-17-14",
+      "interchangeabilityKey": "shapes-17",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 174,
+        "height": 200
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 184,
+        "height": 210,
+        "longestEdge": 210,
+        "area": 38640,
+        "imbalance": 26
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "shapes-17-15",
+      "sourcePieceId": "shapes-17-15",
+      "interchangeabilityKey": "shapes-17",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 196,
+        "height": 191
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 206,
+        "height": 201,
+        "longestEdge": 206,
+        "area": 41406,
+        "imbalance": 5
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "shapes-17-16",
+      "sourcePieceId": "shapes-17-16",
+      "interchangeabilityKey": "shapes-17",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 100
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 110,
+        "longestEdge": 110,
+        "area": 12100,
+        "imbalance": 0
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "shapes-17-17",
+      "sourcePieceId": "shapes-17-17",
+      "interchangeabilityKey": "shapes-17",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 100
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 110,
+        "longestEdge": 110,
+        "area": 12100,
+        "imbalance": 0
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    }
+  ],
+  "sourcePieces": [
+    {
+      "id": "shapes-17-1",
+      "sourceFileId": "shapes-17-source-1",
+      "sourceLayer": "0",
+      "label": "3268390_1.dxf",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 100
+      },
+      "geometry": {
+        "entityType": "CIRCLE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "arc",
+            "x1": 100,
+            "y1": 50,
+            "x2": 50,
+            "y2": 100,
+            "cx": 50,
+            "cy": 50,
+            "radius": 50,
+            "startAngle": 0,
+            "endAngle": 90
+          },
+          {
+            "kind": "arc",
+            "x1": 50,
+            "y1": 100,
+            "x2": 0,
+            "y2": 50.00000000000001,
+            "cx": 50,
+            "cy": 50,
+            "radius": 50,
+            "startAngle": 90,
+            "endAngle": 180
+          },
+          {
+            "kind": "arc",
+            "x1": 0,
+            "y1": 50.00000000000001,
+            "x2": 49.99999999999999,
+            "y2": 0,
+            "cx": 50,
+            "cy": 50,
+            "radius": 50,
+            "startAngle": 180,
+            "endAngle": 270
+          },
+          {
+            "kind": "arc",
+            "x1": 49.99999999999999,
+            "y1": 0,
+            "x2": 100,
+            "y2": 49.999999999999986,
+            "cx": 50,
+            "cy": 50,
+            "radius": 50,
+            "startAngle": 270,
+            "endAngle": 360
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "shapes-17-2",
+      "sourceFileId": "shapes-17-source-2",
+      "sourceLayer": "0",
+      "label": "3268390_2.dxf",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 100
+      },
+      "geometry": {
+        "entityType": "DXF_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 0,
+            "x2": 100,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 0,
+            "x2": 100,
+            "y2": 80
+          },
+          {
+            "kind": "arc",
+            "x1": 100,
+            "y1": 80,
+            "x2": 80,
+            "y2": 100,
+            "cx": 80,
+            "cy": 80,
+            "radius": 20,
+            "startAngle": 0,
+            "endAngle": 90
+          },
+          {
+            "kind": "line",
+            "x1": 80,
+            "y1": 100,
+            "x2": 20,
+            "y2": 100
+          },
+          {
+            "kind": "arc",
+            "x1": 20,
+            "y1": 100,
+            "x2": 0,
+            "y2": 80,
+            "cx": 20,
+            "cy": 80,
+            "radius": 20,
+            "startAngle": 90,
+            "endAngle": 180
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 80,
+            "x2": 0,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "shapes-17-3",
+      "sourceFileId": "shapes-17-source-3",
+      "sourceLayer": "0",
+      "label": "3268390_3.dxf",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 100
+      },
+      "geometry": {
+        "entityType": "DXF_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 40,
+            "y1": 0,
+            "x2": 65,
+            "y2": 0
+          },
+          {
+            "kind": "arc",
+            "x1": 65,
+            "y1": 0,
+            "x2": 100,
+            "y2": 35,
+            "cx": 65,
+            "cy": 35,
+            "radius": 35,
+            "startAngle": -90,
+            "endAngle": 0
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 35,
+            "x2": 100,
+            "y2": 80
+          },
+          {
+            "kind": "arc",
+            "x1": 100,
+            "y1": 80,
+            "x2": 80,
+            "y2": 100,
+            "cx": 80,
+            "cy": 80,
+            "radius": 20,
+            "startAngle": 0,
+            "endAngle": 90
+          },
+          {
+            "kind": "line",
+            "x1": 80,
+            "y1": 100,
+            "x2": 10,
+            "y2": 100
+          },
+          {
+            "kind": "arc",
+            "x1": 10,
+            "y1": 100,
+            "x2": 0,
+            "y2": 90,
+            "cx": 10,
+            "cy": 90,
+            "radius": 10,
+            "startAngle": 90,
+            "endAngle": 180
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 90,
+            "x2": 0,
+            "y2": 40
+          },
+          {
+            "kind": "arc",
+            "x1": 0,
+            "y1": 40.00000000000001,
+            "x2": 39.99999999999999,
+            "y2": 0,
+            "cx": 40,
+            "cy": 40,
+            "radius": 40,
+            "startAngle": 180,
+            "endAngle": 270
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "shapes-17-4",
+      "sourceFileId": "shapes-17-source-4",
+      "sourceLayer": "0",
+      "label": "3268390_4.dxf",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 50
+      },
+      "geometry": {
+        "entityType": "DXF_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 0,
+            "x2": 100,
+            "y2": 0
+          },
+          {
+            "kind": "arc",
+            "x1": 100,
+            "y1": 0,
+            "x2": 0,
+            "y2": 6.123233995736766e-15,
+            "cx": 50,
+            "cy": 0,
+            "radius": 50,
+            "startAngle": 0,
+            "endAngle": 180
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "shapes-17-5",
+      "sourceFileId": "shapes-17-source-5",
+      "sourceLayer": "0",
+      "label": "3268390_5.dxf",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 100
+      },
+      "geometry": {
+        "entityType": "DXF_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 0,
+            "x2": 100,
+            "y2": 0
+          },
+          {
+            "kind": "arc",
+            "x1": 100,
+            "y1": 0,
+            "x2": 6.123233995736766e-15,
+            "y2": 100,
+            "cx": 0,
+            "cy": 0,
+            "radius": 100,
+            "startAngle": 0,
+            "endAngle": 90
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 100,
+            "x2": 0,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "shapes-17-6",
+      "sourceFileId": "shapes-17-source-6",
+      "sourceLayer": "0",
+      "label": "3268390_6.dxf",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 140
+      },
+      "geometry": {
+        "entityType": "ELLIPSE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 50,
+            "y1": 140,
+            "x2": 46.729843538492844,
+            "y2": 139.85012462670224,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 46.729843538492844,
+            "y1": 139.85012462670224,
+            "x2": 43.47369038899742,
+            "y2": 139.40114029616672,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 43.47369038899742,
+            "y1": 139.40114029616672,
+            "x2": 40.24548389919359,
+            "y2": 138.65496962822613,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 40.24548389919359,
+            "y1": 138.65496962822613,
+            "x2": 37.059047744873965,
+            "y2": 137.6148078402348,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 37.059047744873965,
+            "y1": 137.6148078402348,
+            "x2": 33.92802673484192,
+            "y2": 136.2851090646574,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 33.92802673484192,
+            "y1": 136.2851090646574,
+            "x2": 30.865828381745512,
+            "y2": 134.67156727579007,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 30.865828381745512,
+            "y1": 134.67156727579007,
+            "x2": 27.885565489049938,
+            "y2": 132.7810919072882,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 27.885565489049938,
+            "y1": 132.7810919072882,
+            "x2": 25.000000000000004,
+            "y2": 130.62177826491072,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 25.000000000000004,
+            "y1": 130.62177826491072,
+            "x2": 22.221488349019893,
+            "y2": 128.20287286117815,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 22.221488349019893,
+            "y1": 128.20287286117815,
+            "x2": 19.561928549563966,
+            "y2": 125.53473382038646,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 19.561928549563966,
+            "y1": 125.53473382038646,
+            "x2": 17.03270924499656,
+            "y2": 122.62878652352842,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 17.03270924499656,
+            "y1": 122.62878652352842,
+            "x2": 14.64466094067263,
+            "y2": 119.49747468305833,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 14.64466094067263,
+            "y1": 119.49747468305833,
+            "x2": 12.408009626051133,
+            "y2": 116.15420705700481,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 12.408009626051133,
+            "y1": 116.15420705700481,
+            "x2": 10.332332985438242,
+            "y2": 112.61330003061045,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 10.332332985438242,
+            "y1": 112.61330003061045,
+            "x2": 8.42651938487274,
+            "y2": 108.88991631137216,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 8.42651938487274,
+            "y1": 108.88991631137216,
+            "x2": 6.698729810778069,
+            "y2": 105,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 6.698729810778069,
+            "y1": 105,
+            "x2": 5.1563629233655845,
+            "y2": 100.96020831533009,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 5.1563629233655845,
+            "y1": 100.96020831533009,
+            "x2": 3.806023374435661,
+            "y2": 96.78784026555628,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 3.806023374435661,
+            "y1": 96.78784026555628,
+            "x2": 2.65349352524472,
+            "y2": 92.50076257122132,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 2.65349352524472,
+            "y1": 92.50076257122132,
+            "x2": 1.7037086855465873,
+            "y2": 88.11733315717646,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 1.7037086855465873,
+            "y1": 88.11733315717646,
+            "x2": 0.9607359798384749,
+            "y2": 83.65632254112899,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 0.9607359798384749,
+            "y1": 83.65632254112899,
+            "x2": 0.42775693130948156,
+            "y2": 79.13683345540362,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 0.42775693130948156,
+            "y1": 79.13683345540362,
+            "x2": 0.10705383806982383,
+            "y2": 74.57821904611004,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 0.10705383806982383,
+            "y1": 74.57821904611004,
+            "x2": 0,
+            "y2": 70,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 70,
+            "x2": 0.10705383806982383,
+            "y2": 65.42178095388998,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 0.10705383806982383,
+            "y1": 65.42178095388998,
+            "x2": 0.42775693130948156,
+            "y2": 60.86316654459639,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 0.42775693130948156,
+            "y1": 60.86316654459639,
+            "x2": 0.9607359798384749,
+            "y2": 56.34367745887103,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 0.9607359798384749,
+            "y1": 56.34367745887103,
+            "x2": 1.7037086855465873,
+            "y2": 51.882666842823554,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 1.7037086855465873,
+            "y1": 51.882666842823554,
+            "x2": 2.6534935252447127,
+            "y2": 47.499237428778684,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 2.6534935252447127,
+            "y1": 47.499237428778684,
+            "x2": 3.806023374435661,
+            "y2": 43.21215973444373,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 3.806023374435661,
+            "y1": 43.21215973444373,
+            "x2": 5.1563629233655845,
+            "y2": 39.03979168466992,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 5.1563629233655845,
+            "y1": 39.03979168466992,
+            "x2": 6.698729810778062,
+            "y2": 35.000000000000014,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 6.698729810778062,
+            "y1": 35.000000000000014,
+            "x2": 8.42651938487274,
+            "y2": 31.11008368862784,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 8.42651938487274,
+            "y1": 31.11008368862784,
+            "x2": 10.332332985438242,
+            "y2": 27.386699969389554,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 10.332332985438242,
+            "y1": 27.386699969389554,
+            "x2": 12.408009626051133,
+            "y2": 23.845792942995182,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 12.408009626051133,
+            "y1": 23.845792942995182,
+            "x2": 14.644660940672622,
+            "y2": 20.50252531694168,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 14.644660940672622,
+            "y1": 20.50252531694168,
+            "x2": 17.032709244996553,
+            "y2": 17.37121347647159,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 17.032709244996553,
+            "y1": 17.37121347647159,
+            "x2": 19.561928549563955,
+            "y2": 14.465266179613543,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 19.561928549563955,
+            "y1": 14.465266179613543,
+            "x2": 22.221488349019875,
+            "y2": 11.79712713882185,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 22.221488349019875,
+            "y1": 11.79712713882185,
+            "x2": 25.000000000000004,
+            "y2": 9.37822173508929,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 25.000000000000004,
+            "y1": 9.37822173508929,
+            "x2": 27.885565489049917,
+            "y2": 7.218908092711828,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 27.885565489049917,
+            "y1": 7.218908092711828,
+            "x2": 30.865828381745505,
+            "y2": 5.328432724209932,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 30.865828381745505,
+            "y1": 5.328432724209932,
+            "x2": 33.92802673484191,
+            "y2": 3.714890935342609,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 33.92802673484191,
+            "y1": 3.714890935342609,
+            "x2": 37.05904774487395,
+            "y2": 2.385192159765225,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 37.05904774487395,
+            "y1": 2.385192159765225,
+            "x2": 40.245483899193594,
+            "y2": 1.3450303717738734,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 40.245483899193594,
+            "y1": 1.3450303717738734,
+            "x2": 43.4736903889974,
+            "y2": 0.5988597038332699,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 43.4736903889974,
+            "y1": 0.5988597038332699,
+            "x2": 46.729843538492844,
+            "y2": 0.14987537329776046,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 46.729843538492844,
+            "y1": 0.14987537329776046,
+            "x2": 49.99999999999999,
+            "y2": 0,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 49.99999999999999,
+            "y1": 0,
+            "x2": 53.27015646150714,
+            "y2": 0.14987537329776046,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 53.27015646150714,
+            "y1": 0.14987537329776046,
+            "x2": 56.52630961100259,
+            "y2": 0.5988597038332699,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 56.52630961100259,
+            "y1": 0.5988597038332699,
+            "x2": 59.7545161008064,
+            "y2": 1.3450303717738592,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 59.7545161008064,
+            "y1": 1.3450303717738592,
+            "x2": 62.94095225512604,
+            "y2": 2.385192159765225,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 62.94095225512604,
+            "y1": 2.385192159765225,
+            "x2": 66.07197326515808,
+            "y2": 3.714890935342595,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 66.07197326515808,
+            "y1": 3.714890935342595,
+            "x2": 69.13417161825448,
+            "y2": 5.328432724209918,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 69.13417161825448,
+            "y1": 5.328432724209918,
+            "x2": 72.11443451095008,
+            "y2": 7.218908092711821,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 72.11443451095008,
+            "y1": 7.218908092711821,
+            "x2": 74.99999999999999,
+            "y2": 9.378221735089284,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 74.99999999999999,
+            "y1": 9.378221735089284,
+            "x2": 77.7785116509801,
+            "y2": 11.797127138821821,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 77.7785116509801,
+            "y1": 11.797127138821821,
+            "x2": 80.43807145043604,
+            "y2": 14.465266179613536,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 80.43807145043604,
+            "y1": 14.465266179613536,
+            "x2": 82.96729075500343,
+            "y2": 17.37121347647158,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 82.96729075500343,
+            "y1": 17.37121347647158,
+            "x2": 85.35533905932735,
+            "y2": 20.502525316941643,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 85.35533905932735,
+            "y1": 20.502525316941643,
+            "x2": 87.59199037394886,
+            "y2": 23.845792942995168,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 87.59199037394886,
+            "y1": 23.845792942995168,
+            "x2": 89.66766701456174,
+            "y2": 27.38669996938954,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 89.66766701456174,
+            "y1": 27.38669996938954,
+            "x2": 91.57348061512727,
+            "y2": 31.110083688627846,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 91.57348061512727,
+            "y1": 31.110083688627846,
+            "x2": 93.30127018922192,
+            "y2": 34.99999999999997,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 93.30127018922192,
+            "y1": 34.99999999999997,
+            "x2": 94.84363707663442,
+            "y2": 39.03979168466991,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 94.84363707663442,
+            "y1": 39.03979168466991,
+            "x2": 96.19397662556435,
+            "y2": 43.21215973444373,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 96.19397662556435,
+            "y1": 43.21215973444373,
+            "x2": 97.34650647475527,
+            "y2": 47.49923742877867,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 97.34650647475527,
+            "y1": 47.49923742877867,
+            "x2": 98.29629131445341,
+            "y2": 51.882666842823554,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 98.29629131445341,
+            "y1": 51.882666842823554,
+            "x2": 99.03926402016151,
+            "y2": 56.34367745887099,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 99.03926402016151,
+            "y1": 56.34367745887099,
+            "x2": 99.57224306869051,
+            "y2": 60.86316654459638,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 99.57224306869051,
+            "y1": 60.86316654459638,
+            "x2": 99.89294616193018,
+            "y2": 65.42178095389,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 99.89294616193018,
+            "y1": 65.42178095389,
+            "x2": 100,
+            "y2": 69.99999999999999,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 69.99999999999999,
+            "x2": 99.89294616193018,
+            "y2": 74.57821904610996,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 99.89294616193018,
+            "y1": 74.57821904610996,
+            "x2": 99.57224306869053,
+            "y2": 79.13683345540359,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 99.57224306869053,
+            "y1": 79.13683345540359,
+            "x2": 99.03926402016153,
+            "y2": 83.65632254112899,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 99.03926402016153,
+            "y1": 83.65632254112899,
+            "x2": 98.29629131445341,
+            "y2": 88.11733315717642,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 98.29629131445341,
+            "y1": 88.11733315717642,
+            "x2": 97.34650647475529,
+            "y2": 92.5007625712213,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 97.34650647475529,
+            "y1": 92.5007625712213,
+            "x2": 96.19397662556435,
+            "y2": 96.78784026555624,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 96.19397662556435,
+            "y1": 96.78784026555624,
+            "x2": 94.84363707663442,
+            "y2": 100.96020831533008,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 94.84363707663442,
+            "y1": 100.96020831533008,
+            "x2": 93.30127018922192,
+            "y2": 105,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 93.30127018922192,
+            "y1": 105,
+            "x2": 91.57348061512727,
+            "y2": 108.88991631137213,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 91.57348061512727,
+            "y1": 108.88991631137213,
+            "x2": 89.66766701456179,
+            "y2": 112.61330003061039,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 89.66766701456179,
+            "y1": 112.61330003061039,
+            "x2": 87.59199037394886,
+            "y2": 116.15420705700484,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 87.59199037394886,
+            "y1": 116.15420705700484,
+            "x2": 85.35533905932738,
+            "y2": 119.49747468305831,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 85.35533905932738,
+            "y1": 119.49747468305831,
+            "x2": 82.96729075500343,
+            "y2": 122.62878652352842,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 82.96729075500343,
+            "y1": 122.62878652352842,
+            "x2": 80.43807145043604,
+            "y2": 125.53473382038645,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 80.43807145043604,
+            "y1": 125.53473382038645,
+            "x2": 77.77851165098015,
+            "y2": 128.20287286117812,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 77.77851165098015,
+            "y1": 128.20287286117812,
+            "x2": 75.00000000000003,
+            "y2": 130.6217782649107,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 75.00000000000003,
+            "y1": 130.6217782649107,
+            "x2": 72.11443451095008,
+            "y2": 132.7810919072882,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 72.11443451095008,
+            "y1": 132.7810919072882,
+            "x2": 69.13417161825447,
+            "y2": 134.6715672757901,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 69.13417161825447,
+            "y1": 134.6715672757901,
+            "x2": 66.07197326515809,
+            "y2": 136.28510906465738,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 66.07197326515809,
+            "y1": 136.28510906465738,
+            "x2": 62.94095225512608,
+            "y2": 137.61480784023476,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 62.94095225512608,
+            "y1": 137.61480784023476,
+            "x2": 59.754516100806434,
+            "y2": 138.65496962822613,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 59.754516100806434,
+            "y1": 138.65496962822613,
+            "x2": 56.52630961100258,
+            "y2": 139.40114029616672,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 56.52630961100258,
+            "y1": 139.40114029616672,
+            "x2": 53.27015646150714,
+            "y2": 139.85012462670224,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          },
+          {
+            "kind": "line",
+            "x1": 53.27015646150714,
+            "y1": 139.85012462670224,
+            "x2": 50.000000000000014,
+            "y2": 140,
+            "sourceCurve": {
+              "kind": "ellipse",
+              "sourceId": "ELLIPSE:1A",
+              "cx": 50,
+              "cy": 70,
+              "majorAxisX": 0,
+              "majorAxisY": 70,
+              "axisRatio": 0.7142857142857143,
+              "startAngle": 0,
+              "endAngle": 6.283185307179586
+            }
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "shapes-17-7",
+      "sourceFileId": "shapes-17-source-7",
+      "sourceLayer": "0",
+      "label": "3268390_7.dxf",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 120
+      },
+      "geometry": {
+        "entityType": "DXF_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 0,
+            "x2": 100,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 0,
+            "x2": 50,
+            "y2": 120
+          },
+          {
+            "kind": "line",
+            "x1": 50,
+            "y1": 120,
+            "x2": 0,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "shapes-17-8",
+      "sourceFileId": "shapes-17-source-8",
+      "sourceLayer": "0",
+      "label": "3268390_8.dxf",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 100
+      },
+      "geometry": {
+        "entityType": "DXF_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 0,
+            "x2": 100,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 0,
+            "x2": 0,
+            "y2": 100
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 100,
+            "x2": 0,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "shapes-17-9",
+      "sourceFileId": "shapes-17-source-9",
+      "sourceLayer": "0",
+      "label": "3268390_9.dxf",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 100
+      },
+      "geometry": {
+        "entityType": "DXF_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 0,
+            "x2": 100,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 0,
+            "x2": 100,
+            "y2": 80
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 80,
+            "x2": 80,
+            "y2": 100
+          },
+          {
+            "kind": "line",
+            "x1": 80,
+            "y1": 100,
+            "x2": 20,
+            "y2": 100
+          },
+          {
+            "kind": "line",
+            "x1": 20,
+            "y1": 100,
+            "x2": 0,
+            "y2": 80
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 80,
+            "x2": 0,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "shapes-17-10",
+      "sourceFileId": "shapes-17-source-10",
+      "sourceLayer": "0",
+      "label": "3268390_10.dxf",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 100
+      },
+      "geometry": {
+        "entityType": "DXF_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 20,
+            "y1": 0,
+            "x2": 80,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 80,
+            "y1": 0,
+            "x2": 100,
+            "y2": 20
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 20,
+            "x2": 100,
+            "y2": 80
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 80,
+            "x2": 80,
+            "y2": 100
+          },
+          {
+            "kind": "line",
+            "x1": 80,
+            "y1": 100,
+            "x2": 20,
+            "y2": 100
+          },
+          {
+            "kind": "line",
+            "x1": 20,
+            "y1": 100,
+            "x2": 0,
+            "y2": 80
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 80,
+            "x2": 0,
+            "y2": 20
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 20,
+            "x2": 20,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "shapes-17-11",
+      "sourceFileId": "shapes-17-source-11",
+      "sourceLayer": "0",
+      "label": "3268390_11.dxf",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 100
+      },
+      "geometry": {
+        "entityType": "DXF_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 0,
+            "x2": 100,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 0,
+            "x2": 100,
+            "y2": 100
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 100,
+            "x2": 50,
+            "y2": 100
+          },
+          {
+            "kind": "line",
+            "x1": 50,
+            "y1": 100,
+            "x2": 0,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "shapes-17-12",
+      "sourceFileId": "shapes-17-source-12",
+      "sourceLayer": "0",
+      "label": "3268390_12.dxf",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 100
+      },
+      "geometry": {
+        "entityType": "DXF_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 0,
+            "x2": 100,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 0,
+            "x2": 75,
+            "y2": 100
+          },
+          {
+            "kind": "line",
+            "x1": 75,
+            "y1": 100,
+            "x2": 25,
+            "y2": 100
+          },
+          {
+            "kind": "line",
+            "x1": 25,
+            "y1": 100,
+            "x2": 0,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "shapes-17-13",
+      "sourceFileId": "shapes-17-source-13",
+      "sourceLayer": "0",
+      "label": "3268390_13.dxf",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 140
+      },
+      "geometry": {
+        "entityType": "DXF_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 50,
+            "y1": 0,
+            "x2": 100,
+            "y2": 70
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 70,
+            "x2": 50,
+            "y2": 140
+          },
+          {
+            "kind": "line",
+            "x1": 50,
+            "y1": 140,
+            "x2": 0,
+            "y2": 70
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 70,
+            "x2": 50,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "shapes-17-14",
+      "sourceFileId": "shapes-17-source-14",
+      "sourceLayer": "0",
+      "label": "3268390_14.dxf",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 174,
+        "height": 200
+      },
+      "geometry": {
+        "entityType": "DXF_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 87,
+            "y1": 0,
+            "x2": 112,
+            "y2": 56.69872981077806
+          },
+          {
+            "kind": "line",
+            "x1": 112,
+            "y1": 56.69872981077806,
+            "x2": 173.60254037844385,
+            "y2": 50
+          },
+          {
+            "kind": "line",
+            "x1": 173.60254037844385,
+            "y1": 50,
+            "x2": 137,
+            "y2": 100
+          },
+          {
+            "kind": "line",
+            "x1": 137,
+            "y1": 100,
+            "x2": 173.60254037844388,
+            "y2": 150
+          },
+          {
+            "kind": "line",
+            "x1": 173.60254037844388,
+            "y1": 150,
+            "x2": 112,
+            "y2": 143.30127018922195
+          },
+          {
+            "kind": "line",
+            "x1": 112,
+            "y1": 143.30127018922195,
+            "x2": 87,
+            "y2": 200
+          },
+          {
+            "kind": "line",
+            "x1": 87,
+            "y1": 200,
+            "x2": 62.000000000000014,
+            "y2": 143.30127018922195
+          },
+          {
+            "kind": "line",
+            "x1": 62.000000000000014,
+            "y1": 143.30127018922195,
+            "x2": 0.3974596215561519,
+            "y2": 150.00000000000003
+          },
+          {
+            "kind": "line",
+            "x1": 0.3974596215561519,
+            "y1": 150.00000000000003,
+            "x2": 37,
+            "y2": 100
+          },
+          {
+            "kind": "line",
+            "x1": 37,
+            "y1": 100,
+            "x2": 0.3974596215561377,
+            "y2": 49.999999999999986
+          },
+          {
+            "kind": "line",
+            "x1": 0.3974596215561377,
+            "y1": 49.999999999999986,
+            "x2": 61.99999999999997,
+            "y2": 56.698729810778076
+          },
+          {
+            "kind": "line",
+            "x1": 61.99999999999997,
+            "y1": 56.698729810778076,
+            "x2": 87,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "shapes-17-15",
+      "sourceFileId": "shapes-17-source-15",
+      "sourceLayer": "0",
+      "label": "3268390_15.dxf",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 196,
+        "height": 191
+      },
+      "geometry": {
+        "entityType": "DXF_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 98,
+            "y1": 0,
+            "x2": 176.183148246803,
+            "y2": 37.65101981412665
+          },
+          {
+            "kind": "line",
+            "x1": 176.183148246803,
+            "y1": 37.65101981412665,
+            "x2": 195.49279121818236,
+            "y2": 122.25209339563145
+          },
+          {
+            "kind": "line",
+            "x1": 195.49279121818236,
+            "y1": 122.25209339563145,
+            "x2": 141.38837391175582,
+            "y2": 190.0968867902419
+          },
+          {
+            "kind": "line",
+            "x1": 141.38837391175582,
+            "y1": 190.0968867902419,
+            "x2": 54.61162608824419,
+            "y2": 190.0968867902419
+          },
+          {
+            "kind": "line",
+            "x1": 54.61162608824419,
+            "y1": 190.0968867902419,
+            "x2": 0.5072087818176385,
+            "y2": 122.25209339563145
+          },
+          {
+            "kind": "line",
+            "x1": 0.5072087818176385,
+            "y1": 122.25209339563145,
+            "x2": 19.816851753197014,
+            "y2": 37.65101981412666
+          },
+          {
+            "kind": "line",
+            "x1": 19.816851753197014,
+            "y1": 37.65101981412666,
+            "x2": 98,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "shapes-17-16",
+      "sourceFileId": "shapes-17-source-16",
+      "sourceLayer": "0",
+      "label": "3268390_16.dxf",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 100
+      },
+      "geometry": {
+        "entityType": "DXF_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 20,
+            "y1": 0,
+            "x2": 80,
+            "y2": 0
+          },
+          {
+            "kind": "arc",
+            "x1": 80,
+            "y1": 0,
+            "x2": 100,
+            "y2": 20,
+            "cx": 80,
+            "cy": 20,
+            "radius": 20,
+            "startAngle": -90,
+            "endAngle": 0
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 20,
+            "x2": 100,
+            "y2": 80
+          },
+          {
+            "kind": "arc",
+            "x1": 100,
+            "y1": 80,
+            "x2": 80,
+            "y2": 100,
+            "cx": 80,
+            "cy": 80,
+            "radius": 20,
+            "startAngle": 0,
+            "endAngle": 90
+          },
+          {
+            "kind": "line",
+            "x1": 80,
+            "y1": 100,
+            "x2": 20,
+            "y2": 100
+          },
+          {
+            "kind": "arc",
+            "x1": 20,
+            "y1": 100,
+            "x2": 0,
+            "y2": 80,
+            "cx": 20,
+            "cy": 80,
+            "radius": 20,
+            "startAngle": 90,
+            "endAngle": 180
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 80,
+            "x2": 0,
+            "y2": 20
+          },
+          {
+            "kind": "arc",
+            "x1": 0,
+            "y1": 20.000000000000004,
+            "x2": 19.999999999999996,
+            "y2": 0,
+            "cx": 20,
+            "cy": 20,
+            "radius": 20,
+            "startAngle": 180,
+            "endAngle": 270
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "shapes-17-17",
+      "sourceFileId": "shapes-17-source-17",
+      "sourceLayer": "0",
+      "label": "3268390_17.dxf",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 100
+      },
+      "geometry": {
+        "entityType": "DXF_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 0,
+            "x2": 100,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 0,
+            "x2": 100,
+            "y2": 100
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 100,
+            "x2": 0,
+            "y2": 100
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 100,
+            "x2": 0,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    }
+  ],
+  "options": {
+    "allowGlobalRotation": true,
+    "allowGlobalMirror": true,
+    "timeoutMs": 9007199254740991,
+    "workerMode": "irregular-convex-v2",
+    "historyMode": "off",
+    "historyScope": "winning_path",
+    "strategySelectionMode": "single",
+    "strategyIds": [],
+    "layoutSelectionStrategyId": "compact-first",
+    "finalSelectionMode": "best",
+    "irregularSettings": {
+      "geometry": {
+        "flatteningSagToleranceMm": 0.25,
+        "clearanceSafetyMarginMm": 0.25,
+        "geometryBackendId": "irregular-convex-v2-default",
+        "geometryBackendVersion": "0"
+      },
+      "optimizer": {
+        "orderWindow": 4,
+        "beamWidth": 8,
+        "localCandidateFanout": 4,
+        "localRepairBudget": 0,
+        "intrinsicSharedArchiveEnabled": true,
+        "intrinsicObjectiveProfileId": "compact",
+        "transformCap": 8,
+        "transformMinimumEdgeLengthMm": 1.2,
+        "transformAngleDeduplicationToleranceDeg": 0.051,
+        "configuredRotationEnabled": true,
+        "edgeAlignmentEnabled": true,
+        "configuredRotationDeg": [],
+        "gaEnabled": false,
+        "baselineOnly": true,
+        "gaPopulation": 12,
+        "gaGenerationBudget": 2,
+        "gaEvaluationBudget": 24,
+        "gaTimeBudgetMs": 15000,
+        "gaSeed": "default",
+        "priorityOrderMutationEnabled": true,
+        "transformPreferenceMutationEnabled": true,
+        "placementPolicyMutationEnabled": true,
+        "placementPolicyId": "edge-contact-then-balanced-compactness",
+        "placementPolicyIds": [
+          "balanced-compactness",
+          "short-side-fill",
+          "edge-contact-then-balanced-compactness"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "sourceRepository": "https://github.com/jfet97/min-plane-dfx",
+  "sourceCommit": "e4f3608878611c002f343473fab72adc7d155f87",
+  "engineRelease": "0.1.0",
+  "performanceGate": {
+    "freshPostCorrectionBenchmarkRequired": false,
+    "decision": "owner explicitly accepted existing tests and results",
+    "historicalSpeedupClaimedForSource": false
+  },
+  "toolchain": {
+    "node": "v24.16.0",
+    "pnpm": "11.8.0",
+    "rustc": "rustc 1.95.0 (59807616e 2026-04-14) (built from a source tarball)\nbinary: rustc\ncommit-hash: 59807616e1fa2540724bfbac14d7976d7e4a3860\ncommit-date: 2026-04-14\nhost: aarch64-apple-darwin\nrelease: 1.95.0\nLLVM version: 21.1.8",
+    "cargo": "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+    "activeToolchain": {
+      "manager": "nix",
+      "rustupAvailable": false,
+      "rustcExecutable": "/nix/store/r2pi7zvrvcrbhqnc9yjd08qhi7d0l6p7-rustc-wrapper-1.95.0/bin/rustc",
+      "rustcSysroot": "/nix/store/bkvwlxb72x0qkzm9f3fmnlccr29ijk3j-rustc-1.95.0",
+      "host": "aarch64-apple-darwin"
+    },
+    "installedTargets": [
+      "aarch64-apple-darwin",
+      "bpfeb-unknown-none",
+      "bpfel-unknown-none",
+      "wasm32-unknown-unknown",
+      "wasm32v1-none"
+    ],
+    "installedTargetsSource": "/nix/store/bkvwlxb72x0qkzm9f3fmnlccr29ijk3j-rustc-1.95.0/lib/rustlib"
+  },
+  "host": {
+    "os": "Darwin Mac-Studio-di-Andrea.local 25.5.0 Darwin Kernel Version 25.5.0: Tue Jun  9 22:28:34 PDT 2026; root:xnu-12377.121.10~1/RELEASE_ARM64_T6041 arm64 arm Darwin",
+    "cpu": "Apple M4 Max",
+    "logicalCpuCount": 16,
+    "memoryBytes": 68719476736
+  }
+}

@@ -1,0 +1,26 @@
+Command: cargo test --release --manifest-path crates/irregular-nesting-native/Cargo.toml --test thread_equality
+Working directory: /Users/andreasimonecosta/Documents/Work/min-plane-dfx/.claude/worktrees/polygon-nesting-extraction
+Start timestamp: 2026-08-03T18:18:58Z
+Status: running
+
+===== stdout and stderr =====
+    Finished `release` profile [optimized] target(s) in 0.06s
+     Running tests/thread_equality.rs (crates/irregular-nesting-native/target/release/deps/thread_equality-bb520a7658f3e6bc)
+
+running 6 tests
+test canonical_semantic_bytes_sort_object_fields_and_preserve_timing_field_presence ... ok
+test canonical_semantic_bytes_preserve_semantic_values_and_normalize_only_measurements ... ok
+test two_piece_fixture_is_thread_count_invariant ... ok
+test four_piece_fixture_is_thread_count_invariant ... ok
+test eight_piece_fixture_is_thread_count_invariant ... ok
+test twenty_piece_fixture_is_thread_count_invariant has been running for over 60 seconds
+test twenty_piece_fixture_is_thread_count_invariant ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 75.41s
+
+
+===== gate metadata =====
+End timestamp: 2026-08-03T18:20:14Z
+Duration milliseconds: 75524
+Exit code: 0
+Status: passed

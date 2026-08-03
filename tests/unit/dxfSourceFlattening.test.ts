@@ -59,7 +59,7 @@ function ellipse(): string {
 
 /** Imports one source entity and guarantees temporary-file cleanup. */
 async function importEntity(entity: string): Promise<ImportedPiece> {
-  const directory = await mkdtemp(join(tmpdir(), `min-plane-dxf-flatten-${randomUUID()}-`))
+  const directory = await mkdtemp(join(tmpdir(), `min-plane-dfx-flatten-${randomUUID()}-`))
   const path = join(directory, 'source.dxf')
   try {
     await mkdir(directory, { recursive: true })

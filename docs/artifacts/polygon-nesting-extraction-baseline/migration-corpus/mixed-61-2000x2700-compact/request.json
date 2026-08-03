@@ -1,0 +1,4659 @@
+{
+  "version": 1,
+  "jobId": "run-differential-mixed-61-2000x2700",
+  "sheet": {
+    "width": 2000,
+    "height": 2700,
+    "label": "2000x2700"
+  },
+  "padding": 10,
+  "pieces": [
+    {
+      "id": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-1",
+      "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-1",
+      "interchangeabilityKey": "604bc424-469c-4ab8-93f1-80c0fc4090b3",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 70,
+        "longestEdge": 110,
+        "area": 7700,
+        "imbalance": 40
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-2",
+      "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-2",
+      "interchangeabilityKey": "604bc424-469c-4ab8-93f1-80c0fc4090b3",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 70,
+        "longestEdge": 110,
+        "area": 7700,
+        "imbalance": 40
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-3",
+      "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-3",
+      "interchangeabilityKey": "604bc424-469c-4ab8-93f1-80c0fc4090b3",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 70,
+        "longestEdge": 110,
+        "area": 7700,
+        "imbalance": 40
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-4",
+      "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-4",
+      "interchangeabilityKey": "604bc424-469c-4ab8-93f1-80c0fc4090b3",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 70,
+        "longestEdge": 110,
+        "area": 7700,
+        "imbalance": 40
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-5",
+      "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-5",
+      "interchangeabilityKey": "604bc424-469c-4ab8-93f1-80c0fc4090b3",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 70,
+        "longestEdge": 110,
+        "area": 7700,
+        "imbalance": 40
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-1",
+      "sourcePieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-1",
+      "interchangeabilityKey": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 50,
+        "longestEdge": 110,
+        "area": 5500,
+        "imbalance": 60
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-2",
+      "sourcePieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-2",
+      "interchangeabilityKey": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 50,
+        "longestEdge": 110,
+        "area": 5500,
+        "imbalance": 60
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-3",
+      "sourcePieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-3",
+      "interchangeabilityKey": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 50,
+        "longestEdge": 110,
+        "area": 5500,
+        "imbalance": 60
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-4",
+      "sourcePieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-4",
+      "interchangeabilityKey": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 50,
+        "longestEdge": 110,
+        "area": 5500,
+        "imbalance": 60
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-5",
+      "sourcePieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-5",
+      "interchangeabilityKey": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 50,
+        "longestEdge": 110,
+        "area": 5500,
+        "imbalance": 60
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-1",
+      "sourcePieceId": "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-1",
+      "interchangeabilityKey": "b8721c24-33b9-4244-9ce6-fff728f7e73b",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 50,
+        "longestEdge": 110,
+        "area": 5500,
+        "imbalance": 60
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-2",
+      "sourcePieceId": "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-2",
+      "interchangeabilityKey": "b8721c24-33b9-4244-9ce6-fff728f7e73b",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 50,
+        "longestEdge": 110,
+        "area": 5500,
+        "imbalance": 60
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-3",
+      "sourcePieceId": "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-3",
+      "interchangeabilityKey": "b8721c24-33b9-4244-9ce6-fff728f7e73b",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 50,
+        "longestEdge": 110,
+        "area": 5500,
+        "imbalance": 60
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-4",
+      "sourcePieceId": "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-4",
+      "interchangeabilityKey": "b8721c24-33b9-4244-9ce6-fff728f7e73b",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 50,
+        "longestEdge": 110,
+        "area": 5500,
+        "imbalance": 60
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-1",
+      "sourcePieceId": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-1",
+      "interchangeabilityKey": "0aff79d8-47d7-49b2-958b-8f8648eafc07",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 100
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 110,
+        "longestEdge": 110,
+        "area": 12100,
+        "imbalance": 0
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-2",
+      "sourcePieceId": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-2",
+      "interchangeabilityKey": "0aff79d8-47d7-49b2-958b-8f8648eafc07",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 100
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 110,
+        "longestEdge": 110,
+        "area": 12100,
+        "imbalance": 0
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-3",
+      "sourcePieceId": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-3",
+      "interchangeabilityKey": "0aff79d8-47d7-49b2-958b-8f8648eafc07",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 100
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 110,
+        "height": 110,
+        "longestEdge": 110,
+        "area": 12100,
+        "imbalance": 0
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-1",
+      "sourcePieceId": "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-1",
+      "interchangeabilityKey": "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 40,
+        "height": 100
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 50,
+        "height": 110,
+        "longestEdge": 110,
+        "area": 5500,
+        "imbalance": 60
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-2",
+      "sourcePieceId": "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-2",
+      "interchangeabilityKey": "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 40,
+        "height": 100
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 50,
+        "height": 110,
+        "longestEdge": 110,
+        "area": 5500,
+        "imbalance": 60
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-1",
+      "sourcePieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-1",
+      "interchangeabilityKey": "68c5a4cc-cf24-447c-ad54-974a021198a8",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 100
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 110,
+        "longestEdge": 110,
+        "area": 8800,
+        "imbalance": 30
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-2",
+      "sourcePieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-2",
+      "interchangeabilityKey": "68c5a4cc-cf24-447c-ad54-974a021198a8",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 100
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 110,
+        "longestEdge": 110,
+        "area": 8800,
+        "imbalance": 30
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-3",
+      "sourcePieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-3",
+      "interchangeabilityKey": "68c5a4cc-cf24-447c-ad54-974a021198a8",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 100
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 110,
+        "longestEdge": 110,
+        "area": 8800,
+        "imbalance": 30
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-4",
+      "sourcePieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-4",
+      "interchangeabilityKey": "68c5a4cc-cf24-447c-ad54-974a021198a8",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 100
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 110,
+        "longestEdge": 110,
+        "area": 8800,
+        "imbalance": 30
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-1",
+      "sourcePieceId": "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-1",
+      "interchangeabilityKey": "c5135087-12f0-44f9-bd91-4bcf67affd8b",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 140,
+        "height": 100
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 150,
+        "height": 110,
+        "longestEdge": 150,
+        "area": 16500,
+        "imbalance": 40
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-2",
+      "sourcePieceId": "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-2",
+      "interchangeabilityKey": "c5135087-12f0-44f9-bd91-4bcf67affd8b",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 140,
+        "height": 100
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 150,
+        "height": 110,
+        "longestEdge": 150,
+        "area": 16500,
+        "imbalance": 40
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-1",
+      "sourcePieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-1",
+      "interchangeabilityKey": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 30
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 40,
+        "height": 40,
+        "longestEdge": 40,
+        "area": 1600,
+        "imbalance": 0
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-2",
+      "sourcePieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-2",
+      "interchangeabilityKey": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 30
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 40,
+        "height": 40,
+        "longestEdge": 40,
+        "area": 1600,
+        "imbalance": 0
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-3",
+      "sourcePieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-3",
+      "interchangeabilityKey": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 30
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 40,
+        "height": 40,
+        "longestEdge": 40,
+        "area": 1600,
+        "imbalance": 0
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-4",
+      "sourcePieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-4",
+      "interchangeabilityKey": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 30
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 40,
+        "height": 40,
+        "longestEdge": 40,
+        "area": 1600,
+        "imbalance": 0
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-5",
+      "sourcePieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-5",
+      "interchangeabilityKey": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 30
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 40,
+        "height": 40,
+        "longestEdge": 40,
+        "area": 1600,
+        "imbalance": 0
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-6",
+      "sourcePieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-6",
+      "interchangeabilityKey": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 30
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 40,
+        "height": 40,
+        "longestEdge": 40,
+        "area": 1600,
+        "imbalance": 0
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-7",
+      "sourcePieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-7",
+      "interchangeabilityKey": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 30
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 40,
+        "height": 40,
+        "longestEdge": 40,
+        "area": 1600,
+        "imbalance": 0
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-8",
+      "sourcePieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-8",
+      "interchangeabilityKey": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 30
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 40,
+        "height": 40,
+        "longestEdge": 40,
+        "area": 1600,
+        "imbalance": 0
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-1",
+      "sourcePieceId": "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-1",
+      "interchangeabilityKey": "3c364de9-07d8-4e8f-8e47-d5ac4961f640",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 90
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 40,
+        "height": 100,
+        "longestEdge": 100,
+        "area": 4000,
+        "imbalance": 60
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-2",
+      "sourcePieceId": "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-2",
+      "interchangeabilityKey": "3c364de9-07d8-4e8f-8e47-d5ac4961f640",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 90
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 40,
+        "height": 100,
+        "longestEdge": 100,
+        "area": 4000,
+        "imbalance": 60
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-3",
+      "sourcePieceId": "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-3",
+      "interchangeabilityKey": "3c364de9-07d8-4e8f-8e47-d5ac4961f640",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 90
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 40,
+        "height": 100,
+        "longestEdge": 100,
+        "area": 4000,
+        "imbalance": 60
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-4",
+      "sourcePieceId": "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-4",
+      "interchangeabilityKey": "3c364de9-07d8-4e8f-8e47-d5ac4961f640",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 90
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 40,
+        "height": 100,
+        "longestEdge": 100,
+        "area": 4000,
+        "imbalance": 60
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-5",
+      "sourcePieceId": "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-5",
+      "interchangeabilityKey": "3c364de9-07d8-4e8f-8e47-d5ac4961f640",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 90
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 40,
+        "height": 100,
+        "longestEdge": 100,
+        "area": 4000,
+        "imbalance": 60
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-1",
+      "sourcePieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-1",
+      "interchangeabilityKey": "28f5a1d1-afd4-46e4-b2b9-f1841386be28",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 154,
+        "height": 104
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 164,
+        "height": 114,
+        "longestEdge": 164,
+        "area": 18696,
+        "imbalance": 50
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-2",
+      "sourcePieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-2",
+      "interchangeabilityKey": "28f5a1d1-afd4-46e4-b2b9-f1841386be28",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 154,
+        "height": 104
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 164,
+        "height": 114,
+        "longestEdge": 164,
+        "area": 18696,
+        "imbalance": 50
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-3",
+      "sourcePieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-3",
+      "interchangeabilityKey": "28f5a1d1-afd4-46e4-b2b9-f1841386be28",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 154,
+        "height": 104
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 164,
+        "height": 114,
+        "longestEdge": 164,
+        "area": 18696,
+        "imbalance": 50
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-1",
+      "sourcePieceId": "d06db288-d2d6-4f40-874e-98287f516d93-copy-1",
+      "interchangeabilityKey": "d06db288-d2d6-4f40-874e-98287f516d93",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-2",
+      "sourcePieceId": "d06db288-d2d6-4f40-874e-98287f516d93-copy-2",
+      "interchangeabilityKey": "d06db288-d2d6-4f40-874e-98287f516d93",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-3",
+      "sourcePieceId": "d06db288-d2d6-4f40-874e-98287f516d93-copy-3",
+      "interchangeabilityKey": "d06db288-d2d6-4f40-874e-98287f516d93",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-4",
+      "sourcePieceId": "d06db288-d2d6-4f40-874e-98287f516d93-copy-4",
+      "interchangeabilityKey": "d06db288-d2d6-4f40-874e-98287f516d93",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-5",
+      "sourcePieceId": "d06db288-d2d6-4f40-874e-98287f516d93-copy-5",
+      "interchangeabilityKey": "d06db288-d2d6-4f40-874e-98287f516d93",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-6",
+      "sourcePieceId": "d06db288-d2d6-4f40-874e-98287f516d93-copy-6",
+      "interchangeabilityKey": "d06db288-d2d6-4f40-874e-98287f516d93",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-7",
+      "sourcePieceId": "d06db288-d2d6-4f40-874e-98287f516d93-copy-7",
+      "interchangeabilityKey": "d06db288-d2d6-4f40-874e-98287f516d93",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-8",
+      "sourcePieceId": "d06db288-d2d6-4f40-874e-98287f516d93-copy-8",
+      "interchangeabilityKey": "d06db288-d2d6-4f40-874e-98287f516d93",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-9",
+      "sourcePieceId": "d06db288-d2d6-4f40-874e-98287f516d93-copy-9",
+      "interchangeabilityKey": "d06db288-d2d6-4f40-874e-98287f516d93",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-10",
+      "sourcePieceId": "d06db288-d2d6-4f40-874e-98287f516d93-copy-10",
+      "interchangeabilityKey": "d06db288-d2d6-4f40-874e-98287f516d93",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-11",
+      "sourcePieceId": "d06db288-d2d6-4f40-874e-98287f516d93-copy-11",
+      "interchangeabilityKey": "d06db288-d2d6-4f40-874e-98287f516d93",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-12",
+      "sourcePieceId": "d06db288-d2d6-4f40-874e-98287f516d93-copy-12",
+      "interchangeabilityKey": "d06db288-d2d6-4f40-874e-98287f516d93",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-13",
+      "sourcePieceId": "d06db288-d2d6-4f40-874e-98287f516d93-copy-13",
+      "interchangeabilityKey": "d06db288-d2d6-4f40-874e-98287f516d93",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-14",
+      "sourcePieceId": "d06db288-d2d6-4f40-874e-98287f516d93-copy-14",
+      "interchangeabilityKey": "d06db288-d2d6-4f40-874e-98287f516d93",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-15",
+      "sourcePieceId": "d06db288-d2d6-4f40-874e-98287f516d93-copy-15",
+      "interchangeabilityKey": "d06db288-d2d6-4f40-874e-98287f516d93",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-16",
+      "sourcePieceId": "d06db288-d2d6-4f40-874e-98287f516d93-copy-16",
+      "interchangeabilityKey": "d06db288-d2d6-4f40-874e-98287f516d93",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-17",
+      "sourcePieceId": "d06db288-d2d6-4f40-874e-98287f516d93-copy-17",
+      "interchangeabilityKey": "d06db288-d2d6-4f40-874e-98287f516d93",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-18",
+      "sourcePieceId": "d06db288-d2d6-4f40-874e-98287f516d93-copy-18",
+      "interchangeabilityKey": "d06db288-d2d6-4f40-874e-98287f516d93",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-19",
+      "sourcePieceId": "d06db288-d2d6-4f40-874e-98287f516d93-copy-19",
+      "interchangeabilityKey": "d06db288-d2d6-4f40-874e-98287f516d93",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-20",
+      "sourcePieceId": "d06db288-d2d6-4f40-874e-98287f516d93-copy-20",
+      "interchangeabilityKey": "d06db288-d2d6-4f40-874e-98287f516d93",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    }
+  ],
+  "sourcePieces": [
+    {
+      "id": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-1",
+      "sourceFileId": "a9974ea5-3511-4f73-a3ea-a56a5c88d7ad",
+      "sourceLayer": "preset",
+      "label": "trapezoid #1",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 20,
+            "y1": 0,
+            "x2": 80,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 80,
+            "y1": 0,
+            "x2": 100,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 20,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-2",
+      "sourceFileId": "a9974ea5-3511-4f73-a3ea-a56a5c88d7ad",
+      "sourceLayer": "preset",
+      "label": "trapezoid #2",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 20,
+            "y1": 0,
+            "x2": 80,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 80,
+            "y1": 0,
+            "x2": 100,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 20,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-3",
+      "sourceFileId": "a9974ea5-3511-4f73-a3ea-a56a5c88d7ad",
+      "sourceLayer": "preset",
+      "label": "trapezoid #3",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 20,
+            "y1": 0,
+            "x2": 80,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 80,
+            "y1": 0,
+            "x2": 100,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 20,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-4",
+      "sourceFileId": "a9974ea5-3511-4f73-a3ea-a56a5c88d7ad",
+      "sourceLayer": "preset",
+      "label": "trapezoid #4",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 20,
+            "y1": 0,
+            "x2": 80,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 80,
+            "y1": 0,
+            "x2": 100,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 20,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-5",
+      "sourceFileId": "a9974ea5-3511-4f73-a3ea-a56a5c88d7ad",
+      "sourceLayer": "preset",
+      "label": "trapezoid #5",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 20,
+            "y1": 0,
+            "x2": 80,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 80,
+            "y1": 0,
+            "x2": 100,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 20,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-1",
+      "sourceFileId": "4a093a80-8fec-4069-bff4-060852971a92",
+      "sourceLayer": "preset",
+      "label": "trapezoid #1",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 27.5,
+            "y1": 0,
+            "x2": 72.5,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 72.5,
+            "y1": 0,
+            "x2": 100,
+            "y2": 40
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 40,
+            "x2": 0,
+            "y2": 40
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 40,
+            "x2": 27.5,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-2",
+      "sourceFileId": "4a093a80-8fec-4069-bff4-060852971a92",
+      "sourceLayer": "preset",
+      "label": "trapezoid #2",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 27.5,
+            "y1": 0,
+            "x2": 72.5,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 72.5,
+            "y1": 0,
+            "x2": 100,
+            "y2": 40
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 40,
+            "x2": 0,
+            "y2": 40
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 40,
+            "x2": 27.5,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-3",
+      "sourceFileId": "4a093a80-8fec-4069-bff4-060852971a92",
+      "sourceLayer": "preset",
+      "label": "trapezoid #3",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 27.5,
+            "y1": 0,
+            "x2": 72.5,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 72.5,
+            "y1": 0,
+            "x2": 100,
+            "y2": 40
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 40,
+            "x2": 0,
+            "y2": 40
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 40,
+            "x2": 27.5,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-4",
+      "sourceFileId": "4a093a80-8fec-4069-bff4-060852971a92",
+      "sourceLayer": "preset",
+      "label": "trapezoid #4",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 27.5,
+            "y1": 0,
+            "x2": 72.5,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 72.5,
+            "y1": 0,
+            "x2": 100,
+            "y2": 40
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 40,
+            "x2": 0,
+            "y2": 40
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 40,
+            "x2": 27.5,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-5",
+      "sourceFileId": "4a093a80-8fec-4069-bff4-060852971a92",
+      "sourceLayer": "preset",
+      "label": "trapezoid #5",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 27.5,
+            "y1": 0,
+            "x2": 72.5,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 72.5,
+            "y1": 0,
+            "x2": 100,
+            "y2": 40
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 40,
+            "x2": 0,
+            "y2": 40
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 40,
+            "x2": 27.5,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-1",
+      "sourceFileId": "709abc1c-5456-4723-bc82-218ce59cde19",
+      "sourceLayer": "preset",
+      "label": "star #1",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 50,
+            "y1": 0,
+            "x2": 62.9787137637478,
+            "y2": 14.59826777560239
+          },
+          {
+            "kind": "line",
+            "x1": 62.9787137637478,
+            "y1": 14.59826777560239,
+            "x2": 100,
+            "y2": 15.278640450004206
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 15.278640450004206,
+            "x2": 71,
+            "y2": 24.981238786600628
+          },
+          {
+            "kind": "line",
+            "x1": 71,
+            "y1": 24.981238786600628,
+            "x2": 80.90169943749474,
+            "y2": 40
+          },
+          {
+            "kind": "line",
+            "x1": 80.90169943749474,
+            "y1": 40,
+            "x2": 50,
+            "y2": 31.398267775602392
+          },
+          {
+            "kind": "line",
+            "x1": 50,
+            "y1": 31.398267775602392,
+            "x2": 19.098300562505266,
+            "y2": 40
+          },
+          {
+            "kind": "line",
+            "x1": 19.098300562505266,
+            "y1": 40,
+            "x2": 29.000000000000004,
+            "y2": 24.981238786600628
+          },
+          {
+            "kind": "line",
+            "x1": 29.000000000000004,
+            "y1": 24.981238786600628,
+            "x2": 0,
+            "y2": 15.278640450004211
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 15.278640450004211,
+            "x2": 37.02128623625221,
+            "y2": 14.598267775602391
+          },
+          {
+            "kind": "line",
+            "x1": 37.02128623625221,
+            "y1": 14.598267775602391,
+            "x2": 50,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-2",
+      "sourceFileId": "709abc1c-5456-4723-bc82-218ce59cde19",
+      "sourceLayer": "preset",
+      "label": "star #2",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 50,
+            "y1": 0,
+            "x2": 62.9787137637478,
+            "y2": 14.59826777560239
+          },
+          {
+            "kind": "line",
+            "x1": 62.9787137637478,
+            "y1": 14.59826777560239,
+            "x2": 100,
+            "y2": 15.278640450004206
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 15.278640450004206,
+            "x2": 71,
+            "y2": 24.981238786600628
+          },
+          {
+            "kind": "line",
+            "x1": 71,
+            "y1": 24.981238786600628,
+            "x2": 80.90169943749474,
+            "y2": 40
+          },
+          {
+            "kind": "line",
+            "x1": 80.90169943749474,
+            "y1": 40,
+            "x2": 50,
+            "y2": 31.398267775602392
+          },
+          {
+            "kind": "line",
+            "x1": 50,
+            "y1": 31.398267775602392,
+            "x2": 19.098300562505266,
+            "y2": 40
+          },
+          {
+            "kind": "line",
+            "x1": 19.098300562505266,
+            "y1": 40,
+            "x2": 29.000000000000004,
+            "y2": 24.981238786600628
+          },
+          {
+            "kind": "line",
+            "x1": 29.000000000000004,
+            "y1": 24.981238786600628,
+            "x2": 0,
+            "y2": 15.278640450004211
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 15.278640450004211,
+            "x2": 37.02128623625221,
+            "y2": 14.598267775602391
+          },
+          {
+            "kind": "line",
+            "x1": 37.02128623625221,
+            "y1": 14.598267775602391,
+            "x2": 50,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-3",
+      "sourceFileId": "709abc1c-5456-4723-bc82-218ce59cde19",
+      "sourceLayer": "preset",
+      "label": "star #3",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 50,
+            "y1": 0,
+            "x2": 62.9787137637478,
+            "y2": 14.59826777560239
+          },
+          {
+            "kind": "line",
+            "x1": 62.9787137637478,
+            "y1": 14.59826777560239,
+            "x2": 100,
+            "y2": 15.278640450004206
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 15.278640450004206,
+            "x2": 71,
+            "y2": 24.981238786600628
+          },
+          {
+            "kind": "line",
+            "x1": 71,
+            "y1": 24.981238786600628,
+            "x2": 80.90169943749474,
+            "y2": 40
+          },
+          {
+            "kind": "line",
+            "x1": 80.90169943749474,
+            "y1": 40,
+            "x2": 50,
+            "y2": 31.398267775602392
+          },
+          {
+            "kind": "line",
+            "x1": 50,
+            "y1": 31.398267775602392,
+            "x2": 19.098300562505266,
+            "y2": 40
+          },
+          {
+            "kind": "line",
+            "x1": 19.098300562505266,
+            "y1": 40,
+            "x2": 29.000000000000004,
+            "y2": 24.981238786600628
+          },
+          {
+            "kind": "line",
+            "x1": 29.000000000000004,
+            "y1": 24.981238786600628,
+            "x2": 0,
+            "y2": 15.278640450004211
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 15.278640450004211,
+            "x2": 37.02128623625221,
+            "y2": 14.598267775602391
+          },
+          {
+            "kind": "line",
+            "x1": 37.02128623625221,
+            "y1": 14.598267775602391,
+            "x2": 50,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-4",
+      "sourceFileId": "709abc1c-5456-4723-bc82-218ce59cde19",
+      "sourceLayer": "preset",
+      "label": "star #4",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 50,
+            "y1": 0,
+            "x2": 62.9787137637478,
+            "y2": 14.59826777560239
+          },
+          {
+            "kind": "line",
+            "x1": 62.9787137637478,
+            "y1": 14.59826777560239,
+            "x2": 100,
+            "y2": 15.278640450004206
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 15.278640450004206,
+            "x2": 71,
+            "y2": 24.981238786600628
+          },
+          {
+            "kind": "line",
+            "x1": 71,
+            "y1": 24.981238786600628,
+            "x2": 80.90169943749474,
+            "y2": 40
+          },
+          {
+            "kind": "line",
+            "x1": 80.90169943749474,
+            "y1": 40,
+            "x2": 50,
+            "y2": 31.398267775602392
+          },
+          {
+            "kind": "line",
+            "x1": 50,
+            "y1": 31.398267775602392,
+            "x2": 19.098300562505266,
+            "y2": 40
+          },
+          {
+            "kind": "line",
+            "x1": 19.098300562505266,
+            "y1": 40,
+            "x2": 29.000000000000004,
+            "y2": 24.981238786600628
+          },
+          {
+            "kind": "line",
+            "x1": 29.000000000000004,
+            "y1": 24.981238786600628,
+            "x2": 0,
+            "y2": 15.278640450004211
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 15.278640450004211,
+            "x2": 37.02128623625221,
+            "y2": 14.598267775602391
+          },
+          {
+            "kind": "line",
+            "x1": 37.02128623625221,
+            "y1": 14.598267775602391,
+            "x2": 50,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-1",
+      "sourceFileId": "e981bff0-ea3f-42c1-b100-90f3f717e4c7",
+      "sourceLayer": "preset",
+      "label": "star #1",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 100
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 50,
+            "y1": 0,
+            "x2": 62.9787137637478,
+            "y2": 36.495669439005965
+          },
+          {
+            "kind": "line",
+            "x1": 62.9787137637478,
+            "y1": 36.495669439005965,
+            "x2": 100,
+            "y2": 38.19660112501052
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 38.19660112501052,
+            "x2": 71,
+            "y2": 62.453096966501555
+          },
+          {
+            "kind": "line",
+            "x1": 71,
+            "y1": 62.453096966501555,
+            "x2": 80.90169943749474,
+            "y2": 100
+          },
+          {
+            "kind": "line",
+            "x1": 80.90169943749474,
+            "y1": 100,
+            "x2": 50,
+            "y2": 78.49566943900597
+          },
+          {
+            "kind": "line",
+            "x1": 50,
+            "y1": 78.49566943900597,
+            "x2": 19.098300562505266,
+            "y2": 100
+          },
+          {
+            "kind": "line",
+            "x1": 19.098300562505266,
+            "y1": 100,
+            "x2": 29.000000000000004,
+            "y2": 62.453096966501555
+          },
+          {
+            "kind": "line",
+            "x1": 29.000000000000004,
+            "y1": 62.453096966501555,
+            "x2": 0,
+            "y2": 38.196601125010524
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 38.196601125010524,
+            "x2": 37.02128623625221,
+            "y2": 36.495669439005965
+          },
+          {
+            "kind": "line",
+            "x1": 37.02128623625221,
+            "y1": 36.495669439005965,
+            "x2": 50,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-2",
+      "sourceFileId": "e981bff0-ea3f-42c1-b100-90f3f717e4c7",
+      "sourceLayer": "preset",
+      "label": "star #2",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 100
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 50,
+            "y1": 0,
+            "x2": 62.9787137637478,
+            "y2": 36.495669439005965
+          },
+          {
+            "kind": "line",
+            "x1": 62.9787137637478,
+            "y1": 36.495669439005965,
+            "x2": 100,
+            "y2": 38.19660112501052
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 38.19660112501052,
+            "x2": 71,
+            "y2": 62.453096966501555
+          },
+          {
+            "kind": "line",
+            "x1": 71,
+            "y1": 62.453096966501555,
+            "x2": 80.90169943749474,
+            "y2": 100
+          },
+          {
+            "kind": "line",
+            "x1": 80.90169943749474,
+            "y1": 100,
+            "x2": 50,
+            "y2": 78.49566943900597
+          },
+          {
+            "kind": "line",
+            "x1": 50,
+            "y1": 78.49566943900597,
+            "x2": 19.098300562505266,
+            "y2": 100
+          },
+          {
+            "kind": "line",
+            "x1": 19.098300562505266,
+            "y1": 100,
+            "x2": 29.000000000000004,
+            "y2": 62.453096966501555
+          },
+          {
+            "kind": "line",
+            "x1": 29.000000000000004,
+            "y1": 62.453096966501555,
+            "x2": 0,
+            "y2": 38.196601125010524
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 38.196601125010524,
+            "x2": 37.02128623625221,
+            "y2": 36.495669439005965
+          },
+          {
+            "kind": "line",
+            "x1": 37.02128623625221,
+            "y1": 36.495669439005965,
+            "x2": 50,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-3",
+      "sourceFileId": "e981bff0-ea3f-42c1-b100-90f3f717e4c7",
+      "sourceLayer": "preset",
+      "label": "star #3",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 100
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 50,
+            "y1": 0,
+            "x2": 62.9787137637478,
+            "y2": 36.495669439005965
+          },
+          {
+            "kind": "line",
+            "x1": 62.9787137637478,
+            "y1": 36.495669439005965,
+            "x2": 100,
+            "y2": 38.19660112501052
+          },
+          {
+            "kind": "line",
+            "x1": 100,
+            "y1": 38.19660112501052,
+            "x2": 71,
+            "y2": 62.453096966501555
+          },
+          {
+            "kind": "line",
+            "x1": 71,
+            "y1": 62.453096966501555,
+            "x2": 80.90169943749474,
+            "y2": 100
+          },
+          {
+            "kind": "line",
+            "x1": 80.90169943749474,
+            "y1": 100,
+            "x2": 50,
+            "y2": 78.49566943900597
+          },
+          {
+            "kind": "line",
+            "x1": 50,
+            "y1": 78.49566943900597,
+            "x2": 19.098300562505266,
+            "y2": 100
+          },
+          {
+            "kind": "line",
+            "x1": 19.098300562505266,
+            "y1": 100,
+            "x2": 29.000000000000004,
+            "y2": 62.453096966501555
+          },
+          {
+            "kind": "line",
+            "x1": 29.000000000000004,
+            "y1": 62.453096966501555,
+            "x2": 0,
+            "y2": 38.196601125010524
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 38.196601125010524,
+            "x2": 37.02128623625221,
+            "y2": 36.495669439005965
+          },
+          {
+            "kind": "line",
+            "x1": 37.02128623625221,
+            "y1": 36.495669439005965,
+            "x2": 50,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-1",
+      "sourceFileId": "a1ccf00e-e879-4244-9d0c-980eda7d54eb",
+      "sourceLayer": "preset",
+      "label": "star #1",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 40,
+        "height": 100
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 20,
+            "y1": 0,
+            "x2": 25.191485505499116,
+            "y2": 36.495669439005965
+          },
+          {
+            "kind": "line",
+            "x1": 25.191485505499116,
+            "y1": 36.495669439005965,
+            "x2": 40,
+            "y2": 38.19660112501052
+          },
+          {
+            "kind": "line",
+            "x1": 40,
+            "y1": 38.19660112501052,
+            "x2": 28.4,
+            "y2": 62.453096966501555
+          },
+          {
+            "kind": "line",
+            "x1": 28.4,
+            "y1": 62.453096966501555,
+            "x2": 32.3606797749979,
+            "y2": 100
+          },
+          {
+            "kind": "line",
+            "x1": 32.3606797749979,
+            "y1": 100,
+            "x2": 20,
+            "y2": 78.49566943900597
+          },
+          {
+            "kind": "line",
+            "x1": 20,
+            "y1": 78.49566943900597,
+            "x2": 7.639320225002106,
+            "y2": 100
+          },
+          {
+            "kind": "line",
+            "x1": 7.639320225002106,
+            "y1": 100,
+            "x2": 11.600000000000001,
+            "y2": 62.453096966501555
+          },
+          {
+            "kind": "line",
+            "x1": 11.600000000000001,
+            "y1": 62.453096966501555,
+            "x2": 0,
+            "y2": 38.196601125010524
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 38.196601125010524,
+            "x2": 14.808514494500884,
+            "y2": 36.495669439005965
+          },
+          {
+            "kind": "line",
+            "x1": 14.808514494500884,
+            "y1": 36.495669439005965,
+            "x2": 20,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-2",
+      "sourceFileId": "a1ccf00e-e879-4244-9d0c-980eda7d54eb",
+      "sourceLayer": "preset",
+      "label": "star #2",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 40,
+        "height": 100
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 20,
+            "y1": 0,
+            "x2": 25.191485505499116,
+            "y2": 36.495669439005965
+          },
+          {
+            "kind": "line",
+            "x1": 25.191485505499116,
+            "y1": 36.495669439005965,
+            "x2": 40,
+            "y2": 38.19660112501052
+          },
+          {
+            "kind": "line",
+            "x1": 40,
+            "y1": 38.19660112501052,
+            "x2": 28.4,
+            "y2": 62.453096966501555
+          },
+          {
+            "kind": "line",
+            "x1": 28.4,
+            "y1": 62.453096966501555,
+            "x2": 32.3606797749979,
+            "y2": 100
+          },
+          {
+            "kind": "line",
+            "x1": 32.3606797749979,
+            "y1": 100,
+            "x2": 20,
+            "y2": 78.49566943900597
+          },
+          {
+            "kind": "line",
+            "x1": 20,
+            "y1": 78.49566943900597,
+            "x2": 7.639320225002106,
+            "y2": 100
+          },
+          {
+            "kind": "line",
+            "x1": 7.639320225002106,
+            "y1": 100,
+            "x2": 11.600000000000001,
+            "y2": 62.453096966501555
+          },
+          {
+            "kind": "line",
+            "x1": 11.600000000000001,
+            "y1": 62.453096966501555,
+            "x2": 0,
+            "y2": 38.196601125010524
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 38.196601125010524,
+            "x2": 14.808514494500884,
+            "y2": 36.495669439005965
+          },
+          {
+            "kind": "line",
+            "x1": 14.808514494500884,
+            "y1": 36.495669439005965,
+            "x2": 20,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-1",
+      "sourceFileId": "c4eb5ccd-93da-4ec3-b51b-da55c59c5636",
+      "sourceLayer": "preset",
+      "label": "hexagon #1",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 100
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 34.99999999999999,
+            "y1": 0,
+            "x2": 69.99999999999999,
+            "y2": 25
+          },
+          {
+            "kind": "line",
+            "x1": 69.99999999999999,
+            "y1": 25,
+            "x2": 70,
+            "y2": 75
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 75,
+            "x2": 34.99999999999999,
+            "y2": 100
+          },
+          {
+            "kind": "line",
+            "x1": 34.99999999999999,
+            "y1": 100,
+            "x2": 4.1023203976182695e-15,
+            "y2": 75.00000000000001
+          },
+          {
+            "kind": "line",
+            "x1": 4.1023203976182695e-15,
+            "y1": 75.00000000000001,
+            "x2": 0,
+            "y2": 24.999999999999993
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 24.999999999999993,
+            "x2": 34.99999999999999,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-2",
+      "sourceFileId": "c4eb5ccd-93da-4ec3-b51b-da55c59c5636",
+      "sourceLayer": "preset",
+      "label": "hexagon #2",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 100
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 34.99999999999999,
+            "y1": 0,
+            "x2": 69.99999999999999,
+            "y2": 25
+          },
+          {
+            "kind": "line",
+            "x1": 69.99999999999999,
+            "y1": 25,
+            "x2": 70,
+            "y2": 75
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 75,
+            "x2": 34.99999999999999,
+            "y2": 100
+          },
+          {
+            "kind": "line",
+            "x1": 34.99999999999999,
+            "y1": 100,
+            "x2": 4.1023203976182695e-15,
+            "y2": 75.00000000000001
+          },
+          {
+            "kind": "line",
+            "x1": 4.1023203976182695e-15,
+            "y1": 75.00000000000001,
+            "x2": 0,
+            "y2": 24.999999999999993
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 24.999999999999993,
+            "x2": 34.99999999999999,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-3",
+      "sourceFileId": "c4eb5ccd-93da-4ec3-b51b-da55c59c5636",
+      "sourceLayer": "preset",
+      "label": "hexagon #3",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 100
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 34.99999999999999,
+            "y1": 0,
+            "x2": 69.99999999999999,
+            "y2": 25
+          },
+          {
+            "kind": "line",
+            "x1": 69.99999999999999,
+            "y1": 25,
+            "x2": 70,
+            "y2": 75
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 75,
+            "x2": 34.99999999999999,
+            "y2": 100
+          },
+          {
+            "kind": "line",
+            "x1": 34.99999999999999,
+            "y1": 100,
+            "x2": 4.1023203976182695e-15,
+            "y2": 75.00000000000001
+          },
+          {
+            "kind": "line",
+            "x1": 4.1023203976182695e-15,
+            "y1": 75.00000000000001,
+            "x2": 0,
+            "y2": 24.999999999999993
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 24.999999999999993,
+            "x2": 34.99999999999999,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-4",
+      "sourceFileId": "c4eb5ccd-93da-4ec3-b51b-da55c59c5636",
+      "sourceLayer": "preset",
+      "label": "hexagon #4",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 100
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 34.99999999999999,
+            "y1": 0,
+            "x2": 69.99999999999999,
+            "y2": 25
+          },
+          {
+            "kind": "line",
+            "x1": 69.99999999999999,
+            "y1": 25,
+            "x2": 70,
+            "y2": 75
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 75,
+            "x2": 34.99999999999999,
+            "y2": 100
+          },
+          {
+            "kind": "line",
+            "x1": 34.99999999999999,
+            "y1": 100,
+            "x2": 4.1023203976182695e-15,
+            "y2": 75.00000000000001
+          },
+          {
+            "kind": "line",
+            "x1": 4.1023203976182695e-15,
+            "y1": 75.00000000000001,
+            "x2": 0,
+            "y2": 24.999999999999993
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 24.999999999999993,
+            "x2": 34.99999999999999,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-1",
+      "sourceFileId": "1c641b0e-a8a2-4eee-a823-3b61879ba503",
+      "sourceLayer": "preset",
+      "label": "hexagon #1",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 140,
+        "height": 100
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 69.99999999999999,
+            "y1": 0,
+            "x2": 139.99999999999997,
+            "y2": 25
+          },
+          {
+            "kind": "line",
+            "x1": 139.99999999999997,
+            "y1": 25,
+            "x2": 140,
+            "y2": 75
+          },
+          {
+            "kind": "line",
+            "x1": 140,
+            "y1": 75,
+            "x2": 69.99999999999999,
+            "y2": 100
+          },
+          {
+            "kind": "line",
+            "x1": 69.99999999999999,
+            "y1": 100,
+            "x2": 8.204640795236539e-15,
+            "y2": 75.00000000000001
+          },
+          {
+            "kind": "line",
+            "x1": 8.204640795236539e-15,
+            "y1": 75.00000000000001,
+            "x2": 0,
+            "y2": 24.999999999999993
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 24.999999999999993,
+            "x2": 69.99999999999999,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-2",
+      "sourceFileId": "1c641b0e-a8a2-4eee-a823-3b61879ba503",
+      "sourceLayer": "preset",
+      "label": "hexagon #2",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 140,
+        "height": 100
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 69.99999999999999,
+            "y1": 0,
+            "x2": 139.99999999999997,
+            "y2": 25
+          },
+          {
+            "kind": "line",
+            "x1": 139.99999999999997,
+            "y1": 25,
+            "x2": 140,
+            "y2": 75
+          },
+          {
+            "kind": "line",
+            "x1": 140,
+            "y1": 75,
+            "x2": 69.99999999999999,
+            "y2": 100
+          },
+          {
+            "kind": "line",
+            "x1": 69.99999999999999,
+            "y1": 100,
+            "x2": 8.204640795236539e-15,
+            "y2": 75.00000000000001
+          },
+          {
+            "kind": "line",
+            "x1": 8.204640795236539e-15,
+            "y1": 75.00000000000001,
+            "x2": 0,
+            "y2": 24.999999999999993
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 24.999999999999993,
+            "x2": 69.99999999999999,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-1",
+      "sourceFileId": "310c861b-2d94-43ce-a611-438dba9311a7",
+      "sourceLayer": "preset",
+      "label": "rectangle #1",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 30
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 0,
+            "x2": 30,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 30,
+            "y1": 0,
+            "x2": 30,
+            "y2": 30
+          },
+          {
+            "kind": "line",
+            "x1": 30,
+            "y1": 30,
+            "x2": 0,
+            "y2": 30
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 30,
+            "x2": 0,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-2",
+      "sourceFileId": "310c861b-2d94-43ce-a611-438dba9311a7",
+      "sourceLayer": "preset",
+      "label": "rectangle #2",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 30
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 0,
+            "x2": 30,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 30,
+            "y1": 0,
+            "x2": 30,
+            "y2": 30
+          },
+          {
+            "kind": "line",
+            "x1": 30,
+            "y1": 30,
+            "x2": 0,
+            "y2": 30
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 30,
+            "x2": 0,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-3",
+      "sourceFileId": "310c861b-2d94-43ce-a611-438dba9311a7",
+      "sourceLayer": "preset",
+      "label": "rectangle #3",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 30
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 0,
+            "x2": 30,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 30,
+            "y1": 0,
+            "x2": 30,
+            "y2": 30
+          },
+          {
+            "kind": "line",
+            "x1": 30,
+            "y1": 30,
+            "x2": 0,
+            "y2": 30
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 30,
+            "x2": 0,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-4",
+      "sourceFileId": "310c861b-2d94-43ce-a611-438dba9311a7",
+      "sourceLayer": "preset",
+      "label": "rectangle #4",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 30
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 0,
+            "x2": 30,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 30,
+            "y1": 0,
+            "x2": 30,
+            "y2": 30
+          },
+          {
+            "kind": "line",
+            "x1": 30,
+            "y1": 30,
+            "x2": 0,
+            "y2": 30
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 30,
+            "x2": 0,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-5",
+      "sourceFileId": "310c861b-2d94-43ce-a611-438dba9311a7",
+      "sourceLayer": "preset",
+      "label": "rectangle #5",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 30
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 0,
+            "x2": 30,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 30,
+            "y1": 0,
+            "x2": 30,
+            "y2": 30
+          },
+          {
+            "kind": "line",
+            "x1": 30,
+            "y1": 30,
+            "x2": 0,
+            "y2": 30
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 30,
+            "x2": 0,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-6",
+      "sourceFileId": "310c861b-2d94-43ce-a611-438dba9311a7",
+      "sourceLayer": "preset",
+      "label": "rectangle #6",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 30
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 0,
+            "x2": 30,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 30,
+            "y1": 0,
+            "x2": 30,
+            "y2": 30
+          },
+          {
+            "kind": "line",
+            "x1": 30,
+            "y1": 30,
+            "x2": 0,
+            "y2": 30
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 30,
+            "x2": 0,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-7",
+      "sourceFileId": "310c861b-2d94-43ce-a611-438dba9311a7",
+      "sourceLayer": "preset",
+      "label": "rectangle #7",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 30
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 0,
+            "x2": 30,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 30,
+            "y1": 0,
+            "x2": 30,
+            "y2": 30
+          },
+          {
+            "kind": "line",
+            "x1": 30,
+            "y1": 30,
+            "x2": 0,
+            "y2": 30
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 30,
+            "x2": 0,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-8",
+      "sourceFileId": "310c861b-2d94-43ce-a611-438dba9311a7",
+      "sourceLayer": "preset",
+      "label": "rectangle #8",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 30
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 0,
+            "x2": 30,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 30,
+            "y1": 0,
+            "x2": 30,
+            "y2": 30
+          },
+          {
+            "kind": "line",
+            "x1": 30,
+            "y1": 30,
+            "x2": 0,
+            "y2": 30
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 30,
+            "x2": 0,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-1",
+      "sourceFileId": "5915b196-bfe7-4140-82d8-aaa86e390bfe",
+      "sourceLayer": "preset",
+      "label": "rectangle #1",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 90
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 0,
+            "x2": 30,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 30,
+            "y1": 0,
+            "x2": 30,
+            "y2": 90
+          },
+          {
+            "kind": "line",
+            "x1": 30,
+            "y1": 90,
+            "x2": 0,
+            "y2": 90
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 90,
+            "x2": 0,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-2",
+      "sourceFileId": "5915b196-bfe7-4140-82d8-aaa86e390bfe",
+      "sourceLayer": "preset",
+      "label": "rectangle #2",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 90
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 0,
+            "x2": 30,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 30,
+            "y1": 0,
+            "x2": 30,
+            "y2": 90
+          },
+          {
+            "kind": "line",
+            "x1": 30,
+            "y1": 90,
+            "x2": 0,
+            "y2": 90
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 90,
+            "x2": 0,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-3",
+      "sourceFileId": "5915b196-bfe7-4140-82d8-aaa86e390bfe",
+      "sourceLayer": "preset",
+      "label": "rectangle #3",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 90
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 0,
+            "x2": 30,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 30,
+            "y1": 0,
+            "x2": 30,
+            "y2": 90
+          },
+          {
+            "kind": "line",
+            "x1": 30,
+            "y1": 90,
+            "x2": 0,
+            "y2": 90
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 90,
+            "x2": 0,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-4",
+      "sourceFileId": "5915b196-bfe7-4140-82d8-aaa86e390bfe",
+      "sourceLayer": "preset",
+      "label": "rectangle #4",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 90
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 0,
+            "x2": 30,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 30,
+            "y1": 0,
+            "x2": 30,
+            "y2": 90
+          },
+          {
+            "kind": "line",
+            "x1": 30,
+            "y1": 90,
+            "x2": 0,
+            "y2": 90
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 90,
+            "x2": 0,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-5",
+      "sourceFileId": "5915b196-bfe7-4140-82d8-aaa86e390bfe",
+      "sourceLayer": "preset",
+      "label": "rectangle #5",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 90
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 0,
+            "x2": 30,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 30,
+            "y1": 0,
+            "x2": 30,
+            "y2": 90
+          },
+          {
+            "kind": "line",
+            "x1": 30,
+            "y1": 90,
+            "x2": 0,
+            "y2": 90
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 90,
+            "x2": 0,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-1",
+      "sourceFileId": "c75534de-07f8-4183-80e4-9cec76de6ee1",
+      "sourceLayer": "0",
+      "label": "7cd85036-5d7c-421c-a8b2-fb092b1a1980 #1",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 154,
+        "height": 104
+      },
+      "geometry": {
+        "entityType": "DXF_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 0,
+            "x2": 154,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 154,
+            "y1": 0,
+            "x2": 154,
+            "y2": 104
+          },
+          {
+            "kind": "line",
+            "x1": 154,
+            "y1": 104,
+            "x2": 0,
+            "y2": 104
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 104,
+            "x2": 0,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-2",
+      "sourceFileId": "c75534de-07f8-4183-80e4-9cec76de6ee1",
+      "sourceLayer": "0",
+      "label": "7cd85036-5d7c-421c-a8b2-fb092b1a1980 #2",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 154,
+        "height": 104
+      },
+      "geometry": {
+        "entityType": "DXF_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 0,
+            "x2": 154,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 154,
+            "y1": 0,
+            "x2": 154,
+            "y2": 104
+          },
+          {
+            "kind": "line",
+            "x1": 154,
+            "y1": 104,
+            "x2": 0,
+            "y2": 104
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 104,
+            "x2": 0,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-3",
+      "sourceFileId": "c75534de-07f8-4183-80e4-9cec76de6ee1",
+      "sourceLayer": "0",
+      "label": "7cd85036-5d7c-421c-a8b2-fb092b1a1980 #3",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 154,
+        "height": 104
+      },
+      "geometry": {
+        "entityType": "DXF_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 0,
+            "x2": 154,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 154,
+            "y1": 0,
+            "x2": 154,
+            "y2": 104
+          },
+          {
+            "kind": "line",
+            "x1": 154,
+            "y1": 104,
+            "x2": 0,
+            "y2": 104
+          },
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 104,
+            "x2": 0,
+            "y2": 0
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-1",
+      "sourceFileId": "133e0f5e-6aeb-4920-a8ff-2e071238de58",
+      "sourceLayer": "preset",
+      "label": "triangle #1",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-2",
+      "sourceFileId": "133e0f5e-6aeb-4920-a8ff-2e071238de58",
+      "sourceLayer": "preset",
+      "label": "triangle #2",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-3",
+      "sourceFileId": "133e0f5e-6aeb-4920-a8ff-2e071238de58",
+      "sourceLayer": "preset",
+      "label": "triangle #3",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-4",
+      "sourceFileId": "133e0f5e-6aeb-4920-a8ff-2e071238de58",
+      "sourceLayer": "preset",
+      "label": "triangle #4",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-5",
+      "sourceFileId": "133e0f5e-6aeb-4920-a8ff-2e071238de58",
+      "sourceLayer": "preset",
+      "label": "triangle #5",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-6",
+      "sourceFileId": "133e0f5e-6aeb-4920-a8ff-2e071238de58",
+      "sourceLayer": "preset",
+      "label": "triangle #6",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-7",
+      "sourceFileId": "133e0f5e-6aeb-4920-a8ff-2e071238de58",
+      "sourceLayer": "preset",
+      "label": "triangle #7",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-8",
+      "sourceFileId": "133e0f5e-6aeb-4920-a8ff-2e071238de58",
+      "sourceLayer": "preset",
+      "label": "triangle #8",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-9",
+      "sourceFileId": "133e0f5e-6aeb-4920-a8ff-2e071238de58",
+      "sourceLayer": "preset",
+      "label": "triangle #9",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-10",
+      "sourceFileId": "133e0f5e-6aeb-4920-a8ff-2e071238de58",
+      "sourceLayer": "preset",
+      "label": "triangle #10",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-11",
+      "sourceFileId": "133e0f5e-6aeb-4920-a8ff-2e071238de58",
+      "sourceLayer": "preset",
+      "label": "triangle #11",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-12",
+      "sourceFileId": "133e0f5e-6aeb-4920-a8ff-2e071238de58",
+      "sourceLayer": "preset",
+      "label": "triangle #12",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-13",
+      "sourceFileId": "133e0f5e-6aeb-4920-a8ff-2e071238de58",
+      "sourceLayer": "preset",
+      "label": "triangle #13",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-14",
+      "sourceFileId": "133e0f5e-6aeb-4920-a8ff-2e071238de58",
+      "sourceLayer": "preset",
+      "label": "triangle #14",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-15",
+      "sourceFileId": "133e0f5e-6aeb-4920-a8ff-2e071238de58",
+      "sourceLayer": "preset",
+      "label": "triangle #15",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-16",
+      "sourceFileId": "133e0f5e-6aeb-4920-a8ff-2e071238de58",
+      "sourceLayer": "preset",
+      "label": "triangle #16",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-17",
+      "sourceFileId": "133e0f5e-6aeb-4920-a8ff-2e071238de58",
+      "sourceLayer": "preset",
+      "label": "triangle #17",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-18",
+      "sourceFileId": "133e0f5e-6aeb-4920-a8ff-2e071238de58",
+      "sourceLayer": "preset",
+      "label": "triangle #18",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-19",
+      "sourceFileId": "133e0f5e-6aeb-4920-a8ff-2e071238de58",
+      "sourceLayer": "preset",
+      "label": "triangle #19",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "d06db288-d2d6-4f40-874e-98287f516d93-copy-20",
+      "sourceFileId": "133e0f5e-6aeb-4920-a8ff-2e071238de58",
+      "sourceLayer": "preset",
+      "label": "triangle #20",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    }
+  ],
+  "options": {
+    "allowGlobalRotation": true,
+    "allowGlobalMirror": true,
+    "timeoutMs": 9007199254740991,
+    "workerMode": "irregular-convex-v2",
+    "historyMode": "off",
+    "historyScope": "winning_path",
+    "strategySelectionMode": "all_configured",
+    "strategyIds": [
+      "short-fill-bottom-left-then-short-side-fit"
+    ],
+    "layoutSelectionStrategyId": "compact-first",
+    "finalSelectionMode": "manual",
+    "topN": 3,
+    "irregularSettings": {
+      "geometry": {
+        "flatteningSagToleranceMm": 0.25,
+        "clearanceSafetyMarginMm": 0.25,
+        "geometryBackendId": "irregular-convex-v2-default",
+        "geometryBackendVersion": "0"
+      },
+      "optimizer": {
+        "orderWindow": 4,
+        "beamWidth": 8,
+        "localCandidateFanout": 4,
+        "localRepairBudget": 0,
+        "intrinsicSharedArchiveEnabled": true,
+        "intrinsicObjectiveProfileId": "compact",
+        "transformCap": 8,
+        "transformMinimumEdgeLengthMm": 1.2,
+        "transformAngleDeduplicationToleranceDeg": 0.051,
+        "configuredRotationEnabled": true,
+        "edgeAlignmentEnabled": true,
+        "configuredRotationDeg": [],
+        "gaEnabled": false,
+        "baselineOnly": true,
+        "gaPopulation": 12,
+        "gaGenerationBudget": 2,
+        "gaEvaluationBudget": 24,
+        "gaTimeBudgetMs": 15000,
+        "gaSeed": "default",
+        "priorityOrderMutationEnabled": true,
+        "transformPreferenceMutationEnabled": true,
+        "placementPolicyMutationEnabled": true,
+        "placementPolicyId": "edge-contact-then-balanced-compactness",
+        "placementPolicyIds": [
+          "balanced-compactness",
+          "short-side-fill",
+          "edge-contact-then-balanced-compactness"
+        ]
+      }
+    }
+  }
+}

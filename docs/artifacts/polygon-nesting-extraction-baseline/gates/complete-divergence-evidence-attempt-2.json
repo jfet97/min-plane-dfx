@@ -1,0 +1,381 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Complete TypeScript versus accepted Rust diagnostic divergence audit for the required 16-row matrix",
+  "command": "pnpm exec tsx --tsconfig tsconfig.node.json scripts/rust-parity/baseline-divergence-evidence.ts --output /Users/andreasimonecosta/Documents/Work/min-plane-dfx/.claude/worktrees/polygon-nesting-extraction/docs/artifacts/polygon-nesting-extraction-baseline/gates/complete-divergence-evidence-attempt-2.json",
+  "startedAt": "2026-08-03T19:49:06.665Z",
+  "endedAt": "2026-08-03T19:52:03.039Z",
+  "environment": {
+    "node": "v24.11.1",
+    "platform": "darwin",
+    "arch": "arm64",
+    "nativeTargetTriple": "aarch64-apple-darwin",
+    "nativeApiVersion": 3,
+    "nativeBackendVersion": "0.1.0"
+  },
+  "policy": {
+    "comparisonRole": "diagnostic",
+    "blockingExtractionOracle": "exact old Rust versus extracted Rust on a matching target and toolchain pair",
+    "acceptedRowPathValuePairs": [
+      {
+        "row": "shapes-17 sheet=2000x2700 profile=short-side",
+        "path": "value.portfolio.score.freeMaterialSliverMetric",
+        "typescript": 222.54854651458191,
+        "rust": 222.54854651458194
+      },
+      {
+        "row": "shapes-17 sheet=2000x2700 profile=short-side",
+        "path": "value.score.freeMaterialSliverMetric",
+        "typescript": 222.54854651458191,
+        "rust": 222.54854651458194
+      },
+      {
+        "row": "mixed61 sheet=2000x2700 profile=compact",
+        "path": "value.portfolio.score.freeMaterialSliverMetric",
+        "typescript": 11301451.399040371,
+        "rust": 11301451.399040373
+      },
+      {
+        "row": "mixed61 sheet=2000x2700 profile=compact",
+        "path": "value.score.freeMaterialSliverMetric",
+        "typescript": 11301451.399040371,
+        "rust": 11301451.399040373
+      },
+      {
+        "row": "mixed61 sheet=2000x2700 profile=short-side",
+        "path": "value.portfolio.score.freeMaterialSliverMetric",
+        "typescript": 313539.85657207255,
+        "rust": 313539.8565720725
+      },
+      {
+        "row": "mixed61 sheet=2000x2700 profile=short-side",
+        "path": "value.score.freeMaterialSliverMetric",
+        "typescript": 313539.85657207255,
+        "rust": 313539.8565720725
+      }
+    ]
+  },
+  "summary": {
+    "requiredRows": 16,
+    "passedRows": 16,
+    "failedRows": 0,
+    "divergentLeaves": 6,
+    "unexpectedDivergentLeaves": 0,
+    "allRowsExactAfterMask": true,
+    "allExpectedDivergencesObserved": true
+  },
+  "divergences": [
+    {
+      "row": "shapes-17 sheet=2000x2700 profile=short-side",
+      "path": "value.portfolio.score.freeMaterialSliverMetric",
+      "typescript": 222.54854651458191,
+      "rust": 222.54854651458194
+    },
+    {
+      "row": "shapes-17 sheet=2000x2700 profile=short-side",
+      "path": "value.score.freeMaterialSliverMetric",
+      "typescript": 222.54854651458191,
+      "rust": 222.54854651458194
+    },
+    {
+      "row": "mixed61 sheet=2000x2700 profile=compact",
+      "path": "value.portfolio.score.freeMaterialSliverMetric",
+      "typescript": 11301451.399040371,
+      "rust": 11301451.399040373
+    },
+    {
+      "row": "mixed61 sheet=2000x2700 profile=compact",
+      "path": "value.score.freeMaterialSliverMetric",
+      "typescript": 11301451.399040371,
+      "rust": 11301451.399040373
+    },
+    {
+      "row": "mixed61 sheet=2000x2700 profile=short-side",
+      "path": "value.portfolio.score.freeMaterialSliverMetric",
+      "typescript": 313539.85657207255,
+      "rust": 313539.8565720725
+    },
+    {
+      "row": "mixed61 sheet=2000x2700 profile=short-side",
+      "path": "value.score.freeMaterialSliverMetric",
+      "typescript": 313539.85657207255,
+      "rust": 313539.8565720725
+    }
+  ],
+  "rows": [
+    {
+      "label": "mixed61 pieces=2 profile=compact",
+      "args": ["--fixture", "mixed61", "--pieces", "2", "--profile", "compact"],
+      "acceptedDivergences": [],
+      "divergences": [],
+      "unexpectedDivergences": [],
+      "missingAcceptedPaths": [],
+      "exactAfterMask": true,
+      "typescriptOutcomeKind": "success",
+      "rustOutcomeKind": "success",
+      "durationMs": 780,
+      "status": "passed"
+    },
+    {
+      "label": "mixed61 pieces=2 profile=short-side",
+      "args": ["--fixture", "mixed61", "--pieces", "2", "--profile", "short-side"],
+      "acceptedDivergences": [],
+      "divergences": [],
+      "unexpectedDivergences": [],
+      "missingAcceptedPaths": [],
+      "exactAfterMask": true,
+      "typescriptOutcomeKind": "success",
+      "rustOutcomeKind": "success",
+      "durationMs": 703,
+      "status": "passed"
+    },
+    {
+      "label": "mixed61 pieces=4 profile=compact",
+      "args": ["--fixture", "mixed61", "--pieces", "4", "--profile", "compact"],
+      "acceptedDivergences": [],
+      "divergences": [],
+      "unexpectedDivergences": [],
+      "missingAcceptedPaths": [],
+      "exactAfterMask": true,
+      "typescriptOutcomeKind": "success",
+      "rustOutcomeKind": "success",
+      "durationMs": 1011,
+      "status": "passed"
+    },
+    {
+      "label": "mixed61 pieces=4 profile=short-side",
+      "args": ["--fixture", "mixed61", "--pieces", "4", "--profile", "short-side"],
+      "acceptedDivergences": [],
+      "divergences": [],
+      "unexpectedDivergences": [],
+      "missingAcceptedPaths": [],
+      "exactAfterMask": true,
+      "typescriptOutcomeKind": "success",
+      "rustOutcomeKind": "success",
+      "durationMs": 996,
+      "status": "passed"
+    },
+    {
+      "label": "mixed61 pieces=8 profile=compact",
+      "args": ["--fixture", "mixed61", "--pieces", "8", "--profile", "compact"],
+      "acceptedDivergences": [],
+      "divergences": [],
+      "unexpectedDivergences": [],
+      "missingAcceptedPaths": [],
+      "exactAfterMask": true,
+      "typescriptOutcomeKind": "success",
+      "rustOutcomeKind": "success",
+      "durationMs": 2627,
+      "status": "passed"
+    },
+    {
+      "label": "mixed61 pieces=8 profile=short-side",
+      "args": ["--fixture", "mixed61", "--pieces", "8", "--profile", "short-side"],
+      "acceptedDivergences": [],
+      "divergences": [],
+      "unexpectedDivergences": [],
+      "missingAcceptedPaths": [],
+      "exactAfterMask": true,
+      "typescriptOutcomeKind": "success",
+      "rustOutcomeKind": "success",
+      "durationMs": 2667,
+      "status": "passed"
+    },
+    {
+      "label": "triangle-20 sheet=2000x2700 profile=compact",
+      "args": ["--fixture", "triangle-20", "--sheet", "2000x2700"],
+      "acceptedDivergences": [],
+      "divergences": [],
+      "unexpectedDivergences": [],
+      "missingAcceptedPaths": [],
+      "exactAfterMask": true,
+      "typescriptOutcomeKind": "success",
+      "rustOutcomeKind": "success",
+      "durationMs": 6178,
+      "status": "passed"
+    },
+    {
+      "label": "triangle-20 sheet=2000x2700 profile=short-side",
+      "args": ["--fixture", "triangle-20", "--sheet", "2000x2700", "--profile", "short-side"],
+      "acceptedDivergences": [],
+      "divergences": [],
+      "unexpectedDivergences": [],
+      "missingAcceptedPaths": [],
+      "exactAfterMask": true,
+      "typescriptOutcomeKind": "success",
+      "rustOutcomeKind": "success",
+      "durationMs": 6380,
+      "status": "passed"
+    },
+    {
+      "label": "shapes-17 sheet=2000x2700 profile=compact",
+      "args": ["--fixture", "shapes-17", "--sheet", "2000x2700"],
+      "acceptedDivergences": [],
+      "divergences": [],
+      "unexpectedDivergences": [],
+      "missingAcceptedPaths": [],
+      "exactAfterMask": true,
+      "typescriptOutcomeKind": "success",
+      "rustOutcomeKind": "success",
+      "durationMs": 10152,
+      "status": "passed"
+    },
+    {
+      "label": "shapes-17 sheet=2000x2700 profile=short-side",
+      "args": ["--fixture", "shapes-17", "--sheet", "2000x2700", "--profile", "short-side"],
+      "acceptedDivergences": [
+        {
+          "path": "value.portfolio.score.freeMaterialSliverMetric",
+          "typescript": 222.54854651458191,
+          "rust": 222.54854651458194
+        },
+        {
+          "path": "value.score.freeMaterialSliverMetric",
+          "typescript": 222.54854651458191,
+          "rust": 222.54854651458194
+        }
+      ],
+      "divergences": [
+        {
+          "path": "value.portfolio.score.freeMaterialSliverMetric",
+          "typescript": 222.54854651458191,
+          "rust": 222.54854651458194
+        },
+        {
+          "path": "value.score.freeMaterialSliverMetric",
+          "typescript": 222.54854651458191,
+          "rust": 222.54854651458194
+        }
+      ],
+      "unexpectedDivergences": [],
+      "missingAcceptedPaths": [],
+      "exactAfterMask": true,
+      "typescriptOutcomeKind": "success",
+      "rustOutcomeKind": "success",
+      "durationMs": 10938,
+      "status": "passed"
+    },
+    {
+      "label": "mixed61 sheet=600x400 profile=compact",
+      "args": ["--fixture", "mixed61", "--sheet", "600x400"],
+      "acceptedDivergences": [],
+      "divergences": [],
+      "unexpectedDivergences": [],
+      "missingAcceptedPaths": [],
+      "exactAfterMask": true,
+      "typescriptOutcomeKind": "success",
+      "rustOutcomeKind": "success",
+      "durationMs": 5433,
+      "status": "passed"
+    },
+    {
+      "label": "mixed61 sheet=600x400 profile=short-side",
+      "args": ["--fixture", "mixed61", "--sheet", "600x400", "--profile", "short-side"],
+      "acceptedDivergences": [],
+      "divergences": [],
+      "unexpectedDivergences": [],
+      "missingAcceptedPaths": [],
+      "exactAfterMask": true,
+      "typescriptOutcomeKind": "success",
+      "rustOutcomeKind": "success",
+      "durationMs": 5965,
+      "status": "passed"
+    },
+    {
+      "label": "mixed61 sheet=300x300 profile=compact",
+      "args": ["--fixture", "mixed61", "--sheet", "300x300"],
+      "acceptedDivergences": [],
+      "divergences": [],
+      "unexpectedDivergences": [],
+      "missingAcceptedPaths": [],
+      "exactAfterMask": true,
+      "typescriptOutcomeKind": "success",
+      "rustOutcomeKind": "success",
+      "durationMs": 1079,
+      "status": "passed"
+    },
+    {
+      "label": "mixed61 sheet=300x300 profile=short-side",
+      "args": ["--fixture", "mixed61", "--sheet", "300x300", "--profile", "short-side"],
+      "acceptedDivergences": [],
+      "divergences": [],
+      "unexpectedDivergences": [],
+      "missingAcceptedPaths": [],
+      "exactAfterMask": true,
+      "typescriptOutcomeKind": "success",
+      "rustOutcomeKind": "success",
+      "durationMs": 1062,
+      "status": "passed"
+    },
+    {
+      "label": "mixed61 sheet=2000x2700 profile=compact",
+      "args": ["--fixture", "mixed61", "--sheet", "2000x2700"],
+      "acceptedDivergences": [
+        {
+          "path": "value.portfolio.score.freeMaterialSliverMetric",
+          "typescript": 11301451.399040371,
+          "rust": 11301451.399040373
+        },
+        {
+          "path": "value.score.freeMaterialSliverMetric",
+          "typescript": 11301451.399040371,
+          "rust": 11301451.399040373
+        }
+      ],
+      "divergences": [
+        {
+          "path": "value.portfolio.score.freeMaterialSliverMetric",
+          "typescript": 11301451.399040371,
+          "rust": 11301451.399040373
+        },
+        {
+          "path": "value.score.freeMaterialSliverMetric",
+          "typescript": 11301451.399040371,
+          "rust": 11301451.399040373
+        }
+      ],
+      "unexpectedDivergences": [],
+      "missingAcceptedPaths": [],
+      "exactAfterMask": true,
+      "typescriptOutcomeKind": "success",
+      "rustOutcomeKind": "success",
+      "durationMs": 59541,
+      "status": "passed"
+    },
+    {
+      "label": "mixed61 sheet=2000x2700 profile=short-side",
+      "args": ["--fixture", "mixed61", "--sheet", "2000x2700", "--profile", "short-side"],
+      "acceptedDivergences": [
+        {
+          "path": "value.portfolio.score.freeMaterialSliverMetric",
+          "typescript": 313539.85657207255,
+          "rust": 313539.8565720725
+        },
+        {
+          "path": "value.score.freeMaterialSliverMetric",
+          "typescript": 313539.85657207255,
+          "rust": 313539.8565720725
+        }
+      ],
+      "divergences": [
+        {
+          "path": "value.portfolio.score.freeMaterialSliverMetric",
+          "typescript": 313539.85657207255,
+          "rust": 313539.8565720725
+        },
+        {
+          "path": "value.score.freeMaterialSliverMetric",
+          "typescript": 313539.85657207255,
+          "rust": 313539.8565720725
+        }
+      ],
+      "unexpectedDivergences": [],
+      "missingAcceptedPaths": [],
+      "exactAfterMask": true,
+      "typescriptOutcomeKind": "success",
+      "rustOutcomeKind": "success",
+      "durationMs": 60860,
+      "status": "passed"
+    }
+  ],
+  "status": "passed"
+}

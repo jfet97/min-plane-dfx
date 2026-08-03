@@ -133,7 +133,7 @@ Run from `SOURCE_REPO`:
 ```bash
 git status --porcelain=v1
 git rev-parse origin/main
-gh api repos/jfet97/min-plane-dxf/commits/main --jq .sha
+gh api repos/jfet97/min-plane-dfx/commits/main --jq .sha
 git diff --exit-code origin/main -- crates/irregular-nesting-native package.json pnpm-lock.yaml scripts/rust-parity scripts/irregular-compact-nine-baselines.ts scripts/irregular-capacity-gate.ts tests/fixtures
 ```
 
@@ -148,8 +148,17 @@ node --version
 pnpm --version
 rustc -Vv
 cargo --version
-rustup show active-toolchain
-rustup target list --installed
+command -v rustc
+rustc --print sysroot
+rustc --print host-tuple
+if command -v rustup >/dev/null 2>&1; then
+  rustup show active-toolchain
+  rustup target list --installed
+else
+  find "$(rustc --print sysroot)/lib/rustlib" -mindepth 1 -maxdepth 1 -type d \
+    -exec test -d '{}/lib' ';' -print \
+    | sort
+fi
 uname -a
 sysctl -n machdep.cpu.brand_string
 sysctl -n hw.logicalcpu
@@ -165,13 +174,54 @@ Generate `source.json` directly from command output so no manually transcribed v
 ```bash
 node <<'NODE'
 const { execFileSync } = require('node:child_process')
-const { mkdirSync, writeFileSync } = require('node:fs')
+const { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } = require('node:fs')
+const { join } = require('node:path')
+
 const run = (command, args = []) => execFileSync(command, args, { encoding: 'utf8' }).trim()
+const commandExists = (command) => {
+  try {
+    run('which', [command])
+    return true
+  } catch {
+    return false
+  }
+}
 const output = 'docs/artifacts/polygon-nesting-extraction-baseline/source.json'
+const expectedSourceCommit = 'e4f3608878611c002f343473fab72adc7d155f87'
+const sourceCommit = run('git', ['rev-parse', 'origin/main'])
+if (sourceCommit !== expectedSourceCommit) {
+  throw new Error(`origin/main is ${sourceCommit}, expected ${expectedSourceCommit}`)
+}
+
+const rustupAvailable = commandExists('rustup')
+const rustcExecutable = run('which', ['rustc'])
+const rustcSysroot = run('rustc', ['--print', 'sysroot'])
+const rustlibRoot = join(rustcSysroot, 'lib', 'rustlib')
+const installedTargets = readdirSync(rustlibRoot)
+  .filter((entry) => {
+    const libPath = join(rustlibRoot, entry, 'lib')
+    return existsSync(libPath) && statSync(libPath).isDirectory()
+  })
+  .sort()
+const activeToolchain = {
+  manager: rustupAvailable
+    ? 'rustup'
+    : rustcExecutable.startsWith('/nix/store/')
+      ? 'nix'
+      : 'system',
+  rustupAvailable,
+  ...(rustupAvailable
+    ? { rustup: run('rustup', ['show', 'active-toolchain']) }
+    : {}),
+  rustcExecutable,
+  rustcSysroot,
+  host: run('rustc', ['--print', 'host-tuple'])
+}
+
 mkdirSync('docs/artifacts/polygon-nesting-extraction-baseline', { recursive: true })
 const source = {
-  sourceRepository: 'https://github.com/jfet97/min-plane-dxf',
-  sourceCommit: run('git', ['rev-parse', 'origin/main']),
+  sourceRepository: 'https://github.com/jfet97/min-plane-dfx',
+  sourceCommit,
   engineRelease: '0.1.0',
   performanceGate: {
     freshPostCorrectionBenchmarkRequired: false,
@@ -182,7 +232,10 @@ const source = {
     node: run('node', ['--version']),
     pnpm: run('pnpm', ['--version']),
     rustc: run('rustc', ['-Vv']),
-    cargo: run('cargo', ['--version'])
+    cargo: run('cargo', ['--version']),
+    activeToolchain,
+    installedTargets,
+    installedTargetsSource: rustlibRoot
   },
   host: {
     os: run('uname', ['-a']),
@@ -206,6 +259,8 @@ Do not commit yet. Task 2 and Task 3 populate the same evidence directory so the
 **Files:**
 - Create: `SOURCE_WORKTREE/docs/artifacts/polygon-nesting-extraction-baseline/gates/*.log`
 - Create: `SOURCE_WORKTREE/docs/artifacts/polygon-nesting-extraction-baseline/gates/results.json`
+- Create: `SOURCE_WORKTREE/scripts/rust-parity/baseline-divergence-evidence.ts`
+- Create: `SOURCE_WORKTREE/tests/unit/baselineDivergenceEvidence.test.ts`
 
 - [ ] **Step 1: Run Rust formatting and lint gates**
 
@@ -258,17 +313,20 @@ pnpm exec tsx --tsconfig tsconfig.node.json scripts/rust-parity/dump-js-hypot.ts
 pnpm test:differential
 pnpm test:differential:exact
 pnpm exec tsx --tsconfig tsconfig.node.json scripts/rust-parity/differential-fixture-matrix.ts --strict-exploratory --strict-exact
+pnpm exec vitest run tests/unit/baselineDivergenceEvidence.test.ts
+pnpm exec tsx --tsconfig tsconfig.node.json scripts/rust-parity/baseline-divergence-evidence.ts \
+  --output docs/artifacts/polygon-nesting-extraction-baseline/gates/complete-divergence-evidence.json
 pnpm gate:quality-acceptance
 pnpm gate:compact-nine-baselines --output-dir docs/artifacts/polygon-nesting-extraction-baseline/nine-baselines --skip-png
 pnpm gate:mixed61-compact --output docs/artifacts/polygon-nesting-extraction-baseline/mixed61
 pnpm gate:capacity:production
 ```
 
-Expected: every required command exits 0. A strict differential failure is a baseline blocker and must be resolved in the source repository before extraction.
+Expected: accepted-Rust correctness, lifecycle, quality, and capacity commands exit 0. TypeScript-versus-Rust comparison is diagnostic and must not require changing accepted Rust numeric behavior. Preserve any strict exact failure, enumerate every divergent leaf, and prove that masking exactly the approved row-and-path pairs leaves zero other semantic divergence. Exact accepted-old-Rust versus extracted-Rust identity is the later blocking oracle and must use a matching target and toolchain pair.
 
 - [ ] **Step 6: Record machine-readable gate results**
 
-Write `results.json` as an array of command, exit status, start timestamp, end timestamp, and log path. Every required row must have status `passed`.
+Write `results.json` as an array of command, exit status, start timestamp, end timestamp, and log path. Record every attempt honestly. A failed diagnostic TypeScript-versus-Rust exact command remains `failed` and may be classified or superseded only by complete divergence evidence; do not relabel it as passed. Blocking accepted-Rust, quality, capacity, lifecycle, and packaging rows must pass before extraction proceeds.
 
 ### Task 3: Freeze vectors, fixtures, identities, and legal bytes
 
@@ -335,7 +393,7 @@ semantic-projection.json
 metadata.json
 ```
 
-`metadata.json` must contain source fixture hashes, profile, sheet dimensions, requested and actual workers, collision identity, fitted identity, and normalized semantic SHA-256.
+`metadata.json` must contain source fixture hashes, profile, sheet dimensions, requested and actual workers, collision identity, fitted identity, normalized semantic SHA-256, target triple, Rust compiler identity, Cargo identity, build profile, feature set, and relevant native dependency identity. The frozen result is the accepted old-Rust output. TypeScript output may be retained as diagnostic evidence but is not the extraction oracle.
 
 Run the exporter and populate `migration-corpus.json` with every row and artifact hash.
 
@@ -628,7 +686,7 @@ Preserve the existing infallible sink behavior.
 
 - [ ] **Step 5: Write a failing typed job fixture test**
 
-Decode one frozen `EngineRequest`, call typed `run`, and compare its protocol outcome and semantic hash with the frozen old-engine artifact.
+Decode one frozen `EngineRequest`, call typed `run`, and compare its protocol outcome and semantic hash exactly with the frozen accepted-old-Rust artifact produced for the same target and recorded toolchain pair.
 
 - [ ] **Step 6: Implement typed `run`**
 
@@ -919,7 +977,7 @@ Run Rust fmt, Clippy with warnings denied, workspace release tests, thread equal
 
 - [ ] **Step 2: Add four-target addon matrix**
 
-Build and load Linux x64, Windows x64, macOS arm64, and macOS x64 artifacts on matching GitHub runners. Upload each `.node` with its SHA-256.
+Build and load Linux x64, Windows x64, macOS arm64, and macOS x64 artifacts on matching GitHub runners. On each runner, build the accepted embedded Rust source and extracted Rust candidate with the same pinned Rust compiler, Cargo version, profile, features, and relevant native dependencies, then require exact frozen-corpus identity for that pair. Upload each `.node`, its SHA-256, and the paired parity metadata. Never use the macOS arm64 baseline as an exact oracle for another target.
 
 - [ ] **Step 3: Assemble one NPM tarball without rebuilding**
 
@@ -959,11 +1017,11 @@ git commit -m "ci: verify and assemble engine releases"
 
 - [ ] **Step 1: Run frozen corpus through typed core**
 
-For every frozen request, compare exact semantic output to Phase A, excluding only approved non-semantic diagnostic values.
+For every frozen request, compare extracted Rust semantic output exactly to the accepted old-Rust Phase A output from the same target and recorded toolchain pair, excluding only approved non-semantic diagnostic values. Cross-target comparisons are target-specific evidence, not a substitute for same-target exact parity.
 
 - [ ] **Step 2: Run frozen corpus through N-API**
 
-Compare the complete desktop compatibility envelope and ordered callbacks to Phase A.
+Compare the complete desktop compatibility envelope and ordered callbacks exactly to the accepted old-Rust adapter baseline for the same target and recorded toolchain pair.
 
 - [ ] **Step 3: Run frozen corpus through CLI**
 
@@ -975,7 +1033,7 @@ Run the standalone test suite with `SOURCE_REPO` temporarily unavailable through
 
 - [ ] **Step 5: Record parity evidence**
 
-Write every request hash, old outcome hash, core hash, N-API hash, CLI hash, and pass status into `parity.json`.
+Write every request hash, accepted-old-Rust outcome hash, core hash, N-API hash, CLI hash, target identity, toolchain identity, and pass status into `parity.json`. Keep TypeScript comparison in a separate diagnostic section with the frozen accepted leaves; it cannot make the exact Rust extraction lane tolerant.
 
 - [ ] **Step 6: Commit parity evidence**
 
@@ -1000,22 +1058,23 @@ Verify `require('irregular-nesting-native')` resolves the release-candidate pack
 
 - [ ] **Step 3: Run old versus candidate corpus comparison**
 
-Use the frozen corpus and require exact semantic equality under the existing normalizations.
+Use the frozen corpus and require exact accepted-old-Rust versus candidate-Rust semantic equality under the existing non-semantic normalizations. Build and run both sides on the same target with the same recorded toolchain, profile, features, and relevant native dependencies. TypeScript comparison is diagnostic only.
 
 - [ ] **Step 4: Run desktop integration gates**
 
 ```bash
 pnpm test:native:package
 MIN_PLANE_REQUIRE_NATIVE_ADDON=1 pnpm exec vitest run tests/unit/nativeIrregularBackend.test.ts
-pnpm test:differential:exact
+pnpm exec tsx --tsconfig tsconfig.node.json scripts/rust-parity/baseline-divergence-evidence.ts \
+  --output docs/artifacts/polygon-nesting-extraction-candidate/complete-divergence-evidence.json
 pnpm gate:quality-acceptance
 ```
 
-Expected: pass against the tarball.
+Expected: package, addon, quality, and exact paired accepted-old-Rust versus candidate-Rust gates pass against the tarball. The complete TypeScript-versus-candidate-Rust audit must reproduce all six frozen row, path, and value pairs and prove zero other semantic divergence after masking exactly those pairs. The permissive first-divergence diagnostic gate is insufficient for this claim.
 
 - [ ] **Step 5: Run all four packaged-app gates in CI**
 
-Use the exact release-candidate tarball artifact in each platform job. Verify packaged executable and app.asar loading, notices, licenses, and macOS signing.
+Use the exact release-candidate tarball artifact in each platform job. Verify exact accepted-old-Rust versus candidate-Rust frozen-corpus identity on that matching target and toolchain pair, then verify packaged executable and app.asar loading, notices, licenses, and macOS signing.
 
 - [ ] **Step 6: Commit the prepublication cutover branch**
 
@@ -1104,7 +1163,7 @@ Create tag `v0.1.0`, attach checksums and evidence, and state the source commit 
 
 - [ ] **Step 6: Verify registry delivery**
 
-Install from GitHub Packages in a clean temporary directory, load under Node and Electron-as-Node, pull the GHCR image by digest, and rerun the image fixture smoke.
+Install from GitHub Packages in a clean temporary directory, load under Node and Electron-as-Node, and run `baseline-divergence-evidence.ts` or an equivalent complete required-matrix audit against the installed package. Require the same six frozen TypeScript-versus-Rust row, path, and value pairs and zero unexpected semantic divergences after exact masking. Pull the GHCR image by digest and rerun the image fixture smoke. Exact accepted-old-Rust versus published-Rust parity remains blocking on matching target and toolchain pairs.
 
 - [ ] **Step 7: Commit release evidence**
 
@@ -1138,7 +1197,14 @@ Expected: install succeeds from GitHub Packages and the lockfile pins `0.1.0` in
 
 - [ ] **Step 3: Run registry-backed desktop gates**
 
-Run Node, Electron-as-Node, real-addon, lifecycle, differential, quality, and packaged application smoke. Full four-target correctness already ran on identical tarball bytes; registry-backed checks prove package delivery and resolution.
+Run Node, Electron-as-Node, real-addon, lifecycle, quality, and packaged application smoke. Run the complete required-matrix audit against the registry-installed package:
+
+```bash
+pnpm exec tsx --tsconfig tsconfig.node.json scripts/rust-parity/baseline-divergence-evidence.ts \
+  --output docs/artifacts/polygon-nesting-registry-cutover/complete-divergence-evidence.json
+```
+
+Require all six frozen TypeScript-versus-Rust row, path, and value pairs and zero unexpected semantic divergence after masking exactly those pairs. Do not substitute `pnpm test:differential`, because its permissive first-divergence mode cannot prove the frozen scope. Exact accepted-old-Rust versus candidate-Rust four-target correctness already ran on matching target and toolchain pairs using identical tarball bytes; registry-backed checks prove package delivery and resolution.
 
 - [ ] **Step 4: Commit cutover**
 
@@ -1160,7 +1226,7 @@ git commit -m "build: consume external polygon nesting package"
 rg -n 'crates/irregular-nesting-native|workspace:\*|\.\./.*irregular-nesting-native' package.json pnpm-lock.yaml src scripts tests .github electron-builder.yml
 ```
 
-Expected: only explicit removal targets or migration documentation remain.
+Expected: only explicit removal targets or migration documentation remain. The retained release evidence proves exact accepted-old-Rust versus external-package Rust identity on every required matching target and toolchain pair. TypeScript diagnostic evidence reproduces only the frozen accepted leaves.
 
 - [ ] **Step 2: Present the deletion set for final safety confirmation**
 
@@ -1177,12 +1243,13 @@ pnpm typecheck
 pnpm lint
 pnpm test:focused
 pnpm test:native:package
-pnpm test:differential:exact
+pnpm exec tsx --tsconfig tsconfig.node.json scripts/rust-parity/baseline-divergence-evidence.ts \
+  --output docs/artifacts/polygon-nesting-embedded-removal/complete-divergence-evidence.json
 pnpm gate:quality-acceptance
 pnpm build
 ```
 
-Expected: all pass with no embedded crate.
+Expected: all blocking source-repository gates pass with no embedded crate. The complete TypeScript-versus-external-Rust audit reproduces all six frozen row, path, and value pairs and proves zero other semantic divergence after exact masking. Do not use the permissive first-divergence diagnostic gate for this claim. Exact extraction acceptance comes from the retained matching target and toolchain pair evidence produced before deletion.
 
 - [ ] **Step 5: Run IDE diagnostics**
 

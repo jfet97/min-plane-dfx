@@ -1,0 +1,1020 @@
+{
+  "ok": true,
+  "value": {
+    "placedCollisionGeometries": [
+      {
+        "placement": {
+          "pieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-2",
+          "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-2",
+          "placementReference": {
+            "x": -7.287,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 299.512,
+            "translateY": 0,
+            "rotationDeg": 90,
+            "mirrored": false
+          }
+        },
+        "collisionGeometry": {
+          "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-2",
+          "transform": {
+            "index": 0,
+            "rotationDeg": 90,
+            "mirrored": false,
+            "reason": "orthogonal"
+          },
+          "polygon": {
+            "points": [
+              {
+                "x": 0,
+                "y": 23.502
+              },
+              {
+                "x": 0,
+                "y": 91.072
+              },
+              {
+                "x": -70.504,
+                "y": 114.574
+              },
+              {
+                "x": -70.504,
+                "y": 0
+              }
+            ]
+          },
+          "bounds": {
+            "minX": -70.504,
+            "minY": 0,
+            "maxX": 0,
+            "maxY": 114.574
+          }
+        }
+      },
+      {
+        "placement": {
+          "pieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-1",
+          "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-1",
+          "placementReference": {
+            "x": -7.287,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 229.00799999999998,
+            "translateY": 205.647,
+            "rotationDeg": 270,
+            "mirrored": false
+          }
+        },
+        "collisionGeometry": {
+          "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-1",
+          "transform": {
+            "index": 2,
+            "rotationDeg": 270,
+            "mirrored": false,
+            "reason": "orthogonal"
+          },
+          "polygon": {
+            "points": [
+              {
+                "x": 0,
+                "y": -23.502
+              },
+              {
+                "x": 0,
+                "y": -91.072
+              },
+              {
+                "x": 70.504,
+                "y": -114.574
+              },
+              {
+                "x": 70.504,
+                "y": 0
+              }
+            ]
+          },
+          "bounds": {
+            "minX": 0,
+            "minY": -114.574,
+            "maxX": 70.504,
+            "maxY": 0
+          }
+        }
+      },
+      {
+        "placement": {
+          "pieceId": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-1",
+          "sourcePieceId": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-1",
+          "placementReference": {
+            "x": -6.099,
+            "y": -6.609
+          },
+          "transform": {
+            "translateX": 333.568,
+            "translateY": 234.016,
+            "rotationDeg": 127.37748259910418,
+            "mirrored": false
+          }
+        },
+        "collisionGeometry": {
+          "sourcePieceId": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-1",
+          "transform": {
+            "index": 5,
+            "rotationDeg": 127.37748259910418,
+            "mirrored": false,
+            "reason": "edge_alignment"
+          },
+          "polygon": {
+            "points": [
+              {
+                "x": -34.056,
+                "y": 44.579
+              },
+              {
+                "x": -102.167,
+                "y": 63.142
+              },
+              {
+                "x": -144.058,
+                "y": 4.307
+              },
+              {
+                "x": -101.835,
+                "y": -50.962
+              },
+              {
+                "x": -34.056,
+                "y": -26.016
+              }
+            ]
+          },
+          "bounds": {
+            "minX": -144.058,
+            "minY": -50.962,
+            "maxX": -34.056,
+            "maxY": 63.142
+          }
+        }
+      },
+      {
+        "placement": {
+          "pieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-3",
+          "sourcePieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-3",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 229.00799999999998,
+            "translateY": 0,
+            "rotationDeg": 90,
+            "mirrored": false
+          }
+        },
+        "collisionGeometry": {
+          "sourcePieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-3",
+          "transform": {
+            "index": 0,
+            "rotationDeg": 90,
+            "mirrored": false,
+            "reason": "orthogonal"
+          },
+          "polygon": {
+            "points": [
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 0,
+                "y": 164.504
+              },
+              {
+                "x": -114.504,
+                "y": 164.504
+              },
+              {
+                "x": -114.504,
+                "y": 0
+              }
+            ]
+          },
+          "bounds": {
+            "minX": -114.504,
+            "minY": 0,
+            "maxX": 0,
+            "maxY": 164.504
+          }
+        }
+      },
+      {
+        "placement": {
+          "pieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-2",
+          "sourcePieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-2",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 189.51,
+            "translateY": 164.504,
+            "rotationDeg": 0,
+            "mirrored": true
+          }
+        },
+        "collisionGeometry": {
+          "sourcePieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-2",
+          "transform": {
+            "index": 7,
+            "rotationDeg": 0,
+            "mirrored": true,
+            "reason": "orthogonal"
+          },
+          "polygon": {
+            "points": [
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": -164.504,
+                "y": 0
+              },
+              {
+                "x": -164.504,
+                "y": 114.504
+              },
+              {
+                "x": 0,
+                "y": 114.504
+              }
+            ]
+          },
+          "bounds": {
+            "minX": -164.504,
+            "minY": 0,
+            "maxX": 0,
+            "maxY": 114.504
+          }
+        }
+      },
+      {
+        "placement": {
+          "pieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-1",
+          "sourcePieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-1",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 114.50399999999999,
+            "translateY": 0,
+            "rotationDeg": 90,
+            "mirrored": false
+          }
+        },
+        "collisionGeometry": {
+          "sourcePieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-1",
+          "transform": {
+            "index": 0,
+            "rotationDeg": 90,
+            "mirrored": false,
+            "reason": "orthogonal"
+          },
+          "polygon": {
+            "points": [
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 0,
+                "y": 164.504
+              },
+              {
+                "x": -114.504,
+                "y": 164.504
+              },
+              {
+                "x": -114.504,
+                "y": 0
+              }
+            ]
+          },
+          "bounds": {
+            "minX": -114.504,
+            "minY": 0,
+            "maxX": 0,
+            "maxY": 164.504
+          }
+        }
+      }
+    ],
+    "score": {
+      "unplacedCount": 55,
+      "sharedCollisionBoundaryLengthMm": 329.007,
+      "sharedCollisionBoundaryContactUnits": 2.435779,
+      "sharedCollisionBoundaryContactBand": 2,
+      "nearCompleteStructuralContactCount": 1,
+      "dominantNearCompleteStructuralContactCount": 1,
+      "largestNetFreeMaterialRegionAreaMm2": 11974.072867499981,
+      "freeMaterialRegionCount": 1,
+      "freeMaterialHoleCount": 1,
+      "freeMaterialSliverMetric": 374.1952434475732,
+      "collisionBoundsWorstNormalizedSheetConsumption": 0.9983733333333333,
+      "collisionBoundsNormalizedSpanSum": 1.9889000000000001,
+      "collisionBoundsAreaMm2": 89002.38689600001,
+      "collisionBoundsSpanMm": 596.6700000000001,
+      "occupiedHullWasteRatio": 0.068716,
+      "collisionBoundsBottomMm": 0,
+      "collisionBoundsLeftMm": 0,
+      "freeMaterialSnapshot": {
+        "sheet": {
+          "width": 300,
+          "height": 300,
+          "label": "300x300"
+        },
+        "regions": [
+          {
+            "boundary": {
+              "points": [
+                {
+                  "x": 229.008,
+                  "y": 0
+                },
+                {
+                  "x": 300,
+                  "y": 0
+                },
+                {
+                  "x": 300,
+                  "y": 300
+                },
+                {
+                  "x": 0,
+                  "y": 300
+                },
+                {
+                  "x": 0,
+                  "y": 164.504
+                },
+                {
+                  "x": 25.006,
+                  "y": 164.504
+                },
+                {
+                  "x": 25.006,
+                  "y": 279.008
+                },
+                {
+                  "x": 189.51,
+                  "y": 279.008
+                },
+                {
+                  "x": 189.51,
+                  "y": 164.504
+                },
+                {
+                  "x": 229.008,
+                  "y": 164.504
+                },
+                {
+                  "x": 229.008,
+                  "y": 182.145
+                },
+                {
+                  "x": 299.512,
+                  "y": 205.647
+                },
+                {
+                  "x": 299.512,
+                  "y": 91.073
+                },
+                {
+                  "x": 229.008,
+                  "y": 114.575
+                },
+                {
+                  "x": 229.008,
+                  "y": 114.574
+                },
+                {
+                  "x": 299.512,
+                  "y": 91.072
+                },
+                {
+                  "x": 299.512,
+                  "y": 23.502
+                }
+              ]
+            },
+            "holes": [
+              {
+                "points": [
+                  {
+                    "x": 231.733,
+                    "y": 183.054
+                  },
+                  {
+                    "x": 189.51,
+                    "y": 238.323
+                  },
+                  {
+                    "x": 231.401,
+                    "y": 297.158
+                  },
+                  {
+                    "x": 299.512,
+                    "y": 278.595
+                  },
+                  {
+                    "x": 299.512,
+                    "y": 208
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "diagnostics": []
+      },
+      "placementOrder": [
+        "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-2",
+        "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-1",
+        "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-1",
+        "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-3",
+        "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-2",
+        "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-1"
+      ],
+      "unplacedSourcePieceIds": [
+        "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-1",
+        "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-2",
+        "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-2",
+        "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-3",
+        "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-1",
+        "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-2",
+        "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-3",
+        "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-4",
+        "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-3",
+        "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-4",
+        "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-5",
+        "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-1",
+        "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-2",
+        "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-3",
+        "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-4",
+        "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-5",
+        "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-1",
+        "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-2",
+        "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-3",
+        "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-4",
+        "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-1",
+        "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-2",
+        "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-1",
+        "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-2",
+        "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-3",
+        "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-4",
+        "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-5",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-1",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-2",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-3",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-4",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-5",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-6",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-7",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-8",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-9",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-10",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-11",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-12",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-13",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-14",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-15",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-16",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-17",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-18",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-19",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-20",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-1",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-2",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-3",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-4",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-5",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-6",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-7",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-8"
+      ]
+    },
+    "unplacedPieceIds": [
+      "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-1",
+      "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-2",
+      "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-2",
+      "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-3",
+      "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-1",
+      "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-2",
+      "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-3",
+      "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-4",
+      "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-3",
+      "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-4",
+      "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-5",
+      "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-1",
+      "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-2",
+      "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-3",
+      "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-4",
+      "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-5",
+      "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-1",
+      "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-2",
+      "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-3",
+      "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-4",
+      "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-1",
+      "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-2",
+      "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-1",
+      "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-2",
+      "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-3",
+      "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-4",
+      "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-5",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-1",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-2",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-3",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-4",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-5",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-6",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-7",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-8",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-9",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-10",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-11",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-12",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-13",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-14",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-15",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-16",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-17",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-18",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-19",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-20",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-1",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-2",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-3",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-4",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-5",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-6",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-7",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-8"
+    ],
+    "diagnostics": [
+      {
+        "code": "capacity_preflight_proven_impossible",
+        "message": "reason minimum-collision-area-exceeds-sheet-area; minimum-doubled-collision-area-grid2 626973708439; sheet-doubled-area-grid2 180000000000"
+      },
+      {
+        "code": "capacity_subset_settled",
+        "message": "settlement exhausted; placed 6; unplaced 55; origin cold-search; evaluations 149719/249856; pruned-count 0; pruned-material 0; prefixes 0/0; hash bb22df3517b4f2bbbdebc1d35704dbf4374f96d264af919a4c8d29dc2168fa33"
+      },
+      {
+        "code": "intrinsic_short_side_selected",
+        "message": "selected admitted contact-strip construction e0647c8175bfadb7c158720978b7e2f0b9ab44496ac55bb90f42205fd17f7858"
+      }
+    ],
+    "sortedPieceIds": [
+      "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-1",
+      "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-2",
+      "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-3",
+      "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-1",
+      "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-2",
+      "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-1",
+      "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-2",
+      "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-3",
+      "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-1",
+      "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-2",
+      "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-3",
+      "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-4",
+      "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-1",
+      "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-2",
+      "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-3",
+      "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-4",
+      "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-5",
+      "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-1",
+      "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-2",
+      "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-3",
+      "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-4",
+      "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-5",
+      "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-1",
+      "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-2",
+      "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-3",
+      "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-4",
+      "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-1",
+      "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-2",
+      "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-1",
+      "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-2",
+      "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-3",
+      "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-4",
+      "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-5",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-1",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-2",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-3",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-4",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-5",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-6",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-7",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-8",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-9",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-10",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-11",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-12",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-13",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-14",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-15",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-16",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-17",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-18",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-19",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-20",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-1",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-2",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-3",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-4",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-5",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-6",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-7",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-8"
+    ],
+    "stateSnapshots": [],
+    "beamWidth": 8,
+    "portfolio": {
+      "status": "completed",
+      "terminationReason": "shared_archive_completed",
+      "source": "shared-archive",
+      "placements": [
+        {
+          "pieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-2",
+          "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-2",
+          "placementReference": {
+            "x": -7.287,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 299.512,
+            "translateY": 0,
+            "rotationDeg": 90,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-1",
+          "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-1",
+          "placementReference": {
+            "x": -7.287,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 229.00799999999998,
+            "translateY": 205.647,
+            "rotationDeg": 270,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-1",
+          "sourcePieceId": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-1",
+          "placementReference": {
+            "x": -6.099,
+            "y": -6.609
+          },
+          "transform": {
+            "translateX": 333.568,
+            "translateY": 234.016,
+            "rotationDeg": 127.37748259910418,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-3",
+          "sourcePieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-3",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 229.00799999999998,
+            "translateY": 0,
+            "rotationDeg": 90,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-2",
+          "sourcePieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-2",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 189.51,
+            "translateY": 164.504,
+            "rotationDeg": 0,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-1",
+          "sourcePieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-1",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 114.50399999999999,
+            "translateY": 0,
+            "rotationDeg": 90,
+            "mirrored": false
+          }
+        }
+      ],
+      "unplacedPieceIds": [
+        "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-1",
+        "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-2",
+        "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-2",
+        "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-3",
+        "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-1",
+        "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-2",
+        "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-3",
+        "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-4",
+        "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-3",
+        "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-4",
+        "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-5",
+        "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-1",
+        "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-2",
+        "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-3",
+        "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-4",
+        "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-5",
+        "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-1",
+        "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-2",
+        "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-3",
+        "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-4",
+        "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-1",
+        "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-2",
+        "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-1",
+        "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-2",
+        "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-3",
+        "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-4",
+        "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-5",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-1",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-2",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-3",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-4",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-5",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-6",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-7",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-8",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-9",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-10",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-11",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-12",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-13",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-14",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-15",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-16",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-17",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-18",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-19",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-20",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-1",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-2",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-3",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-4",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-5",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-6",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-7",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-8"
+      ],
+      "score": {
+        "unplacedCount": 55,
+        "sharedCollisionBoundaryLengthMm": 329.007,
+        "sharedCollisionBoundaryContactUnits": 2.435779,
+        "sharedCollisionBoundaryContactBand": 2,
+        "nearCompleteStructuralContactCount": 1,
+        "dominantNearCompleteStructuralContactCount": 1,
+        "largestNetFreeMaterialRegionAreaMm2": 11974.072867499981,
+        "freeMaterialRegionCount": 1,
+        "freeMaterialHoleCount": 1,
+        "freeMaterialSliverMetric": 374.1952434475732,
+        "collisionBoundsWorstNormalizedSheetConsumption": 0.9983733333333333,
+        "collisionBoundsNormalizedSpanSum": 1.9889000000000001,
+        "collisionBoundsAreaMm2": 89002.38689600001,
+        "collisionBoundsSpanMm": 596.6700000000001
+      },
+      "diagnostics": [
+        {
+          "code": "intrinsic_short_side_selected",
+          "message": "selected terminal contact-strip construction (e0647c8175bfadb7c158720978b7e2f0b9ab44496ac55bb90f42205fd17f7858)"
+        }
+      ]
+    },
+    "focusedCompleteReconstructionTrace": {
+      "version": "intrinsic-focused-complete-reconstruction-v1",
+      "status": "skipped-preflight-proven-impossible",
+      "consumedCandidateEvaluations": 0,
+      "candidateEvaluationAccountingComplete": true,
+      "runtimeMs": "<timing:present>",
+      "outputInfluence": "none"
+    },
+    "intrinsicShortSideObserverTrace": {
+      "candidateEvaluations": 0,
+      "cavityHullGuardEligibleEndpointCount": 0,
+      "endpoints": [],
+      "evaluatedOrientationCount": 0,
+      "geometricParetoEligibleEndpointCount": 0,
+      "outputInfluence": "none",
+      "placementEvaluations": 0,
+      "productionEnvelopeAreaGrid2": "89504369008",
+      "productionEnvelopeAreaMm2": 89504.369008,
+      "productionMaximumSideGrid": 299512,
+      "productionMaximumSideMm": 299.512,
+      "productionShortAxisSpanGrid": 299512,
+      "productionShortAxisSpanMm": 299.512,
+      "rankedCanonicalGeometryHashes": [],
+      "requestedLongAxis": "width",
+      "requestedLongAxisMm": 300,
+      "requestedSheetHeightMm": 300,
+      "requestedSheetWidthMm": 300,
+      "requestedShortAxisMm": 300,
+      "runtimeBudgetExceeded": false,
+      "runtimeMs": "<timing:present>",
+      "serializedTraceBytes": "<timing:present>",
+      "settledEndpointCount": 0,
+      "status": "skipped-no-settled-complete-endpoints",
+      "version": "intrinsic-short-side-observer-v6"
+    },
+    "intrinsicShortSidePairFoldTrace": {
+      "admission": {
+        "accepted": true,
+        "allPiecesPlaced": true,
+        "collisionEnvelopeDensity": 0.8766722989538912,
+        "depthWithinProductionMaximumSide": true,
+        "directionallyEfficient": false,
+        "enclosedCavityCount": 0,
+        "envelopeAreaCostFactor": 0.9943915350997544,
+        "envelopeAreaCostWithinProductionBound": true,
+        "exactLegal": true,
+        "fillRatio": 0.9905266666666667,
+        "projectionComponentCount": 1,
+        "projectionCoverageRatio": 1,
+        "shortAxisSpanGainFactor": 0.9921405486257646
+      },
+      "canonicalGeometryHash": "e0647c8175bfadb7c158720978b7e2f0b9ab44496ac55bb90f42205fd17f7858",
+      "collisionMaterialDoubledAreaGrid2": "156051854265",
+      "constructionKind": "contact-strip",
+      "contactStrip": {
+        "backtrackCount": 0,
+        "candidateEvaluations": 258,
+        "executionModel": "single-process-sequential",
+        "orderPolicy": "reverse",
+        "peakRssDeltaBytes": "<timing:present>",
+        "placedCount": 6,
+        "requestedCount": 6,
+        "reusedPrefixPlacements": 0,
+        "runtimeMs": "<timing:present>",
+        "selectionPolicy": "depth-first",
+        "status": "constructed",
+        "stripLongAxisMm": 300,
+        "stripShortAxisMm": 300,
+        "transformEvaluations": 48,
+        "version": "intrinsic-short-side-contact-strip-v3"
+      },
+      "contactStripLanes": [
+        {
+          "backtrackCount": 0,
+          "candidateEvaluations": 156,
+          "executionModel": "single-process-sequential",
+          "failureReason": "piece 604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-2 has no legal contact placement inside the requested short-axis strip.",
+          "orderPolicy": "prepared",
+          "peakRssDeltaBytes": "<timing:present>",
+          "placedCount": 5,
+          "requestedCount": 6,
+          "reusedPrefixPlacements": 0,
+          "runtimeMs": "<timing:present>",
+          "selectionPolicy": "depth-first",
+          "status": "no-legal-placement",
+          "stripLongAxisMm": 300,
+          "stripShortAxisMm": 300,
+          "transformEvaluations": 48,
+          "version": "intrinsic-short-side-contact-strip-v3"
+        },
+        {
+          "backtrackCount": 1,
+          "candidateEvaluations": 222,
+          "executionModel": "single-process-sequential",
+          "failureReason": "piece 604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-2 has no legal contact placement inside the requested short-axis strip.",
+          "orderPolicy": "prepared",
+          "peakRssDeltaBytes": "<timing:present>",
+          "placedCount": 5,
+          "requestedCount": 6,
+          "reusedPrefixPlacements": 1,
+          "runtimeMs": "<timing:present>",
+          "selectionPolicy": "contact-first",
+          "status": "no-legal-placement",
+          "stripLongAxisMm": 300,
+          "stripShortAxisMm": 300,
+          "transformEvaluations": 80,
+          "version": "intrinsic-short-side-contact-strip-v3"
+        },
+        {
+          "backtrackCount": 0,
+          "candidateEvaluations": 258,
+          "executionModel": "single-process-sequential",
+          "orderPolicy": "reverse",
+          "peakRssDeltaBytes": "<timing:present>",
+          "placedCount": 6,
+          "requestedCount": 6,
+          "reusedPrefixPlacements": 0,
+          "runtimeMs": "<timing:present>",
+          "selectionPolicy": "depth-first",
+          "status": "constructed",
+          "stripLongAxisMm": 300,
+          "stripShortAxisMm": 300,
+          "transformEvaluations": 48,
+          "version": "intrinsic-short-side-contact-strip-v3"
+        }
+      ],
+      "contactStripPromotion": {
+        "contactStripAdmitted": true,
+        "contactStripSummary": {
+          "admission": {
+            "accepted": true,
+            "allPiecesPlaced": true,
+            "collisionEnvelopeDensity": 0.8766722989538912,
+            "depthWithinProductionMaximumSide": true,
+            "directionallyEfficient": false,
+            "enclosedCavityCount": 0,
+            "envelopeAreaCostFactor": 0.9943915350997544,
+            "envelopeAreaCostWithinProductionBound": true,
+            "exactLegal": true,
+            "fillRatio": 0.9905266666666667,
+            "projectionComponentCount": 1,
+            "projectionCoverageRatio": 1,
+            "shortAxisSpanGainFactor": 0.9921405486257646
+          },
+          "collisionMaterialDoubledAreaGrid2": "156051854265",
+          "envelopeAreaGrid2": "89002386896",
+          "envelopeAreaMm2": 89002.386896,
+          "interlocking": {
+            "isolatedPieceCount": 1,
+            "largestOccupiedHullGapDoubledAreaGrid2": "11514374944",
+            "largestOccupiedHullGapRatio": 0.06871530921800584,
+            "largestPositiveContactComponentSize": 5,
+            "occupiedHullDoubledAreaGrid2": "167566370217",
+            "positiveContactComponentCount": 2,
+            "sharedBoundaryLengthMm": 493.51099999999997
+          },
+          "status": "accepted",
+          "usedLongAxisDepthGrid": 299512,
+          "usedLongAxisDepthMm": 299.512,
+          "usedShortAxisSpanGrid": 297158,
+          "usedShortAxisSpanMm": 297.158
+        },
+        "promoted": false
+      },
+      "envelopeAreaCostVetoObserved": false,
+      "envelopeAreaCostVetoes": [],
+      "envelopeAreaGrid2": "89002386896",
+      "envelopeAreaMm2": 89002.386896,
+      "evaluatedPairCount": 15,
+      "executionModel": "single-process-sequential",
+      "expectedPairCount": 15,
+      "interlocking": {
+        "isolatedPieceCount": 1,
+        "largestOccupiedHullGapDoubledAreaGrid2": "11514374944",
+        "largestOccupiedHullGapRatio": 0.06871530921800584,
+        "largestPositiveContactComponentSize": 5,
+        "occupiedHullDoubledAreaGrid2": "167566370217",
+        "positiveContactComponentCount": 2,
+        "sharedBoundaryLengthMm": 493.51099999999997
+      },
+      "outputInfluence": "selected",
+      "peakRssDeltaBytes": "<timing:present>",
+      "placedCount": 6,
+      "prescribedRotationDeg": 90,
+      "productionEnvelopeAreaGrid2": "89504369008",
+      "productionEnvelopeAreaMm2": 89504.369008,
+      "productionMaximumSideGrid": 299512,
+      "productionMaximumSideMm": 299.512,
+      "productionShortAxisSpanGrid": 299512,
+      "productionShortAxisSpanMm": 299.512,
+      "requestedLongAxisMm": 300,
+      "requestedShortAxisMm": 300,
+      "rowCount": 0,
+      "runtimeMs": "<timing:present>",
+      "serializedTraceBytes": "<timing:present>",
+      "status": "accepted",
+      "transformEvaluations": 48,
+      "usedLongAxisDepthGrid": 299512,
+      "usedLongAxisDepthMm": 299.512,
+      "usedShortAxisSpanGrid": 297158,
+      "usedShortAxisSpanMm": 297.158,
+      "version": "intrinsic-short-side-terminal-observer-v6"
+    }
+  }
+}

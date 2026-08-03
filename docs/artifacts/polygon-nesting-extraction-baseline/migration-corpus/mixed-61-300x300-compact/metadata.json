@@ -1,0 +1,86 @@
+{
+  "acceptedEngine": "old-rust",
+  "sourceFixtures": [
+    {
+      "kind": "file",
+      "path": "tests/fixtures/irregularSheetInvariance/mixed61-request.json",
+      "sha256": "52fad3673793e57d482090dfc7a75c5e5de2aaa1bae77c08719d230667c89161"
+    }
+  ],
+  "profile": "compact",
+  "sheet": {
+    "width": 300,
+    "height": 300
+  },
+  "workers": {
+    "requested": 15,
+    "actual": 15
+  },
+  "collisionIdentitySha256": "bb22df3517b4f2bbbdebc1d35704dbf4374f96d264af919a4c8d29dc2168fa33",
+  "fittedIdentitySha256": "37d7bf9c37dfe2b9702bf8df73791782006178eb570ac043b23f1ca20ca22c0b",
+  "normalizedSemanticSha256": "2393402cae74630a9b0c8ce4d431e7ffeba3d499b7b6b048d71cb073c9b3ae18",
+  "targetTriple": "aarch64-apple-darwin",
+  "rustcIdentity": "rustc 1.95.0 (59807616e 2026-04-14) (built from a source tarball)\nbinary: rustc\ncommit-hash: 59807616e1fa2540724bfbac14d7976d7e4a3860\ncommit-date: 2026-04-14\nhost: aarch64-apple-darwin\nrelease: 1.95.0\nLLVM version: 21.1.8",
+  "cargoIdentity": "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+  "build": {
+    "profile": "release",
+    "features": []
+  },
+  "nativeDependencies": [
+    {
+      "name": "libm",
+      "version": "0.2.16"
+    },
+    {
+      "name": "napi",
+      "version": "3.12.0",
+      "features": [
+        "dyn-symbols",
+        "napi8"
+      ]
+    },
+    {
+      "name": "napi-build",
+      "version": "2.4.0"
+    },
+    {
+      "name": "napi-derive",
+      "version": "3.6.1"
+    },
+    {
+      "name": "num-bigint",
+      "version": "0.4.8"
+    },
+    {
+      "name": "rayon",
+      "version": "1.12.0"
+    },
+    {
+      "name": "robust",
+      "version": "1.2.0"
+    },
+    {
+      "name": "ryu-js",
+      "version": "1.0.3"
+    },
+    {
+      "name": "serde",
+      "version": "1.0.229",
+      "features": [
+        "derive",
+        "rc"
+      ]
+    },
+    {
+      "name": "serde_json",
+      "version": "1.0.151",
+      "features": [
+        "float_roundtrip"
+      ]
+    },
+    {
+      "name": "sha2",
+      "version": "0.10.9"
+    }
+  ]
+}

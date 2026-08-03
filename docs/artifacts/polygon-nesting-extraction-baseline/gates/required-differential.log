@@ -1,0 +1,46 @@
+Command: pnpm test:differential
+Working directory: /Users/andreasimonecosta/Documents/Work/min-plane-dfx/.claude/worktrees/polygon-nesting-extraction
+Environment: PATH=/nix/store/h57ln4r40qr349z1r8ri90n9i9xid3r5-nodejs-24.11.1/bin:$PATH
+Start timestamp: 2026-08-03T18:43:44Z
+Status: running
+
+===== stdout and stderr =====
+$ tsx --tsconfig tsconfig.node.json scripts/rust-parity/differential-fixture-matrix.ts --required-only
+[differential-fixture-matrix] required: mixed61 pieces=2 profile=compact ... OK
+[differential-fixture-matrix] required: mixed61 pieces=2 profile=short-side ... OK
+[differential-fixture-matrix] required: mixed61 pieces=4 profile=compact ... OK
+[differential-fixture-matrix] required: mixed61 pieces=4 profile=short-side ... OK
+[differential-fixture-matrix] required: mixed61 pieces=8 profile=compact ... OK
+[differential-fixture-matrix] required: mixed61 pieces=8 profile=short-side ... OK
+[differential-fixture-matrix] required: triangle-20 sheet=2000x2700 profile=compact ... OK
+[differential-fixture-matrix] required: triangle-20 sheet=2000x2700 profile=short-side ... OK
+[differential-fixture-matrix] required: shapes-17 sheet=2000x2700 profile=compact ... OK
+[differential-fixture-matrix] required: shapes-17 sheet=2000x2700 profile=short-side ... OK
+    [run-differential] FIRST DIVERGENCE at path: value.portfolio.score.freeMaterialSliverMetric
+      typescript: 222.54854651458191
+      rust      : 222.54854651458194
+    [run-differential] runtime: node=v24.11.1 platform=darwin arch=arm64
+    [run-differential] diagnostic divergence accepted for quality evaluation
+[differential-fixture-matrix] required: mixed61 sheet=600x400 profile=compact ... OK
+[differential-fixture-matrix] required: mixed61 sheet=600x400 profile=short-side ... OK
+[differential-fixture-matrix] required: mixed61 sheet=300x300 profile=compact ... OK
+[differential-fixture-matrix] required: mixed61 sheet=300x300 profile=short-side ... OK
+[differential-fixture-matrix] required: mixed61 sheet=2000x2700 profile=compact ... OK
+    [run-differential] FIRST DIVERGENCE at path: value.portfolio.score.freeMaterialSliverMetric
+      typescript: 11301451.399040371
+      rust      : 11301451.399040373
+    [run-differential] runtime: node=v24.11.1 platform=darwin arch=arm64
+    [run-differential] diagnostic divergence accepted for quality evaluation
+[differential-fixture-matrix] required: mixed61 sheet=2000x2700 profile=short-side ... OK
+    [run-differential] FIRST DIVERGENCE at path: value.portfolio.score.freeMaterialSliverMetric
+      typescript: 313539.85657207255
+      rust      : 313539.8565720725
+    [run-differential] runtime: node=v24.11.1 platform=darwin arch=arm64
+    [run-differential] diagnostic divergence accepted for quality evaluation
+[differential-fixture-matrix] required: 16/16 passed; exploratory (N1): 0/0 passed
+
+===== gate metadata =====
+End timestamp: 2026-08-03T18:46:51Z
+Duration milliseconds: 186405
+Exit code: 0
+Status: passed

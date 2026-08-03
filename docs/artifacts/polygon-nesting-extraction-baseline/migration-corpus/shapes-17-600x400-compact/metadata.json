@@ -1,0 +1,166 @@
+{
+  "acceptedEngine": "old-rust",
+  "sourceFixtures": [
+    {
+      "kind": "file",
+      "path": "tests/fixtures/irregularSeventeenShapes/3268390_1.dxf",
+      "sha256": "11a424b2722585db0f70cbd3d75fa73ee7f5c2bc28205ac6042cce52d0b2abc5"
+    },
+    {
+      "kind": "file",
+      "path": "tests/fixtures/irregularSeventeenShapes/3268390_10.dxf",
+      "sha256": "bbe7929b79648f1b347816b0d6a56200f144fed259be27ce117d7a18ade37624"
+    },
+    {
+      "kind": "file",
+      "path": "tests/fixtures/irregularSeventeenShapes/3268390_11.dxf",
+      "sha256": "8523c418e9f126e95161c9c67c4a2004ce071f6f8e1db0081c0eb6c47128fd4b"
+    },
+    {
+      "kind": "file",
+      "path": "tests/fixtures/irregularSeventeenShapes/3268390_12.dxf",
+      "sha256": "b7de4d6db64f77c3f5def93c759d7e079151ae029f5f5aefc12ab4244a6d0d1c"
+    },
+    {
+      "kind": "file",
+      "path": "tests/fixtures/irregularSeventeenShapes/3268390_13.dxf",
+      "sha256": "fa8224d53a15ba57db9678ce51d51bf6cd8df01b3230d94b7c23380364346d85"
+    },
+    {
+      "kind": "file",
+      "path": "tests/fixtures/irregularSeventeenShapes/3268390_14.dxf",
+      "sha256": "c3a15d61cedf7aa892017d82b503b7d9edcbdf0d5197297323eb391b9158ce4b"
+    },
+    {
+      "kind": "file",
+      "path": "tests/fixtures/irregularSeventeenShapes/3268390_15.dxf",
+      "sha256": "d1ed86e33a108dd19402894629b69e3621793d8d30a25fc5415e785e410a11d3"
+    },
+    {
+      "kind": "file",
+      "path": "tests/fixtures/irregularSeventeenShapes/3268390_16.dxf",
+      "sha256": "5ed42c073701b0d72624729268f6636be5f40d8625d7ed0c847d4af10ae5d08b"
+    },
+    {
+      "kind": "file",
+      "path": "tests/fixtures/irregularSeventeenShapes/3268390_17.dxf",
+      "sha256": "db254f2513c4e52b59afc3927db0f6255a58256885deb39bab84b2f09146f12a"
+    },
+    {
+      "kind": "file",
+      "path": "tests/fixtures/irregularSeventeenShapes/3268390_2.dxf",
+      "sha256": "7fec1ed6d21c21c0ae4c5edcb54764636b474f1eb5a61e086da4ef94cbf44c40"
+    },
+    {
+      "kind": "file",
+      "path": "tests/fixtures/irregularSeventeenShapes/3268390_3.dxf",
+      "sha256": "134d511f5bfbaac8b42145efeda74a5ecd1a442fd533162505279af99912df2a"
+    },
+    {
+      "kind": "file",
+      "path": "tests/fixtures/irregularSeventeenShapes/3268390_4.dxf",
+      "sha256": "f7bcac09bd6ab4550c3ba7c82621ccb598f11d15d7f00dd72d322fb5a6489c34"
+    },
+    {
+      "kind": "file",
+      "path": "tests/fixtures/irregularSeventeenShapes/3268390_5.dxf",
+      "sha256": "c58c2516068c3e88a9a2a063c6dc54fe05b38fa41f6ee0ec621c01ae2fa45db8"
+    },
+    {
+      "kind": "file",
+      "path": "tests/fixtures/irregularSeventeenShapes/3268390_6.dxf",
+      "sha256": "a8936ffcbb1a9b857c4348513b40e39d1115a1b413c3a01dcbb5b73f1dcce952"
+    },
+    {
+      "kind": "file",
+      "path": "tests/fixtures/irregularSeventeenShapes/3268390_7.dxf",
+      "sha256": "75f2c6eea66d23ae48481b94fc557eec79e06e584b78e7e434d37c9cbeb64ce8"
+    },
+    {
+      "kind": "file",
+      "path": "tests/fixtures/irregularSeventeenShapes/3268390_8.dxf",
+      "sha256": "0c8e79a74892f99deb16290f9257bcf7d5d627f97e88a77e49f22f9dac243b18"
+    },
+    {
+      "kind": "file",
+      "path": "tests/fixtures/irregularSeventeenShapes/3268390_9.dxf",
+      "sha256": "bb80dd96f1feeca0026c61d1c31bf18b47e71762eb16e48b82da532fcbbf55b0"
+    }
+  ],
+  "profile": "compact",
+  "sheet": {
+    "width": 600,
+    "height": 400
+  },
+  "workers": {
+    "requested": 15,
+    "actual": 15
+  },
+  "collisionIdentitySha256": "01b2060d87752bb36eebfd4eb8602709687d5cb00c71b8feaec14a6e7cf9ba12",
+  "fittedIdentitySha256": "4472adc8ddfcc26af748adcfeb220e049a4f0e814cb17a99c0dc092db903921e",
+  "normalizedSemanticSha256": "bd4d0fd38ae84d0ca69957dba24562957b2268e6d970d8c665ec7c92ab7930dc",
+  "targetTriple": "aarch64-apple-darwin",
+  "rustcIdentity": "rustc 1.95.0 (59807616e 2026-04-14) (built from a source tarball)\nbinary: rustc\ncommit-hash: 59807616e1fa2540724bfbac14d7976d7e4a3860\ncommit-date: 2026-04-14\nhost: aarch64-apple-darwin\nrelease: 1.95.0\nLLVM version: 21.1.8",
+  "cargoIdentity": "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+  "build": {
+    "profile": "release",
+    "features": []
+  },
+  "nativeDependencies": [
+    {
+      "name": "libm",
+      "version": "0.2.16"
+    },
+    {
+      "name": "napi",
+      "version": "3.12.0",
+      "features": [
+        "dyn-symbols",
+        "napi8"
+      ]
+    },
+    {
+      "name": "napi-build",
+      "version": "2.4.0"
+    },
+    {
+      "name": "napi-derive",
+      "version": "3.6.1"
+    },
+    {
+      "name": "num-bigint",
+      "version": "0.4.8"
+    },
+    {
+      "name": "rayon",
+      "version": "1.12.0"
+    },
+    {
+      "name": "robust",
+      "version": "1.2.0"
+    },
+    {
+      "name": "ryu-js",
+      "version": "1.0.3"
+    },
+    {
+      "name": "serde",
+      "version": "1.0.229",
+      "features": [
+        "derive",
+        "rc"
+      ]
+    },
+    {
+      "name": "serde_json",
+      "version": "1.0.151",
+      "features": [
+        "float_roundtrip"
+      ]
+    },
+    {
+      "name": "sha2",
+      "version": "0.10.9"
+    }
+  ]
+}

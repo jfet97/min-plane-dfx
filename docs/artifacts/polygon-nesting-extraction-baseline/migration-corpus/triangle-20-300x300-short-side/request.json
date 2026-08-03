@@ -1,0 +1,1324 @@
+{
+  "version": 1,
+  "jobId": "run-differential-triangle-20-300x300",
+  "sheet": {
+    "width": 300,
+    "height": 300,
+    "label": "300x300"
+  },
+  "padding": 10,
+  "pieces": [
+    {
+      "id": "triangle-copy-1",
+      "sourcePieceId": "triangle-copy-1",
+      "interchangeabilityKey": "triangle-20",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "triangle-copy-2",
+      "sourcePieceId": "triangle-copy-2",
+      "interchangeabilityKey": "triangle-20",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "triangle-copy-3",
+      "sourcePieceId": "triangle-copy-3",
+      "interchangeabilityKey": "triangle-20",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "triangle-copy-4",
+      "sourcePieceId": "triangle-copy-4",
+      "interchangeabilityKey": "triangle-20",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "triangle-copy-5",
+      "sourcePieceId": "triangle-copy-5",
+      "interchangeabilityKey": "triangle-20",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "triangle-copy-6",
+      "sourcePieceId": "triangle-copy-6",
+      "interchangeabilityKey": "triangle-20",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "triangle-copy-7",
+      "sourcePieceId": "triangle-copy-7",
+      "interchangeabilityKey": "triangle-20",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "triangle-copy-8",
+      "sourcePieceId": "triangle-copy-8",
+      "interchangeabilityKey": "triangle-20",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "triangle-copy-9",
+      "sourcePieceId": "triangle-copy-9",
+      "interchangeabilityKey": "triangle-20",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "triangle-copy-10",
+      "sourcePieceId": "triangle-copy-10",
+      "interchangeabilityKey": "triangle-20",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "triangle-copy-11",
+      "sourcePieceId": "triangle-copy-11",
+      "interchangeabilityKey": "triangle-20",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "triangle-copy-12",
+      "sourcePieceId": "triangle-copy-12",
+      "interchangeabilityKey": "triangle-20",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "triangle-copy-13",
+      "sourcePieceId": "triangle-copy-13",
+      "interchangeabilityKey": "triangle-20",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "triangle-copy-14",
+      "sourcePieceId": "triangle-copy-14",
+      "interchangeabilityKey": "triangle-20",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "triangle-copy-15",
+      "sourcePieceId": "triangle-copy-15",
+      "interchangeabilityKey": "triangle-20",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "triangle-copy-16",
+      "sourcePieceId": "triangle-copy-16",
+      "interchangeabilityKey": "triangle-20",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "triangle-copy-17",
+      "sourcePieceId": "triangle-copy-17",
+      "interchangeabilityKey": "triangle-20",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "triangle-copy-18",
+      "sourcePieceId": "triangle-copy-18",
+      "interchangeabilityKey": "triangle-20",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "triangle-copy-19",
+      "sourcePieceId": "triangle-copy-19",
+      "interchangeabilityKey": "triangle-20",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    },
+    {
+      "id": "triangle-copy-20",
+      "sourcePieceId": "triangle-copy-20",
+      "interchangeabilityKey": "triangle-20",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "paddedBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 70,
+        "longestEdge": 80,
+        "area": 5600,
+        "imbalance": 10
+      },
+      "padding": 5,
+      "allowRotation": true,
+      "allowMirror": true
+    }
+  ],
+  "sourcePieces": [
+    {
+      "id": "triangle-copy-1",
+      "sourceFileId": "triangle-source-copy-1",
+      "sourceLayer": "preset",
+      "label": "triangle copy 1",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "triangle-copy-2",
+      "sourceFileId": "triangle-source-copy-2",
+      "sourceLayer": "preset",
+      "label": "triangle copy 2",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "triangle-copy-3",
+      "sourceFileId": "triangle-source-copy-3",
+      "sourceLayer": "preset",
+      "label": "triangle copy 3",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "triangle-copy-4",
+      "sourceFileId": "triangle-source-copy-4",
+      "sourceLayer": "preset",
+      "label": "triangle copy 4",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "triangle-copy-5",
+      "sourceFileId": "triangle-source-copy-5",
+      "sourceLayer": "preset",
+      "label": "triangle copy 5",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "triangle-copy-6",
+      "sourceFileId": "triangle-source-copy-6",
+      "sourceLayer": "preset",
+      "label": "triangle copy 6",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "triangle-copy-7",
+      "sourceFileId": "triangle-source-copy-7",
+      "sourceLayer": "preset",
+      "label": "triangle copy 7",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "triangle-copy-8",
+      "sourceFileId": "triangle-source-copy-8",
+      "sourceLayer": "preset",
+      "label": "triangle copy 8",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "triangle-copy-9",
+      "sourceFileId": "triangle-source-copy-9",
+      "sourceLayer": "preset",
+      "label": "triangle copy 9",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "triangle-copy-10",
+      "sourceFileId": "triangle-source-copy-10",
+      "sourceLayer": "preset",
+      "label": "triangle copy 10",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "triangle-copy-11",
+      "sourceFileId": "triangle-source-copy-11",
+      "sourceLayer": "preset",
+      "label": "triangle copy 11",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "triangle-copy-12",
+      "sourceFileId": "triangle-source-copy-12",
+      "sourceLayer": "preset",
+      "label": "triangle copy 12",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "triangle-copy-13",
+      "sourceFileId": "triangle-source-copy-13",
+      "sourceLayer": "preset",
+      "label": "triangle copy 13",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "triangle-copy-14",
+      "sourceFileId": "triangle-source-copy-14",
+      "sourceLayer": "preset",
+      "label": "triangle copy 14",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "triangle-copy-15",
+      "sourceFileId": "triangle-source-copy-15",
+      "sourceLayer": "preset",
+      "label": "triangle copy 15",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "triangle-copy-16",
+      "sourceFileId": "triangle-source-copy-16",
+      "sourceLayer": "preset",
+      "label": "triangle copy 16",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "triangle-copy-17",
+      "sourceFileId": "triangle-source-copy-17",
+      "sourceLayer": "preset",
+      "label": "triangle copy 17",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "triangle-copy-18",
+      "sourceFileId": "triangle-source-copy-18",
+      "sourceLayer": "preset",
+      "label": "triangle copy 18",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "triangle-copy-19",
+      "sourceFileId": "triangle-source-copy-19",
+      "sourceLayer": "preset",
+      "label": "triangle copy 19",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "id": "triangle-copy-20",
+      "sourceFileId": "triangle-source-copy-20",
+      "sourceLayer": "preset",
+      "label": "triangle copy 20",
+      "realBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 70,
+        "height": 60
+      },
+      "geometry": {
+        "entityType": "PRESET_SHAPE",
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line",
+            "x1": 0,
+            "y1": 60,
+            "x2": 35,
+            "y2": 0
+          },
+          {
+            "kind": "line",
+            "x1": 35,
+            "y1": 0,
+            "x2": 70,
+            "y2": 60
+          },
+          {
+            "kind": "line",
+            "x1": 70,
+            "y1": 60,
+            "x2": 0,
+            "y2": 60
+          }
+        ]
+      },
+      "warnings": []
+    }
+  ],
+  "options": {
+    "allowGlobalRotation": true,
+    "allowGlobalMirror": true,
+    "timeoutMs": 9007199254740991,
+    "workerMode": "irregular-convex-v2",
+    "historyMode": "off",
+    "historyScope": "winning_path",
+    "strategySelectionMode": "single",
+    "strategyIds": [],
+    "layoutSelectionStrategyId": "compact-first",
+    "finalSelectionMode": "best",
+    "irregularSettings": {
+      "geometry": {
+        "flatteningSagToleranceMm": 0.25,
+        "clearanceSafetyMarginMm": 0.25,
+        "geometryBackendId": "irregular-convex-v2-default",
+        "geometryBackendVersion": "0"
+      },
+      "optimizer": {
+        "orderWindow": 4,
+        "beamWidth": 8,
+        "localCandidateFanout": 4,
+        "localRepairBudget": 0,
+        "intrinsicSharedArchiveEnabled": true,
+        "intrinsicObjectiveProfileId": "short-side",
+        "transformCap": 8,
+        "transformMinimumEdgeLengthMm": 1.2,
+        "transformAngleDeduplicationToleranceDeg": 0.051,
+        "configuredRotationEnabled": true,
+        "edgeAlignmentEnabled": true,
+        "configuredRotationDeg": [],
+        "gaEnabled": false,
+        "baselineOnly": true,
+        "gaPopulation": 12,
+        "gaGenerationBudget": 2,
+        "gaEvaluationBudget": 24,
+        "gaTimeBudgetMs": 15000,
+        "gaSeed": "default",
+        "priorityOrderMutationEnabled": true,
+        "transformPreferenceMutationEnabled": true,
+        "placementPolicyMutationEnabled": true,
+        "placementPolicyId": "edge-contact-then-balanced-compactness",
+        "placementPolicyIds": [
+          "balanced-compactness",
+          "short-side-fill",
+          "edge-contact-then-balanced-compactness"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,1881 @@
+{
+  "ok": true,
+  "value": {
+    "placedCollisionGeometries": [
+      {
+        "placement": {
+          "pieceId": "triangle-copy-1",
+          "sourcePieceId": "triangle-copy-1",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 421.254,
+            "translateY": 114.392,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true
+          }
+        },
+        "collisionGeometry": {
+          "sourcePieceId": "triangle-copy-1",
+          "transform": {
+            "index": 4,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true,
+            "reason": "edge_alignment"
+          },
+          "polygon": {
+            "points": [
+              {
+                "x": 22.243,
+                "y": -38.131
+              },
+              {
+                "x": -20.88,
+                "y": -114.392
+              },
+              {
+                "x": -65.366,
+                "y": -38.131
+              }
+            ]
+          },
+          "bounds": {
+            "minX": -65.366,
+            "minY": -114.392,
+            "maxX": 22.243,
+            "maxY": -38.131
+          }
+        }
+      },
+      {
+        "placement": {
+          "pieceId": "triangle-copy-2",
+          "sourcePieceId": "triangle-copy-2",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 465.74,
+            "translateY": -38.131,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false
+          }
+        },
+        "collisionGeometry": {
+          "sourcePieceId": "triangle-copy-2",
+          "transform": {
+            "index": 5,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false,
+            "reason": "edge_alignment"
+          },
+          "polygon": {
+            "points": [
+              {
+                "x": 22.243,
+                "y": 38.131
+              },
+              {
+                "x": -20.88,
+                "y": 114.392
+              },
+              {
+                "x": -65.366,
+                "y": 38.131
+              }
+            ]
+          },
+          "bounds": {
+            "minX": -65.366,
+            "minY": 38.131,
+            "maxX": 22.243,
+            "maxY": 114.392
+          }
+        }
+      },
+      {
+        "placement": {
+          "pieceId": "triangle-copy-3",
+          "sourcePieceId": "triangle-copy-3",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 421.254,
+            "translateY": 190.653,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true
+          }
+        },
+        "collisionGeometry": {
+          "sourcePieceId": "triangle-copy-3",
+          "transform": {
+            "index": 4,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true,
+            "reason": "edge_alignment"
+          },
+          "polygon": {
+            "points": [
+              {
+                "x": 22.243,
+                "y": -38.131
+              },
+              {
+                "x": -20.88,
+                "y": -114.392
+              },
+              {
+                "x": -65.366,
+                "y": -38.131
+              }
+            ]
+          },
+          "bounds": {
+            "minX": -65.366,
+            "minY": -114.392,
+            "maxX": 22.243,
+            "maxY": -38.131
+          }
+        }
+      },
+      {
+        "placement": {
+          "pieceId": "triangle-copy-4",
+          "sourcePieceId": "triangle-copy-4",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 465.74,
+            "translateY": 38.13,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false
+          }
+        },
+        "collisionGeometry": {
+          "sourcePieceId": "triangle-copy-4",
+          "transform": {
+            "index": 5,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false,
+            "reason": "edge_alignment"
+          },
+          "polygon": {
+            "points": [
+              {
+                "x": 22.243,
+                "y": 38.131
+              },
+              {
+                "x": -20.88,
+                "y": 114.392
+              },
+              {
+                "x": -65.366,
+                "y": 38.131
+              }
+            ]
+          },
+          "bounds": {
+            "minX": -65.366,
+            "minY": 38.131,
+            "maxX": 22.243,
+            "maxY": 114.392
+          }
+        }
+      },
+      {
+        "placement": {
+          "pieceId": "triangle-copy-5",
+          "sourcePieceId": "triangle-copy-5",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 332.28200000000004,
+            "translateY": 114.392,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true
+          }
+        },
+        "collisionGeometry": {
+          "sourcePieceId": "triangle-copy-5",
+          "transform": {
+            "index": 4,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true,
+            "reason": "edge_alignment"
+          },
+          "polygon": {
+            "points": [
+              {
+                "x": 22.243,
+                "y": -38.131
+              },
+              {
+                "x": -20.88,
+                "y": -114.392
+              },
+              {
+                "x": -65.366,
+                "y": -38.131
+              }
+            ]
+          },
+          "bounds": {
+            "minX": -65.366,
+            "minY": -114.392,
+            "maxX": 22.243,
+            "maxY": -38.131
+          }
+        }
+      },
+      {
+        "placement": {
+          "pieceId": "triangle-copy-6",
+          "sourcePieceId": "triangle-copy-6",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 376.76800000000003,
+            "translateY": -38.131,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false
+          }
+        },
+        "collisionGeometry": {
+          "sourcePieceId": "triangle-copy-6",
+          "transform": {
+            "index": 5,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false,
+            "reason": "edge_alignment"
+          },
+          "polygon": {
+            "points": [
+              {
+                "x": 22.243,
+                "y": 38.131
+              },
+              {
+                "x": -20.88,
+                "y": 114.392
+              },
+              {
+                "x": -65.366,
+                "y": 38.131
+              }
+            ]
+          },
+          "bounds": {
+            "minX": -65.366,
+            "minY": 38.131,
+            "maxX": 22.243,
+            "maxY": 114.392
+          }
+        }
+      },
+      {
+        "placement": {
+          "pieceId": "triangle-copy-7",
+          "sourcePieceId": "triangle-copy-7",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 332.28200000000004,
+            "translateY": 190.653,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true
+          }
+        },
+        "collisionGeometry": {
+          "sourcePieceId": "triangle-copy-7",
+          "transform": {
+            "index": 4,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true,
+            "reason": "edge_alignment"
+          },
+          "polygon": {
+            "points": [
+              {
+                "x": 22.243,
+                "y": -38.131
+              },
+              {
+                "x": -20.88,
+                "y": -114.392
+              },
+              {
+                "x": -65.366,
+                "y": -38.131
+              }
+            ]
+          },
+          "bounds": {
+            "minX": -65.366,
+            "minY": -114.392,
+            "maxX": 22.243,
+            "maxY": -38.131
+          }
+        }
+      },
+      {
+        "placement": {
+          "pieceId": "triangle-copy-8",
+          "sourcePieceId": "triangle-copy-8",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 376.76800000000003,
+            "translateY": 38.13,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false
+          }
+        },
+        "collisionGeometry": {
+          "sourcePieceId": "triangle-copy-8",
+          "transform": {
+            "index": 5,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false,
+            "reason": "edge_alignment"
+          },
+          "polygon": {
+            "points": [
+              {
+                "x": 22.243,
+                "y": 38.131
+              },
+              {
+                "x": -20.88,
+                "y": 114.392
+              },
+              {
+                "x": -65.366,
+                "y": 38.131
+              }
+            ]
+          },
+          "bounds": {
+            "minX": -65.366,
+            "minY": 38.131,
+            "maxX": 22.243,
+            "maxY": 114.392
+          }
+        }
+      },
+      {
+        "placement": {
+          "pieceId": "triangle-copy-9",
+          "sourcePieceId": "triangle-copy-9",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 243.31,
+            "translateY": 114.392,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true
+          }
+        },
+        "collisionGeometry": {
+          "sourcePieceId": "triangle-copy-9",
+          "transform": {
+            "index": 4,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true,
+            "reason": "edge_alignment"
+          },
+          "polygon": {
+            "points": [
+              {
+                "x": 22.243,
+                "y": -38.131
+              },
+              {
+                "x": -20.88,
+                "y": -114.392
+              },
+              {
+                "x": -65.366,
+                "y": -38.131
+              }
+            ]
+          },
+          "bounds": {
+            "minX": -65.366,
+            "minY": -114.392,
+            "maxX": 22.243,
+            "maxY": -38.131
+          }
+        }
+      },
+      {
+        "placement": {
+          "pieceId": "triangle-copy-10",
+          "sourcePieceId": "triangle-copy-10",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 287.796,
+            "translateY": -38.131,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false
+          }
+        },
+        "collisionGeometry": {
+          "sourcePieceId": "triangle-copy-10",
+          "transform": {
+            "index": 5,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false,
+            "reason": "edge_alignment"
+          },
+          "polygon": {
+            "points": [
+              {
+                "x": 22.243,
+                "y": 38.131
+              },
+              {
+                "x": -20.88,
+                "y": 114.392
+              },
+              {
+                "x": -65.366,
+                "y": 38.131
+              }
+            ]
+          },
+          "bounds": {
+            "minX": -65.366,
+            "minY": 38.131,
+            "maxX": 22.243,
+            "maxY": 114.392
+          }
+        }
+      },
+      {
+        "placement": {
+          "pieceId": "triangle-copy-11",
+          "sourcePieceId": "triangle-copy-11",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 243.31,
+            "translateY": 190.653,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true
+          }
+        },
+        "collisionGeometry": {
+          "sourcePieceId": "triangle-copy-11",
+          "transform": {
+            "index": 4,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true,
+            "reason": "edge_alignment"
+          },
+          "polygon": {
+            "points": [
+              {
+                "x": 22.243,
+                "y": -38.131
+              },
+              {
+                "x": -20.88,
+                "y": -114.392
+              },
+              {
+                "x": -65.366,
+                "y": -38.131
+              }
+            ]
+          },
+          "bounds": {
+            "minX": -65.366,
+            "minY": -114.392,
+            "maxX": 22.243,
+            "maxY": -38.131
+          }
+        }
+      },
+      {
+        "placement": {
+          "pieceId": "triangle-copy-12",
+          "sourcePieceId": "triangle-copy-12",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 287.796,
+            "translateY": 38.13,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false
+          }
+        },
+        "collisionGeometry": {
+          "sourcePieceId": "triangle-copy-12",
+          "transform": {
+            "index": 5,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false,
+            "reason": "edge_alignment"
+          },
+          "polygon": {
+            "points": [
+              {
+                "x": 22.243,
+                "y": 38.131
+              },
+              {
+                "x": -20.88,
+                "y": 114.392
+              },
+              {
+                "x": -65.366,
+                "y": 38.131
+              }
+            ]
+          },
+          "bounds": {
+            "minX": -65.366,
+            "minY": 38.131,
+            "maxX": 22.243,
+            "maxY": 114.392
+          }
+        }
+      },
+      {
+        "placement": {
+          "pieceId": "triangle-copy-13",
+          "sourcePieceId": "triangle-copy-13",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 154.33800000000002,
+            "translateY": 114.392,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true
+          }
+        },
+        "collisionGeometry": {
+          "sourcePieceId": "triangle-copy-13",
+          "transform": {
+            "index": 4,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true,
+            "reason": "edge_alignment"
+          },
+          "polygon": {
+            "points": [
+              {
+                "x": 22.243,
+                "y": -38.131
+              },
+              {
+                "x": -20.88,
+                "y": -114.392
+              },
+              {
+                "x": -65.366,
+                "y": -38.131
+              }
+            ]
+          },
+          "bounds": {
+            "minX": -65.366,
+            "minY": -114.392,
+            "maxX": 22.243,
+            "maxY": -38.131
+          }
+        }
+      },
+      {
+        "placement": {
+          "pieceId": "triangle-copy-14",
+          "sourcePieceId": "triangle-copy-14",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 198.824,
+            "translateY": -38.131,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false
+          }
+        },
+        "collisionGeometry": {
+          "sourcePieceId": "triangle-copy-14",
+          "transform": {
+            "index": 5,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false,
+            "reason": "edge_alignment"
+          },
+          "polygon": {
+            "points": [
+              {
+                "x": 22.243,
+                "y": 38.131
+              },
+              {
+                "x": -20.88,
+                "y": 114.392
+              },
+              {
+                "x": -65.366,
+                "y": 38.131
+              }
+            ]
+          },
+          "bounds": {
+            "minX": -65.366,
+            "minY": 38.131,
+            "maxX": 22.243,
+            "maxY": 114.392
+          }
+        }
+      },
+      {
+        "placement": {
+          "pieceId": "triangle-copy-15",
+          "sourcePieceId": "triangle-copy-15",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 154.33800000000002,
+            "translateY": 190.653,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true
+          }
+        },
+        "collisionGeometry": {
+          "sourcePieceId": "triangle-copy-15",
+          "transform": {
+            "index": 4,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true,
+            "reason": "edge_alignment"
+          },
+          "polygon": {
+            "points": [
+              {
+                "x": 22.243,
+                "y": -38.131
+              },
+              {
+                "x": -20.88,
+                "y": -114.392
+              },
+              {
+                "x": -65.366,
+                "y": -38.131
+              }
+            ]
+          },
+          "bounds": {
+            "minX": -65.366,
+            "minY": -114.392,
+            "maxX": 22.243,
+            "maxY": -38.131
+          }
+        }
+      },
+      {
+        "placement": {
+          "pieceId": "triangle-copy-16",
+          "sourcePieceId": "triangle-copy-16",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 198.824,
+            "translateY": 38.13,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false
+          }
+        },
+        "collisionGeometry": {
+          "sourcePieceId": "triangle-copy-16",
+          "transform": {
+            "index": 5,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false,
+            "reason": "edge_alignment"
+          },
+          "polygon": {
+            "points": [
+              {
+                "x": 22.243,
+                "y": 38.131
+              },
+              {
+                "x": -20.88,
+                "y": 114.392
+              },
+              {
+                "x": -65.366,
+                "y": 38.131
+              }
+            ]
+          },
+          "bounds": {
+            "minX": -65.366,
+            "minY": 38.131,
+            "maxX": 22.243,
+            "maxY": 114.392
+          }
+        }
+      },
+      {
+        "placement": {
+          "pieceId": "triangle-copy-17",
+          "sourcePieceId": "triangle-copy-17",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 65.366,
+            "translateY": 114.392,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true
+          }
+        },
+        "collisionGeometry": {
+          "sourcePieceId": "triangle-copy-17",
+          "transform": {
+            "index": 4,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true,
+            "reason": "edge_alignment"
+          },
+          "polygon": {
+            "points": [
+              {
+                "x": 22.243,
+                "y": -38.131
+              },
+              {
+                "x": -20.88,
+                "y": -114.392
+              },
+              {
+                "x": -65.366,
+                "y": -38.131
+              }
+            ]
+          },
+          "bounds": {
+            "minX": -65.366,
+            "minY": -114.392,
+            "maxX": 22.243,
+            "maxY": -38.131
+          }
+        }
+      },
+      {
+        "placement": {
+          "pieceId": "triangle-copy-18",
+          "sourcePieceId": "triangle-copy-18",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 109.85200000000002,
+            "translateY": -38.131,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false
+          }
+        },
+        "collisionGeometry": {
+          "sourcePieceId": "triangle-copy-18",
+          "transform": {
+            "index": 5,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false,
+            "reason": "edge_alignment"
+          },
+          "polygon": {
+            "points": [
+              {
+                "x": 22.243,
+                "y": 38.131
+              },
+              {
+                "x": -20.88,
+                "y": 114.392
+              },
+              {
+                "x": -65.366,
+                "y": 38.131
+              }
+            ]
+          },
+          "bounds": {
+            "minX": -65.366,
+            "minY": 38.131,
+            "maxX": 22.243,
+            "maxY": 114.392
+          }
+        }
+      },
+      {
+        "placement": {
+          "pieceId": "triangle-copy-19",
+          "sourcePieceId": "triangle-copy-19",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 65.366,
+            "translateY": 190.653,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true
+          }
+        },
+        "collisionGeometry": {
+          "sourcePieceId": "triangle-copy-19",
+          "transform": {
+            "index": 4,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true,
+            "reason": "edge_alignment"
+          },
+          "polygon": {
+            "points": [
+              {
+                "x": 22.243,
+                "y": -38.131
+              },
+              {
+                "x": -20.88,
+                "y": -114.392
+              },
+              {
+                "x": -65.366,
+                "y": -38.131
+              }
+            ]
+          },
+          "bounds": {
+            "minX": -65.366,
+            "minY": -114.392,
+            "maxX": 22.243,
+            "maxY": -38.131
+          }
+        }
+      },
+      {
+        "placement": {
+          "pieceId": "triangle-copy-20",
+          "sourcePieceId": "triangle-copy-20",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 109.85200000000002,
+            "translateY": 38.13,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false
+          }
+        },
+        "collisionGeometry": {
+          "sourcePieceId": "triangle-copy-20",
+          "transform": {
+            "index": 5,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false,
+            "reason": "edge_alignment"
+          },
+          "polygon": {
+            "points": [
+              {
+                "x": 22.243,
+                "y": 38.131
+              },
+              {
+                "x": -20.88,
+                "y": 114.392
+              },
+              {
+                "x": -65.366,
+                "y": 38.131
+              }
+            ]
+          },
+          "bounds": {
+            "minX": -65.366,
+            "minY": 38.131,
+            "maxX": 22.243,
+            "maxY": 114.392
+          }
+        }
+      }
+    ],
+    "score": {
+      "unplacedCount": 0,
+      "sharedCollisionBoundaryLengthMm": 388.10699999999997,
+      "sharedCollisionBoundaryContactUnits": 4.395927678620074,
+      "sharedCollisionBoundaryContactBand": 4,
+      "nearCompleteStructuralContactCount": 0,
+      "dominantNearCompleteStructuralContactCount": 0,
+      "largestNetFreeMaterialRegionAreaMm2": 5333188.50051,
+      "freeMaterialRegionCount": 1,
+      "freeMaterialHoleCount": 6,
+      "freeMaterialSliverMetric": 31.775258662144648,
+      "collisionBoundsWorstNormalizedSheetConsumption": 0.2439915,
+      "collisionBoundsNormalizedSpanSum": 0.30048112962962964,
+      "collisionBoundsAreaMm2": 74428.143126,
+      "collisionBoundsSpanMm": 640.505,
+      "occupiedHullWasteRatio": 0.06015213029072752,
+      "collisionBoundsBottomMm": 0,
+      "collisionBoundsLeftMm": 0,
+      "freeMaterialSnapshot": {
+        "sheet": {
+          "width": 2000,
+          "height": 2700,
+          "label": "2000x2700"
+        },
+        "regions": [
+          {
+            "boundary": {
+              "points": [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 44.486,
+                  "y": 0
+                },
+                {
+                  "x": 88.972,
+                  "y": 76.261
+                },
+                {
+                  "x": 132.095,
+                  "y": 0
+                },
+                {
+                  "x": 133.458,
+                  "y": 0
+                },
+                {
+                  "x": 177.944,
+                  "y": 76.261
+                },
+                {
+                  "x": 221.067,
+                  "y": 0
+                },
+                {
+                  "x": 222.43,
+                  "y": 0
+                },
+                {
+                  "x": 266.916,
+                  "y": 76.261
+                },
+                {
+                  "x": 310.039,
+                  "y": 0
+                },
+                {
+                  "x": 311.402,
+                  "y": 0
+                },
+                {
+                  "x": 355.888,
+                  "y": 76.261
+                },
+                {
+                  "x": 399.011,
+                  "y": 0
+                },
+                {
+                  "x": 400.374,
+                  "y": 0
+                },
+                {
+                  "x": 444.86,
+                  "y": 76.261
+                },
+                {
+                  "x": 487.983,
+                  "y": 0
+                },
+                {
+                  "x": 2000,
+                  "y": 0
+                },
+                {
+                  "x": 2000,
+                  "y": 2700
+                },
+                {
+                  "x": 0,
+                  "y": 2700
+                }
+              ]
+            },
+            "holes": [
+              {
+                "points": [
+                  {
+                    "x": 44.486,
+                    "y": 0
+                  },
+                  {
+                    "x": 0,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 44.486,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 88.972,
+                    "y": 152.522
+                  },
+                  {
+                    "x": 132.095,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 133.458,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 177.944,
+                    "y": 152.522
+                  },
+                  {
+                    "x": 221.067,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 222.43,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 266.916,
+                    "y": 152.522
+                  },
+                  {
+                    "x": 310.039,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 311.402,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 355.888,
+                    "y": 152.522
+                  },
+                  {
+                    "x": 399.011,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 400.374,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 444.86,
+                    "y": 152.522
+                  },
+                  {
+                    "x": 487.983,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 443.497,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 400.374,
+                    "y": 0
+                  },
+                  {
+                    "x": 355.888,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 354.525,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 311.402,
+                    "y": 0
+                  },
+                  {
+                    "x": 266.916,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 265.553,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 222.43,
+                    "y": 0
+                  },
+                  {
+                    "x": 177.944,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 176.581,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 133.458,
+                    "y": 0
+                  },
+                  {
+                    "x": 88.972,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 87.609,
+                    "y": 76.261
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 44.486,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 0,
+                    "y": 152.522
+                  },
+                  {
+                    "x": 87.609,
+                    "y": 152.522
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 133.458,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 88.972,
+                    "y": 152.522
+                  },
+                  {
+                    "x": 176.581,
+                    "y": 152.522
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 222.43,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 177.944,
+                    "y": 152.522
+                  },
+                  {
+                    "x": 265.553,
+                    "y": 152.522
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 311.402,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 266.916,
+                    "y": 152.522
+                  },
+                  {
+                    "x": 354.525,
+                    "y": 152.522
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 400.374,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 355.888,
+                    "y": 152.522
+                  },
+                  {
+                    "x": 443.497,
+                    "y": 152.522
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "diagnostics": []
+      },
+      "placementOrder": [
+        "triangle-copy-1",
+        "triangle-copy-2",
+        "triangle-copy-3",
+        "triangle-copy-4",
+        "triangle-copy-5",
+        "triangle-copy-6",
+        "triangle-copy-7",
+        "triangle-copy-8",
+        "triangle-copy-9",
+        "triangle-copy-10",
+        "triangle-copy-11",
+        "triangle-copy-12",
+        "triangle-copy-13",
+        "triangle-copy-14",
+        "triangle-copy-15",
+        "triangle-copy-16",
+        "triangle-copy-17",
+        "triangle-copy-18",
+        "triangle-copy-19",
+        "triangle-copy-20"
+      ],
+      "unplacedSourcePieceIds": []
+    },
+    "unplacedPieceIds": [],
+    "diagnostics": [
+      {
+        "code": "intrinsic_shared_archive_completed",
+        "message": "shared archive selected periodic-P2 from 10 exact endpoints"
+      },
+      {
+        "code": "capacity_preflight_inconclusive",
+        "message": "proof-only capacity preflight was inconclusive; complete mode ran unchanged"
+      },
+      {
+        "code": "complete_archive_fitted",
+        "message": "complete endpoint 371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127 fits the requested sheet; scheduled capacity prework had already settled as observer-only work"
+      }
+    ],
+    "sortedPieceIds": [
+      "triangle-copy-1",
+      "triangle-copy-2",
+      "triangle-copy-3",
+      "triangle-copy-4",
+      "triangle-copy-5",
+      "triangle-copy-6",
+      "triangle-copy-7",
+      "triangle-copy-8",
+      "triangle-copy-9",
+      "triangle-copy-10",
+      "triangle-copy-11",
+      "triangle-copy-12",
+      "triangle-copy-13",
+      "triangle-copy-14",
+      "triangle-copy-15",
+      "triangle-copy-16",
+      "triangle-copy-17",
+      "triangle-copy-18",
+      "triangle-copy-19",
+      "triangle-copy-20"
+    ],
+    "stateSnapshots": [],
+    "beamWidth": 8,
+    "portfolio": {
+      "status": "completed",
+      "terminationReason": "shared_archive_completed",
+      "source": "shared-archive",
+      "placements": [
+        {
+          "pieceId": "triangle-copy-1",
+          "sourcePieceId": "triangle-copy-1",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 421.254,
+            "translateY": 114.392,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "triangle-copy-2",
+          "sourcePieceId": "triangle-copy-2",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 465.74,
+            "translateY": -38.131,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-3",
+          "sourcePieceId": "triangle-copy-3",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 421.254,
+            "translateY": 190.653,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "triangle-copy-4",
+          "sourcePieceId": "triangle-copy-4",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 465.74,
+            "translateY": 38.13,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-5",
+          "sourcePieceId": "triangle-copy-5",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 332.28200000000004,
+            "translateY": 114.392,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "triangle-copy-6",
+          "sourcePieceId": "triangle-copy-6",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 376.76800000000003,
+            "translateY": -38.131,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-7",
+          "sourcePieceId": "triangle-copy-7",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 332.28200000000004,
+            "translateY": 190.653,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "triangle-copy-8",
+          "sourcePieceId": "triangle-copy-8",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 376.76800000000003,
+            "translateY": 38.13,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-9",
+          "sourcePieceId": "triangle-copy-9",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 243.31,
+            "translateY": 114.392,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "triangle-copy-10",
+          "sourcePieceId": "triangle-copy-10",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 287.796,
+            "translateY": -38.131,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-11",
+          "sourcePieceId": "triangle-copy-11",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 243.31,
+            "translateY": 190.653,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "triangle-copy-12",
+          "sourcePieceId": "triangle-copy-12",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 287.796,
+            "translateY": 38.13,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-13",
+          "sourcePieceId": "triangle-copy-13",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 154.33800000000002,
+            "translateY": 114.392,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "triangle-copy-14",
+          "sourcePieceId": "triangle-copy-14",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 198.824,
+            "translateY": -38.131,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-15",
+          "sourcePieceId": "triangle-copy-15",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 154.33800000000002,
+            "translateY": 190.653,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "triangle-copy-16",
+          "sourcePieceId": "triangle-copy-16",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 198.824,
+            "translateY": 38.13,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-17",
+          "sourcePieceId": "triangle-copy-17",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 65.366,
+            "translateY": 114.392,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "triangle-copy-18",
+          "sourcePieceId": "triangle-copy-18",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 109.85200000000002,
+            "translateY": -38.131,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-19",
+          "sourcePieceId": "triangle-copy-19",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 65.366,
+            "translateY": 190.653,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "triangle-copy-20",
+          "sourcePieceId": "triangle-copy-20",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 109.85200000000002,
+            "translateY": 38.13,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false
+          }
+        }
+      ],
+      "unplacedPieceIds": [],
+      "score": {
+        "unplacedCount": 0,
+        "sharedCollisionBoundaryLengthMm": 388.10699999999997,
+        "sharedCollisionBoundaryContactUnits": 4.395927678620074,
+        "sharedCollisionBoundaryContactBand": 4,
+        "nearCompleteStructuralContactCount": 0,
+        "dominantNearCompleteStructuralContactCount": 0,
+        "largestNetFreeMaterialRegionAreaMm2": 5333188.50051,
+        "freeMaterialRegionCount": 1,
+        "freeMaterialHoleCount": 6,
+        "canonicalEnclosedCavityCount": 0,
+        "freeMaterialSliverMetric": 31.775258662144648,
+        "collisionBoundsWorstNormalizedSheetConsumption": 0.2439915,
+        "collisionBoundsNormalizedSpanSum": 0.30048112962962964,
+        "collisionBoundsAreaMm2": 74428.143126,
+        "collisionBoundsSpanMm": 640.505
+      },
+      "diagnostics": [
+        {
+          "code": "intrinsic_shared_archive_selected",
+          "message": "selected exact shared-archive role periodic-P2 (371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127)"
+        }
+      ]
+    },
+    "intrinsicAnytimeSchedulerTrace": {
+      "version": "intrinsic-anytime-scheduler-v1",
+      "coldQuantumDepths": 4,
+      "coldStartStatus": "paused",
+      "coldStartCompletedDepths": 4,
+      "coldStartConsumedPlacementEvaluations": 2533,
+      "coldCheckpointReused": false,
+      "warmPrefixEndpointsAdmitted": false,
+      "cancellationReason": "complete-endpoint-fitted",
+      "quanta": [
+        {
+          "ordinal": 0,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 1,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 2,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 3,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 4,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 5,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 6,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 7,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 8,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 9,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 10,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 11,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 12,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 13,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 14,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 15,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 16,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 17,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 18,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 19,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 20,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 21,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 22,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 23,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 24,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 25,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 26,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 27,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 28,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 29,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 30,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 31,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 32,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "settled"
+        },
+        {
+          "ordinal": 33,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 34,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 35,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 36,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "settled"
+        }
+      ]
+    },
+    "focusedCompleteReconstructionTrace": {
+      "version": "intrinsic-focused-complete-reconstruction-v1",
+      "status": "duplicate-order",
+      "sourceCanonicalGeometryHash": "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127",
+      "selectedCanonicalGeometryHash": "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127",
+      "consumedCandidateEvaluations": 0,
+      "candidateEvaluationAccountingComplete": true,
+      "runtimeMs": "<timing:present>",
+      "outputInfluence": "protected-fallback"
+    }
+  }
+}

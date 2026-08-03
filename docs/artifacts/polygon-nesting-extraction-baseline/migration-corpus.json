@@ -1,0 +1,366 @@
+{
+  "version": 1,
+  "acceptedEngine": "old-rust",
+  "rows": [
+    {
+      "id": "triangle-20-2000x2700-compact",
+      "fixture": "triangle-20",
+      "sheet": "2000x2700",
+      "profile": "compact",
+      "artifacts": {
+        "request": "migration-corpus/triangle-20-2000x2700-compact/request.json",
+        "result": "migration-corpus/triangle-20-2000x2700-compact/result.json",
+        "events": "migration-corpus/triangle-20-2000x2700-compact/events.ndjson",
+        "semanticProjection": "migration-corpus/triangle-20-2000x2700-compact/semantic-projection.json",
+        "metadata": "migration-corpus/triangle-20-2000x2700-compact/metadata.json"
+      },
+      "sha256": {
+        "request": "69103cfdc60e38e9efa028bf33f320c36eecc0b0417a839953990cdd1cc4f6f2",
+        "result": "cebb35f7b18f5484954d9379608295a418ce09690d6d52382644c8a82ab63cbd",
+        "events": "865993c508b4e85fa2d7b62deb19529424eeed4dc88c3d36a207ebf2f6d52464",
+        "semanticProjection": "9a63504610d8b7f7f2a4ff5926b8b4ef4f381eb8a8cf9e6b12e30a959f4fc360",
+        "metadata": "31c6f050ef036e426edcebc44289a3f6844a95e7cbcc33963376d792ccecba9d"
+      }
+    },
+    {
+      "id": "triangle-20-2000x2700-short-side",
+      "fixture": "triangle-20",
+      "sheet": "2000x2700",
+      "profile": "short-side",
+      "artifacts": {
+        "request": "migration-corpus/triangle-20-2000x2700-short-side/request.json",
+        "result": "migration-corpus/triangle-20-2000x2700-short-side/result.json",
+        "events": "migration-corpus/triangle-20-2000x2700-short-side/events.ndjson",
+        "semanticProjection": "migration-corpus/triangle-20-2000x2700-short-side/semantic-projection.json",
+        "metadata": "migration-corpus/triangle-20-2000x2700-short-side/metadata.json"
+      },
+      "sha256": {
+        "request": "27b526de2524166f7f748ee664ea0be68099e7734ebcf5e72d7ba04286b77a80",
+        "result": "9baf3089e6468bc8fc5da599d84e0bb4ecf8d349e6c77ae863263dbca5f43c16",
+        "events": "2809a3c60c27c73ac6599f5c7322ac7b1f6f31cfaafe798f6777ee28f7ce3bc4",
+        "semanticProjection": "e02ceb246ddfaad90a4ef69c15f53e6828e88a9c5743a3cc712e2b4513867dc3",
+        "metadata": "4893518d9ee683e929b6f8e30ecc0b3d48358039f4f3c55784a3486d92ad9518"
+      }
+    },
+    {
+      "id": "triangle-20-600x400-compact",
+      "fixture": "triangle-20",
+      "sheet": "600x400",
+      "profile": "compact",
+      "artifacts": {
+        "request": "migration-corpus/triangle-20-600x400-compact/request.json",
+        "result": "migration-corpus/triangle-20-600x400-compact/result.json",
+        "events": "migration-corpus/triangle-20-600x400-compact/events.ndjson",
+        "semanticProjection": "migration-corpus/triangle-20-600x400-compact/semantic-projection.json",
+        "metadata": "migration-corpus/triangle-20-600x400-compact/metadata.json"
+      },
+      "sha256": {
+        "request": "5b743bc4306d3addb796736c342a9f7a8545402e0a797195633a32cdf337fa58",
+        "result": "87ad48851ff47df6316359459e22f764e531f25ec521aa5faae0fc30794abf0a",
+        "events": "e0cbe7186eb0e6131728b52b3492506538409d52c724028bc1e0fbdd43a8e82e",
+        "semanticProjection": "9e4ee87966c09b1da76f2c3d186c5ee980e882ca0f40369b360f7dbc1b055de9",
+        "metadata": "65f44df3f054aff86ccc02d470d4e3b553bf0fa6c914d81645286089b9671628"
+      }
+    },
+    {
+      "id": "triangle-20-600x400-short-side",
+      "fixture": "triangle-20",
+      "sheet": "600x400",
+      "profile": "short-side",
+      "artifacts": {
+        "request": "migration-corpus/triangle-20-600x400-short-side/request.json",
+        "result": "migration-corpus/triangle-20-600x400-short-side/result.json",
+        "events": "migration-corpus/triangle-20-600x400-short-side/events.ndjson",
+        "semanticProjection": "migration-corpus/triangle-20-600x400-short-side/semantic-projection.json",
+        "metadata": "migration-corpus/triangle-20-600x400-short-side/metadata.json"
+      },
+      "sha256": {
+        "request": "fc5ad97ef3b291e87cc0701f05c85b8215945e2a29418bfaaf96364fa009e6ef",
+        "result": "da4470ae47f27d0688b991b975e0e1b855f253993e1e603057786a5ea13440fc",
+        "events": "021525d54f936797739fa5858ad7088b44b25d5c5fb21e661085b7aabe07c902",
+        "semanticProjection": "f59b627625cdb456e4d2bf42d847f291c39e50694b73fa4c80c0cb7ba96d2723",
+        "metadata": "464d8831dafb31cd307ea9fede8495e8f6f618d25b79673efbbeec517dc31e37"
+      }
+    },
+    {
+      "id": "triangle-20-300x300-compact",
+      "fixture": "triangle-20",
+      "sheet": "300x300",
+      "profile": "compact",
+      "artifacts": {
+        "request": "migration-corpus/triangle-20-300x300-compact/request.json",
+        "result": "migration-corpus/triangle-20-300x300-compact/result.json",
+        "events": "migration-corpus/triangle-20-300x300-compact/events.ndjson",
+        "semanticProjection": "migration-corpus/triangle-20-300x300-compact/semantic-projection.json",
+        "metadata": "migration-corpus/triangle-20-300x300-compact/metadata.json"
+      },
+      "sha256": {
+        "request": "ee408d5a1a42e00cffa3f9cc30ba2862d59ccf5e2e77fe1ac67424fc213b9534",
+        "result": "983c8b8641604f90808d46d348e331ac523c1e38cfe667fbeec7c9205d04bd6e",
+        "events": "db7b9447899e786cd567783ae8b00951da3c065144ca1a8b3bc830cfbf171d60",
+        "semanticProjection": "be9066f5af97b6f8d0482f6133fb9ec419df575a0d4d5b16507c15fc94128954",
+        "metadata": "d3c973a1d083ca9dc82a165827fbc9ee8f1768b94e9b7add9decedce4d50e4d3"
+      }
+    },
+    {
+      "id": "triangle-20-300x300-short-side",
+      "fixture": "triangle-20",
+      "sheet": "300x300",
+      "profile": "short-side",
+      "artifacts": {
+        "request": "migration-corpus/triangle-20-300x300-short-side/request.json",
+        "result": "migration-corpus/triangle-20-300x300-short-side/result.json",
+        "events": "migration-corpus/triangle-20-300x300-short-side/events.ndjson",
+        "semanticProjection": "migration-corpus/triangle-20-300x300-short-side/semantic-projection.json",
+        "metadata": "migration-corpus/triangle-20-300x300-short-side/metadata.json"
+      },
+      "sha256": {
+        "request": "78768fee5275d15641bd68aee71c6e47ae61c3cfe7a81444b5ad9e2c82635adb",
+        "result": "adc7264ea1e879e691b9b599e6e342e6eea7f530889c19274f253b88bb6ca90c",
+        "events": "55ba69174b4e86610bd656a0354c5e2de5cbc44aea27036b717815f67e5e98d8",
+        "semanticProjection": "079475d9ae2d8d0eafe4512a571b8a56ed18471481d7a015d66ca488f0a17ebb",
+        "metadata": "b34d288bf18088cfc04f05e2ac72336f2fa60e3bceff5adc86deab56b27e9865"
+      }
+    },
+    {
+      "id": "mixed-61-2000x2700-compact",
+      "fixture": "mixed-61",
+      "sheet": "2000x2700",
+      "profile": "compact",
+      "artifacts": {
+        "request": "migration-corpus/mixed-61-2000x2700-compact/request.json",
+        "result": "migration-corpus/mixed-61-2000x2700-compact/result.json",
+        "events": "migration-corpus/mixed-61-2000x2700-compact/events.ndjson",
+        "semanticProjection": "migration-corpus/mixed-61-2000x2700-compact/semantic-projection.json",
+        "metadata": "migration-corpus/mixed-61-2000x2700-compact/metadata.json"
+      },
+      "sha256": {
+        "request": "fa064b3c7d2a7fcddc4a17ac39db5f885af92a1def312311c14157082529082f",
+        "result": "de87424fe9e8bb305fabb249b7c928d558c6b95efaaa0cda0bdc25ed2de51762",
+        "events": "0ab604e5d6524399632e9e09d6889ce3345ae29a755165e4b8acef61a14d4d31",
+        "semanticProjection": "49b6d3b0037316adf0355afa00f37548dd5a03a433dc3b34d7c51203ec613786",
+        "metadata": "f620fa5fe57f90a7a0924da0cd495f38c06b27b42a59121eb3b761d066e26225"
+      }
+    },
+    {
+      "id": "mixed-61-2000x2700-short-side",
+      "fixture": "mixed-61",
+      "sheet": "2000x2700",
+      "profile": "short-side",
+      "artifacts": {
+        "request": "migration-corpus/mixed-61-2000x2700-short-side/request.json",
+        "result": "migration-corpus/mixed-61-2000x2700-short-side/result.json",
+        "events": "migration-corpus/mixed-61-2000x2700-short-side/events.ndjson",
+        "semanticProjection": "migration-corpus/mixed-61-2000x2700-short-side/semantic-projection.json",
+        "metadata": "migration-corpus/mixed-61-2000x2700-short-side/metadata.json"
+      },
+      "sha256": {
+        "request": "e0d4331bc4f8678666515de25d1df323e0a8492da8c2fc1b9229b7ac5e563c5b",
+        "result": "2d0b047da73eae309e2422e24e133b9193630f4cdf1f2df3a8e48bc0ce523443",
+        "events": "2bc79310fc64d4dbf39ae85f882e39e4da04c53c0152236ca315ad3fd0e2ca69",
+        "semanticProjection": "6c329298570c208712d7fb6a42a95edadeeb5019bf665d86b14365a205a5faf6",
+        "metadata": "d6f249e886aa97a21f73ac500c4d7e4edb60c69c62937178f2dcb52ebde3f8f5"
+      }
+    },
+    {
+      "id": "mixed-61-600x400-compact",
+      "fixture": "mixed-61",
+      "sheet": "600x400",
+      "profile": "compact",
+      "artifacts": {
+        "request": "migration-corpus/mixed-61-600x400-compact/request.json",
+        "result": "migration-corpus/mixed-61-600x400-compact/result.json",
+        "events": "migration-corpus/mixed-61-600x400-compact/events.ndjson",
+        "semanticProjection": "migration-corpus/mixed-61-600x400-compact/semantic-projection.json",
+        "metadata": "migration-corpus/mixed-61-600x400-compact/metadata.json"
+      },
+      "sha256": {
+        "request": "2738acace2cbb9ea94eadcc0fc5a9e7e9050ad065dc9155a895cfbbcffbabb63",
+        "result": "6d49617b105f0d4e464b8f89b01256c19c7641c0d5daff6cdb7fa7ead25aba45",
+        "events": "6ad64afab0909e36c915ff51fa3f2c797f49bf78141eecd067527ab101d73062",
+        "semanticProjection": "1f460fedd9d9a7326f2c5769a5c4a7b8b214132f131c0468f364edda4b047d9d",
+        "metadata": "edd246fa6b9f78c15aaea08bd7c43699ce77a71ef53c7eb07a3b3d8e4cab1abd"
+      }
+    },
+    {
+      "id": "mixed-61-600x400-short-side",
+      "fixture": "mixed-61",
+      "sheet": "600x400",
+      "profile": "short-side",
+      "artifacts": {
+        "request": "migration-corpus/mixed-61-600x400-short-side/request.json",
+        "result": "migration-corpus/mixed-61-600x400-short-side/result.json",
+        "events": "migration-corpus/mixed-61-600x400-short-side/events.ndjson",
+        "semanticProjection": "migration-corpus/mixed-61-600x400-short-side/semantic-projection.json",
+        "metadata": "migration-corpus/mixed-61-600x400-short-side/metadata.json"
+      },
+      "sha256": {
+        "request": "14710ec1ab0f82f4a98a640ea6fa63e2c1c54f4192ccbdb52d88d7d8dcf39ba7",
+        "result": "aec5892fa84ab7301ecaac0225409a212506a89df69d666b22b296509306e198",
+        "events": "68a5ccc38c84b436798679e41e22a4fd3da756cc00b5544b43dc46f5d0d41256",
+        "semanticProjection": "7b4a8092f6fb64ab14818af01f9a63232e92cdc80de0ae514456bbbfaf50f983",
+        "metadata": "066fbcfd459349af72276b68e57e9dd3bb30350d0edf4033659210e1bc09b552"
+      }
+    },
+    {
+      "id": "mixed-61-300x300-compact",
+      "fixture": "mixed-61",
+      "sheet": "300x300",
+      "profile": "compact",
+      "artifacts": {
+        "request": "migration-corpus/mixed-61-300x300-compact/request.json",
+        "result": "migration-corpus/mixed-61-300x300-compact/result.json",
+        "events": "migration-corpus/mixed-61-300x300-compact/events.ndjson",
+        "semanticProjection": "migration-corpus/mixed-61-300x300-compact/semantic-projection.json",
+        "metadata": "migration-corpus/mixed-61-300x300-compact/metadata.json"
+      },
+      "sha256": {
+        "request": "82bd1edb398f8235621eea9fb949f513377d20c51262bbbba72b670f368f570f",
+        "result": "06ea2de81479c32a951eb1bc8f48ac5cabb8772f6aee137a1809521d4df9b42b",
+        "events": "e11dc3a109690c7ce5dd031d5d48077c0ac4192ccf35fc003b62a0f764ac81d2",
+        "semanticProjection": "d10fa4dbdab51a395e9d2166da6a673ba533a5d5d6f77e9d04452e3232f87ea4",
+        "metadata": "a087466e71cdad2954ea3e70c5c6e68fc81bcf5c16e09baabb2783b478f9357b"
+      }
+    },
+    {
+      "id": "mixed-61-300x300-short-side",
+      "fixture": "mixed-61",
+      "sheet": "300x300",
+      "profile": "short-side",
+      "artifacts": {
+        "request": "migration-corpus/mixed-61-300x300-short-side/request.json",
+        "result": "migration-corpus/mixed-61-300x300-short-side/result.json",
+        "events": "migration-corpus/mixed-61-300x300-short-side/events.ndjson",
+        "semanticProjection": "migration-corpus/mixed-61-300x300-short-side/semantic-projection.json",
+        "metadata": "migration-corpus/mixed-61-300x300-short-side/metadata.json"
+      },
+      "sha256": {
+        "request": "7fa5963d7a404e205ebdb27ea5e941d25e52b26bfdc31e697585f3c5e577cba5",
+        "result": "02e5b7dcc76d496f6dbbbae3f8b14730c79a9f3588e2e0be1b7b78ac93fccb18",
+        "events": "6c2462f6fb7c674352b43554075a7ad07a85b7b77d03091f1185625aeeabb16e",
+        "semanticProjection": "30309567dec58897612fa6ae68792bafac61322590513e9c8541c080df11e22a",
+        "metadata": "30128fadf428f3f45e0124f1685995343c397ceea14e61caee1c2b383364fd4d"
+      }
+    },
+    {
+      "id": "shapes-17-2000x2700-compact",
+      "fixture": "shapes-17",
+      "sheet": "2000x2700",
+      "profile": "compact",
+      "artifacts": {
+        "request": "migration-corpus/shapes-17-2000x2700-compact/request.json",
+        "result": "migration-corpus/shapes-17-2000x2700-compact/result.json",
+        "events": "migration-corpus/shapes-17-2000x2700-compact/events.ndjson",
+        "semanticProjection": "migration-corpus/shapes-17-2000x2700-compact/semantic-projection.json",
+        "metadata": "migration-corpus/shapes-17-2000x2700-compact/metadata.json"
+      },
+      "sha256": {
+        "request": "7110f02fed8b6f07b7e8f2837129885cee79f7d6798a576e902f24f828e13ba7",
+        "result": "0e86dbf99b46c6495f0d0bcd32fb52a1578bb8957af29d0b8798d6c2d3864411",
+        "events": "849a008b4349d466b4fb6329914668bf3bb9caf7d332745fb8b19660e194b2d9",
+        "semanticProjection": "54b9ffff2e2df6d84b45cc51ab4b34a4a5f936e08be3949d0eceae228438bd2f",
+        "metadata": "e9e1dd5009b62ff4b2195a0f01d0c308f851a55bcd2489651e3f27d447bb0f63"
+      }
+    },
+    {
+      "id": "shapes-17-2000x2700-short-side",
+      "fixture": "shapes-17",
+      "sheet": "2000x2700",
+      "profile": "short-side",
+      "artifacts": {
+        "request": "migration-corpus/shapes-17-2000x2700-short-side/request.json",
+        "result": "migration-corpus/shapes-17-2000x2700-short-side/result.json",
+        "events": "migration-corpus/shapes-17-2000x2700-short-side/events.ndjson",
+        "semanticProjection": "migration-corpus/shapes-17-2000x2700-short-side/semantic-projection.json",
+        "metadata": "migration-corpus/shapes-17-2000x2700-short-side/metadata.json"
+      },
+      "sha256": {
+        "request": "7f9a5a5fcbe232ed8791958a57036980c9b78ccddc67e411e42bede0744a520f",
+        "result": "d787b6555414b90defafaf2ef96d99b07a50182b7cc6a7382a9238714045b744",
+        "events": "37a1c143e55eddab44657908f6b133440370b97ce2e5255c5800118fda534923",
+        "semanticProjection": "ed0b46d5e0204d9896934b2a83f1f09828e2681a6f06f6da315ec632e9119ab6",
+        "metadata": "87382d35eb3d62df6e8afeedbbea7d33d0a48b5884a0869046666b3b8b62e7da"
+      }
+    },
+    {
+      "id": "shapes-17-600x400-compact",
+      "fixture": "shapes-17",
+      "sheet": "600x400",
+      "profile": "compact",
+      "artifacts": {
+        "request": "migration-corpus/shapes-17-600x400-compact/request.json",
+        "result": "migration-corpus/shapes-17-600x400-compact/result.json",
+        "events": "migration-corpus/shapes-17-600x400-compact/events.ndjson",
+        "semanticProjection": "migration-corpus/shapes-17-600x400-compact/semantic-projection.json",
+        "metadata": "migration-corpus/shapes-17-600x400-compact/metadata.json"
+      },
+      "sha256": {
+        "request": "fb07e216d48f48758b22b3f6061faffa56e959445fc7f167d46ab152b6563c1a",
+        "result": "96af4ea84449321560d49e2bbf1ed397777124cb7eb135a7f214c33eb41f6722",
+        "events": "22e4a95ec5f441411fc6c30a7ba780d8005afa8d76ba1da51e8f7a15cc5a88ab",
+        "semanticProjection": "522f32b7e71e075cf6cbf902376e08d57426bd23b1c9a9a80b0a74d80dfacf95",
+        "metadata": "e2a7b44e632af3fe9fed8334838d9a66ea8c1e7806308866fc388b4c197aae8c"
+      }
+    },
+    {
+      "id": "shapes-17-600x400-short-side",
+      "fixture": "shapes-17",
+      "sheet": "600x400",
+      "profile": "short-side",
+      "artifacts": {
+        "request": "migration-corpus/shapes-17-600x400-short-side/request.json",
+        "result": "migration-corpus/shapes-17-600x400-short-side/result.json",
+        "events": "migration-corpus/shapes-17-600x400-short-side/events.ndjson",
+        "semanticProjection": "migration-corpus/shapes-17-600x400-short-side/semantic-projection.json",
+        "metadata": "migration-corpus/shapes-17-600x400-short-side/metadata.json"
+      },
+      "sha256": {
+        "request": "04765eb7726a603f202055cc079474f7565e0827149636c2f99084e92e6f4684",
+        "result": "d7013d3aed36482bf551fcfd0f5406d38c793ade1ceaa0c51a7a40c74840c262",
+        "events": "4fd8fea743e911e2d9bae870337d9242666a33878983dd0646ce7f3484585ec9",
+        "semanticProjection": "c8492bee53f11699da7efb29e6584698fd639afa0585f706d212ecf7bcb746a1",
+        "metadata": "fb38029f7b0046f690f6e55252fa7cec1f313f23ef2b20702365412222ebc77b"
+      }
+    },
+    {
+      "id": "shapes-17-300x300-compact",
+      "fixture": "shapes-17",
+      "sheet": "300x300",
+      "profile": "compact",
+      "artifacts": {
+        "request": "migration-corpus/shapes-17-300x300-compact/request.json",
+        "result": "migration-corpus/shapes-17-300x300-compact/result.json",
+        "events": "migration-corpus/shapes-17-300x300-compact/events.ndjson",
+        "semanticProjection": "migration-corpus/shapes-17-300x300-compact/semantic-projection.json",
+        "metadata": "migration-corpus/shapes-17-300x300-compact/metadata.json"
+      },
+      "sha256": {
+        "request": "36c6049ca9842d8a37b0acacbcf629db307acbfe8895a08db060c2988cb91b1b",
+        "result": "925568183bb9d0dab9a617aa250e47a69c15bd934b54246995001bf5e433b46b",
+        "events": "8a7c1b2047b726d835d3e7957b6f222991718b74687702708dbbae63b9516d67",
+        "semanticProjection": "b6f9d549bb5335826d8e2e9011a46c086e500f7e9688db339810c74603279912",
+        "metadata": "883dc1b782b402ed8cd65865199db49c38496e31f32e085ac83992ca9a3f4650"
+      }
+    },
+    {
+      "id": "shapes-17-300x300-short-side",
+      "fixture": "shapes-17",
+      "sheet": "300x300",
+      "profile": "short-side",
+      "artifacts": {
+        "request": "migration-corpus/shapes-17-300x300-short-side/request.json",
+        "result": "migration-corpus/shapes-17-300x300-short-side/result.json",
+        "events": "migration-corpus/shapes-17-300x300-short-side/events.ndjson",
+        "semanticProjection": "migration-corpus/shapes-17-300x300-short-side/semantic-projection.json",
+        "metadata": "migration-corpus/shapes-17-300x300-short-side/metadata.json"
+      },
+      "sha256": {
+        "request": "7e271b082766fa1315251982a33e80ef954c53bf847c86d8d24196a1516d5470",
+        "result": "8bfe7bc2c6b48b3618a695f8f453fc5f68f3f9c793407d778449ca1ca2f39009",
+        "events": "316a2bfe0d38382f2692ed5bbbeb443785a74a0f8bac3eca6aed905a3bb8c3dd",
+        "semanticProjection": "6fcea9e47260b201fdd27f9f1e1b01da03e479ef60a442df0832def11011eb81",
+        "metadata": "d00fde0f4e04af75b8928b80ed0c0bd708c85cc7aa488fe6c323f91eaab713d7"
+      }
+    }
+  ]
+}

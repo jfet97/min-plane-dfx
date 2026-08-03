@@ -1,0 +1,12 @@
+Command: node -e "const c=require('./crates/irregular-nesting-native/npm/index.cjs').nativeCapability(); if(c.apiVersion!==3) throw new Error(JSON.stringify(c))"
+Working directory: /Users/andreasimonecosta/Documents/Work/min-plane-dfx/.claude/worktrees/polygon-nesting-extraction
+Start timestamp: 2026-08-03T18:22:49Z
+Status: running
+
+===== stdout and stderr =====
+
+===== gate metadata =====
+End timestamp: 2026-08-03T18:22:49Z
+Duration milliseconds: 45
+Exit code: 0
+Status: passed

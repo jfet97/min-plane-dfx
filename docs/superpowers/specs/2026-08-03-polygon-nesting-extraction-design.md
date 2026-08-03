@@ -33,7 +33,7 @@ At design time:
 - PR 31 restored semantic periodic-crop chronology by reverting one parallel seam;
 - PR 32 corrected macOS staged-addon signing;
 - the current `main` push workflow passed Rust formatting, Clippy, release tests, required differential rows, thread equality, native loading, and four-target packaging;
-- quality acceptance and the full strict differential matrix were skipped on that push because their workflow conditions require a pull request, schedule, or manual dispatch. Phase A must run both on the exact frozen source.
+- quality acceptance and the full differential matrix were skipped on that push because their workflow conditions require a pull request, schedule, or manual dispatch. Phase A must run both on the exact frozen source. TypeScript-versus-Rust comparison is diagnostic: it characterizes frontend compatibility but cannot require changing the accepted Rust engine. Exact old-Rust-versus-extracted-Rust identity is the blocking extraction oracle.
 
 The checked-in performance measurements predate the PR 31 correction. The owner explicitly accepted the existing tests and results and waived fresh post-correction performance benchmarking as an extraction blocker. The migration document and release evidence must state this fact without claiming that historical speedup measurements describe the exact extracted source.
 
@@ -171,6 +171,8 @@ Exact names may differ, but JSON parsing and serialization are adapter concerns.
 
 One call owns one pool, all caches, cancellation state, coordinator state, and diagnostics. All parallel work uses the owned pool. Immutable parallel results are replayed in deterministic order. The ambient global Rayon pool is never initialized by the engine.
 
+Exact extraction parity is always evaluated on a matching target and toolchain pair: the embedded accepted Rust engine and extracted Rust engine must be built and run for the same target with the same recorded Rust compiler, Cargo version, profile, features, and relevant native dependencies. A macOS arm64 result is not a universal exact oracle for Linux, Windows, or macOS x64. Cross-target comparisons are target-specific diagnostics and must not introduce tolerances into same-target parity.
+
 The extraction must preserve:
 
 - exact integer-grid and BigInt authority;
@@ -271,7 +273,7 @@ The repository `.npmrc` contains only the scope mapping and environment-token re
 always-auth=true
 ```
 
-No credential is committed. The private package grants GitHub Actions access to `jfet97/min-plane-dxf`. Its CI uses a token with `read:packages`; release CI uses `write:packages`. Local development supplies `NODE_AUTH_TOKEN` from the user's authenticated GitHub package token or equivalent credential.
+No credential is committed. The private package grants GitHub Actions access to `jfet97/min-plane-dfx`. Its CI uses a token with `read:packages`; release CI uses `write:packages`. Local development supplies `NODE_AUTH_TOKEN` from the user's authenticated GitHub package token or equivalent credential.
 
 Initial desktop targets remain closed to:
 
@@ -361,12 +363,13 @@ The initial runtime contract assumes Linux amd64. No Linux arm64 support is clai
 - Recheck clean `main`, `origin/main`, source commit, and GitHub checks.
 - Record exact Node, pnpm, Electron, Rust, Cargo, target, OS, CPU, and memory metadata.
 - Run current Rust formatting, Clippy, release tests, thread equality, no-global-pool containment, real-addon, lifecycle, differential, quality, capacity, and package gates.
+- Treat TypeScript-versus-Rust comparison as diagnostic. Freeze every observed leaf difference and prove that masking only the explicitly accepted diagnostic leaves reveals no other semantic divergence.
 - Materialize standalone EngineRequest fixtures for Triangle-20, Mixed-61, and Shapes-17.
 - Preserve all current Rust vectors and source fixtures with SHA-256 manifests.
-- Preserve old-engine result or error envelopes, ordered events, normalized semantic identities, canonical layout identities, requested and actual worker diagnostics, addon hashes, and legal hashes.
+- Preserve accepted old-Rust result or error envelopes, ordered events, normalized semantic identities, canonical layout identities, requested and actual worker diagnostics, addon hashes, legal hashes, target identity, and toolchain identity.
 - Record the explicit performance-gate waiver. Do not reuse historical speedup values as current-source claims.
 
-A reproducible baseline failure is fixed in `min-plane-dfx` before extraction proceeds.
+A reproducible accepted-Rust correctness, lifecycle, quality, capacity, or packaging failure is fixed in `min-plane-dfx` before extraction proceeds. A TypeScript-versus-Rust numeric difference is not itself an extraction blocker when the complete diagnostic audit proves its exact scope and the accepted Rust behavior remains unchanged.
 
 ### Phase B: standalone protocol and core
 
@@ -390,8 +393,8 @@ A reproducible baseline failure is fixed in `min-plane-dfx` before extraction pr
 - Assemble one release-candidate NPM tarball containing all four verified desktop binaries and record its SHA-256.
 - Build one Linux amd64 release-candidate image, record its immutable image digest, and export it for prepublication smoke tests.
 - In an isolated `min-plane-dfx` cutover branch, replace `workspace:*` with the exact local tarball through the dependency key `irregular-nesting-native`.
-- Compare embedded and release-candidate outputs over the frozen corpus.
-- Run plain Node, Electron-as-Node, lifecycle, native integration, quality, and all four packaged-app gates against the exact tarball bytes intended for publication.
+- Compare embedded and release-candidate Rust outputs exactly over the frozen corpus on each matching target and toolchain pair. TypeScript comparison remains diagnostic.
+- Run plain Node, Electron-as-Node, lifecycle, native integration, diagnostic TypeScript comparison, quality, and all four packaged-app gates against the exact tarball bytes intended for publication.
 - Run CLI and OCI gates against the exact image digest intended for publication.
 - Confirm immediately before outward publication.
 - Publish the already verified tarball as `@jfet97/polygon-nesting@0.1.0` to GitHub Packages without rebuilding it.
@@ -401,7 +404,7 @@ A reproducible baseline failure is fixed in `min-plane-dfx` before extraction pr
 - Verify a clean registry installation, package integrity, plain Node load, Electron-as-Node load, and packaged application smoke from the published package. These postpublication checks verify registry delivery, while all correctness and four-target release gates already ran on the immutable prepublication bytes.
 - Retain a version-pinned rollback path.
 - Confirm immediately before deleting the embedded crate and obsolete staging or CI ownership.
-- Remove embedded ownership only after every cutover and registry-delivery gate passes.
+- Remove embedded ownership only after every cutover and registry-delivery gate passes, including exact accepted-old-Rust versus candidate-Rust identity on the required matching target and toolchain pairs. TypeScript diagnostic differences do not block removal when their frozen scope remains unchanged.
 
 ## Verification
 
@@ -416,8 +419,9 @@ A reproducible baseline failure is fixed in `min-plane-dfx` before extraction pr
 - cancellation first-reason tests;
 - thread-count equality across repeated runs;
 - no-global-Rayon process isolation;
-- exact frozen-corpus result identities;
-- explicit proof that diagnostics do not affect semantic hashes.
+- exact accepted-old-Rust versus extracted-Rust frozen-corpus result identities on matching target and toolchain pairs;
+- explicit proof that diagnostics do not affect semantic hashes;
+- complete TypeScript-versus-Rust diagnostic divergence evidence, with every accepted leaf listed and zero other divergence after masking exactly those leaves.
 
 ### N-API
 
@@ -452,7 +456,8 @@ A reproducible baseline failure is fixed in `min-plane-dfx` before extraction pr
 
 - no runtime repository-relative dependency after removal;
 - released package loads in all supported packaged Electron targets;
-- frozen old and new semantic identities match;
+- frozen accepted-old-Rust and extracted-Rust semantic identities match exactly on every verified matching target and toolchain pair;
+- TypeScript-versus-Rust differences remain diagnostic and do not redefine the accepted Rust oracle;
 - standalone repository tests pass without the old checkout;
 - OCI CLI runs without Node or Electron;
 - package and image versions identify the same source release.

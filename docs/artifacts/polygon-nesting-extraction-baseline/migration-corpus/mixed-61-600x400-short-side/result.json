@@ -1,0 +1,2576 @@
+{
+  "placedCollisionGeometries": [
+    {
+      "placement": {
+        "pieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-1",
+        "sourcePieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-1",
+        "placementReference": {
+          "x": -5.252,
+          "y": -5.252
+        },
+        "transform": {
+          "translateX": 596.0840000000001,
+          "translateY": 0,
+          "rotationDeg": 90,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-1",
+        "transform": {
+          "index": 0,
+          "rotationDeg": 90,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 0,
+              "y": 164.504
+            },
+            {
+              "x": -114.504,
+              "y": 164.504
+            },
+            {
+              "x": -114.504,
+              "y": 0
+            }
+          ]
+        },
+        "bounds": {
+          "minX": -114.504,
+          "minY": 0,
+          "maxX": 0,
+          "maxY": 164.504
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-2",
+        "sourcePieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-2",
+        "placementReference": {
+          "x": -5.252,
+          "y": -5.252
+        },
+        "transform": {
+          "translateX": 596.0840000000001,
+          "translateY": 164.504,
+          "rotationDeg": 90,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-2",
+        "transform": {
+          "index": 0,
+          "rotationDeg": 90,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 0,
+              "y": 164.504
+            },
+            {
+              "x": -114.504,
+              "y": 164.504
+            },
+            {
+              "x": -114.504,
+              "y": 0
+            }
+          ]
+        },
+        "bounds": {
+          "minX": -114.504,
+          "minY": 0,
+          "maxX": 0,
+          "maxY": 164.504
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-3",
+        "sourcePieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-3",
+        "placementReference": {
+          "x": -5.252,
+          "y": -5.252
+        },
+        "transform": {
+          "translateX": 481.58000000000004,
+          "translateY": 0,
+          "rotationDeg": 90,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-3",
+        "transform": {
+          "index": 0,
+          "rotationDeg": 90,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 0,
+              "y": 164.504
+            },
+            {
+              "x": -114.504,
+              "y": 164.504
+            },
+            {
+              "x": -114.504,
+              "y": 0
+            }
+          ]
+        },
+        "bounds": {
+          "minX": -114.504,
+          "minY": 0,
+          "maxX": 0,
+          "maxY": 164.504
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-1",
+        "sourcePieceId": "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-1",
+        "placementReference": {
+          "x": -5.252,
+          "y": -5.577
+        },
+        "transform": {
+          "translateX": 506.89000000000004,
+          "translateY": 192.85,
+          "rotationDeg": 109.65401698807655,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-1",
+        "transform": {
+          "index": 5,
+          "rotationDeg": 109.65401698807655,
+          "mirrored": false,
+          "reason": "edge_alignment"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": -25.31,
+              "y": 70.868
+            },
+            {
+              "x": -75.931,
+              "y": 132.696
+            },
+            {
+              "x": -129.988,
+              "y": 113.39
+            },
+            {
+              "x": -129.988,
+              "y": 33.482
+            },
+            {
+              "x": -79.368,
+              "y": -28.346
+            },
+            {
+              "x": -25.31,
+              "y": -9.039
+            }
+          ]
+        },
+        "bounds": {
+          "minX": -129.988,
+          "minY": -28.346,
+          "maxX": -25.31,
+          "maxY": 132.696
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-2",
+        "sourcePieceId": "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-2",
+        "placementReference": {
+          "x": -5.252,
+          "y": -5.577
+        },
+        "transform": {
+          "translateX": 383.51200000000006,
+          "translateY": 249.496,
+          "rotationDeg": 90,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-2",
+        "transform": {
+          "index": 0,
+          "rotationDeg": 90,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 0,
+              "y": 75.252
+            },
+            {
+              "x": -26.876,
+              "y": 150.504
+            },
+            {
+              "x": -84.278,
+              "y": 150.504
+            },
+            {
+              "x": -111.154,
+              "y": 75.252
+            },
+            {
+              "x": -84.278,
+              "y": 0
+            },
+            {
+              "x": -26.876,
+              "y": 0
+            }
+          ]
+        },
+        "bounds": {
+          "minX": -111.154,
+          "minY": 0,
+          "maxX": 0,
+          "maxY": 150.504
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-1",
+        "sourcePieceId": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-1",
+        "placementReference": {
+          "x": -6.099,
+          "y": -6.609
+        },
+        "transform": {
+          "translateX": 291.31000000000006,
+          "translateY": 266.058,
+          "rotationDeg": 162.82850612001232,
+          "mirrored": true
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-1",
+        "transform": {
+          "index": 6,
+          "rotationDeg": 162.82850612001232,
+          "mirrored": true,
+          "reason": "edge_alignment"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 53.598,
+              "y": -16.562
+            },
+            {
+              "x": 94.544,
+              "y": -74.07
+            },
+            {
+              "x": 53.799,
+              "y": -133.704
+            },
+            {
+              "x": -12.652,
+              "y": -113.17
+            },
+            {
+              "x": -12.652,
+              "y": -40.946
+            }
+          ]
+        },
+        "bounds": {
+          "minX": -12.652,
+          "minY": -133.704,
+          "maxX": 94.544,
+          "maxY": -16.562
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-2",
+        "sourcePieceId": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-2",
+        "placementReference": {
+          "x": -6.099,
+          "y": -6.609
+        },
+        "transform": {
+          "translateX": 272.53200000000004,
+          "translateY": 133.704,
+          "rotationDeg": 162.82850612001232,
+          "mirrored": true
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-2",
+        "transform": {
+          "index": 6,
+          "rotationDeg": 162.82850612001232,
+          "mirrored": true,
+          "reason": "edge_alignment"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 53.598,
+              "y": -16.562
+            },
+            {
+              "x": 94.544,
+              "y": -74.07
+            },
+            {
+              "x": 53.799,
+              "y": -133.704
+            },
+            {
+              "x": -12.652,
+              "y": -113.17
+            },
+            {
+              "x": -12.652,
+              "y": -40.946
+            }
+          ]
+        },
+        "bounds": {
+          "minX": -12.652,
+          "minY": -133.704,
+          "maxX": 94.544,
+          "maxY": -16.562
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-3",
+        "sourcePieceId": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-3",
+        "placementReference": {
+          "x": -6.099,
+          "y": -6.609
+        },
+        "transform": {
+          "translateX": 203.34500000000008,
+          "translateY": 327.33,
+          "rotationDeg": 162.82850612001232,
+          "mirrored": true
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-3",
+        "transform": {
+          "index": 6,
+          "rotationDeg": 162.82850612001232,
+          "mirrored": true,
+          "reason": "edge_alignment"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 53.598,
+              "y": -16.562
+            },
+            {
+              "x": 94.544,
+              "y": -74.07
+            },
+            {
+              "x": 53.799,
+              "y": -133.704
+            },
+            {
+              "x": -12.652,
+              "y": -113.17
+            },
+            {
+              "x": -12.652,
+              "y": -40.946
+            }
+          ]
+        },
+        "bounds": {
+          "minX": -12.652,
+          "minY": -133.704,
+          "maxX": 94.544,
+          "maxY": -16.562
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-1",
+        "sourcePieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-1",
+        "placementReference": {
+          "x": -5.252,
+          "y": -6.454
+        },
+        "transform": {
+          "translateX": 198.15400000000005,
+          "translateY": 86.508,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-1",
+        "transform": {
+          "index": 3,
+          "rotationDeg": 0,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 40.252,
+              "y": 0
+            },
+            {
+              "x": 80.504,
+              "y": 28.751
+            },
+            {
+              "x": 80.504,
+              "y": 84.157
+            },
+            {
+              "x": 40.252,
+              "y": 112.908
+            },
+            {
+              "x": 0,
+              "y": 84.157
+            },
+            {
+              "x": 0,
+              "y": 28.751
+            }
+          ]
+        },
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "maxX": 80.504,
+          "maxY": 112.908
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-2",
+        "sourcePieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-2",
+        "placementReference": {
+          "x": -5.252,
+          "y": -6.454
+        },
+        "transform": {
+          "translateX": 299.23300000000006,
+          "translateY": 351.202,
+          "rotationDeg": 125.53727384446901,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-2",
+        "transform": {
+          "index": 5,
+          "rotationDeg": 125.53727384446901,
+          "mirrored": false,
+          "reason": "edge_alignment"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": -23.396,
+              "y": 32.755
+            },
+            {
+              "x": -70.187,
+              "y": 48.798
+            },
+            {
+              "x": -115.273,
+              "y": 16.594
+            },
+            {
+              "x": -115.273,
+              "y": -32.871
+            },
+            {
+              "x": -68.482,
+              "y": -48.915
+            },
+            {
+              "x": -23.396,
+              "y": -16.711
+            }
+          ]
+        },
+        "bounds": {
+          "minX": -115.273,
+          "minY": -48.915,
+          "maxX": -23.396,
+          "maxY": 48.798
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-3",
+        "sourcePieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-3",
+        "placementReference": {
+          "x": -5.252,
+          "y": -6.454
+        },
+        "transform": {
+          "translateX": 144.60600000000005,
+          "translateY": 48.915,
+          "rotationDeg": 234.462726155531,
+          "mirrored": true
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-3",
+        "transform": {
+          "index": 4,
+          "rotationDeg": 234.462726155531,
+          "mirrored": true,
+          "reason": "edge_alignment"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 23.396,
+              "y": 32.755
+            },
+            {
+              "x": 70.187,
+              "y": 48.798
+            },
+            {
+              "x": 115.273,
+              "y": 16.594
+            },
+            {
+              "x": 115.273,
+              "y": -32.871
+            },
+            {
+              "x": 68.482,
+              "y": -48.915
+            },
+            {
+              "x": 23.396,
+              "y": -16.711
+            }
+          ]
+        },
+        "bounds": {
+          "minX": 23.396,
+          "minY": -48.915,
+          "maxX": 115.273,
+          "maxY": 48.798
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-4",
+        "sourcePieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-4",
+        "placementReference": {
+          "x": -5.252,
+          "y": -6.454
+        },
+        "transform": {
+          "translateX": 117.65000000000003,
+          "translateY": 86.508,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-4",
+        "transform": {
+          "index": 3,
+          "rotationDeg": 0,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 40.252,
+              "y": 0
+            },
+            {
+              "x": 80.504,
+              "y": 28.751
+            },
+            {
+              "x": 80.504,
+              "y": 84.157
+            },
+            {
+              "x": 40.252,
+              "y": 112.908
+            },
+            {
+              "x": 0,
+              "y": 84.157
+            },
+            {
+              "x": 0,
+              "y": 28.751
+            }
+          ]
+        },
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "maxX": 80.504,
+          "maxY": 112.908
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-1",
+        "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-1",
+        "placementReference": {
+          "x": -7.287,
+          "y": -5.252
+        },
+        "transform": {
+          "translateX": 596.0840000000001,
+          "translateY": 399.512,
+          "rotationDeg": 180,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-1",
+        "transform": {
+          "index": 1,
+          "rotationDeg": 180,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": -23.502,
+              "y": 0
+            },
+            {
+              "x": -91.072,
+              "y": 0
+            },
+            {
+              "x": -114.574,
+              "y": -70.504
+            },
+            {
+              "x": 0,
+              "y": -70.504
+            }
+          ]
+        },
+        "bounds": {
+          "minX": -114.574,
+          "minY": -70.504,
+          "maxX": 0,
+          "maxY": 0
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-2",
+        "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-2",
+        "placementReference": {
+          "x": -7.287,
+          "y": -5.252
+        },
+        "transform": {
+          "translateX": 390.6,
+          "translateY": 329.496,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-2",
+        "transform": {
+          "index": 3,
+          "rotationDeg": 0,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 23.502,
+              "y": 0
+            },
+            {
+              "x": 91.072,
+              "y": 0
+            },
+            {
+              "x": 114.574,
+              "y": 70.504
+            },
+            {
+              "x": 0,
+              "y": 70.504
+            }
+          ]
+        },
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "maxX": 114.574,
+          "maxY": 70.504
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-3",
+        "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-3",
+        "placementReference": {
+          "x": -7.287,
+          "y": -5.252
+        },
+        "transform": {
+          "translateX": 120.18900000000008,
+          "translateY": 303.06,
+          "rotationDeg": 270,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-3",
+        "transform": {
+          "index": 2,
+          "rotationDeg": 270,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 0,
+              "y": -23.502
+            },
+            {
+              "x": 0,
+              "y": -91.072
+            },
+            {
+              "x": 70.504,
+              "y": -114.574
+            },
+            {
+              "x": 70.504,
+              "y": 0
+            }
+          ]
+        },
+        "bounds": {
+          "minX": 0,
+          "minY": -114.574,
+          "maxX": 70.504,
+          "maxY": 0
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-4",
+        "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-4",
+        "placementReference": {
+          "x": -7.287,
+          "y": -5.252
+        },
+        "transform": {
+          "translateX": 183.96000000000004,
+          "translateY": 277.314,
+          "rotationDeg": 90,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-4",
+        "transform": {
+          "index": 0,
+          "rotationDeg": 90,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 0,
+              "y": 23.502
+            },
+            {
+              "x": 0,
+              "y": 91.072
+            },
+            {
+              "x": -70.504,
+              "y": 114.574
+            },
+            {
+              "x": -70.504,
+              "y": 0
+            }
+          ]
+        },
+        "bounds": {
+          "minX": -70.504,
+          "minY": 0,
+          "maxX": 0,
+          "maxY": 114.574
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-5",
+        "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-5",
+        "placementReference": {
+          "x": -7.287,
+          "y": -5.252
+        },
+        "transform": {
+          "translateX": 151.51200000000006,
+          "translateY": 0,
+          "rotationDeg": 90,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-5",
+        "transform": {
+          "index": 0,
+          "rotationDeg": 90,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 0,
+              "y": 23.502
+            },
+            {
+              "x": 0,
+              "y": 91.072
+            },
+            {
+              "x": -70.504,
+              "y": 114.574
+            },
+            {
+              "x": -70.504,
+              "y": 0
+            }
+          ]
+        },
+        "bounds": {
+          "minX": -70.504,
+          "minY": 0,
+          "maxX": 0,
+          "maxY": 114.574
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-1",
+        "sourcePieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-1",
+        "placementReference": {
+          "x": -9.984,
+          "y": -5.252
+        },
+        "transform": {
+          "translateX": 120.18900000000008,
+          "translateY": 177.267,
+          "rotationDeg": 90,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-1",
+        "transform": {
+          "index": 0,
+          "rotationDeg": 90,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 0,
+              "y": 34.721
+            },
+            {
+              "x": 0,
+              "y": 85.247
+            },
+            {
+              "x": -50.504,
+              "y": 119.968
+            },
+            {
+              "x": -50.504,
+              "y": 0
+            }
+          ]
+        },
+        "bounds": {
+          "minX": -50.504,
+          "minY": 0,
+          "maxX": 0,
+          "maxY": 119.968
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-2",
+        "sourcePieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-2",
+        "placementReference": {
+          "x": -9.984,
+          "y": -5.252
+        },
+        "transform": {
+          "translateX": 62.95100000000002,
+          "translateY": 387.112,
+          "rotationDeg": 270,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-2",
+        "transform": {
+          "index": 2,
+          "rotationDeg": 270,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 0,
+              "y": -34.721
+            },
+            {
+              "x": 0,
+              "y": -85.247
+            },
+            {
+              "x": 50.504,
+              "y": -119.968
+            },
+            {
+              "x": 50.504,
+              "y": 0
+            }
+          ]
+        },
+        "bounds": {
+          "minX": 0,
+          "minY": -119.968,
+          "maxX": 50.504,
+          "maxY": 0
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-3",
+        "sourcePieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-3",
+        "placementReference": {
+          "x": -9.984,
+          "y": -5.252
+        },
+        "transform": {
+          "translateX": 84.19400000000007,
+          "translateY": 82.044,
+          "rotationDeg": 90,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-3",
+        "transform": {
+          "index": 0,
+          "rotationDeg": 90,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 0,
+              "y": 34.721
+            },
+            {
+              "x": 0,
+              "y": 85.247
+            },
+            {
+              "x": -50.504,
+              "y": 119.968
+            },
+            {
+              "x": -50.504,
+              "y": 0
+            }
+          ]
+        },
+        "bounds": {
+          "minX": -50.504,
+          "minY": 0,
+          "maxX": 0,
+          "maxY": 119.968
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-4",
+        "sourcePieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-4",
+        "placementReference": {
+          "x": -9.984,
+          "y": -5.252
+        },
+        "transform": {
+          "translateX": 19.18100000000004,
+          "translateY": 297.235,
+          "rotationDeg": 270,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-4",
+        "transform": {
+          "index": 2,
+          "rotationDeg": 270,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 0,
+              "y": -34.721
+            },
+            {
+              "x": 0,
+              "y": -85.247
+            },
+            {
+              "x": 50.504,
+              "y": -119.968
+            },
+            {
+              "x": 50.504,
+              "y": 0
+            }
+          ]
+        },
+        "bounds": {
+          "minX": 0,
+          "minY": -119.968,
+          "maxX": 50.504,
+          "maxY": 0
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-5",
+        "sourcePieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-5",
+        "placementReference": {
+          "x": -9.984,
+          "y": -5.252
+        },
+        "transform": {
+          "translateX": 62.95100000000002,
+          "translateY": 267.144,
+          "rotationDeg": 90,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-5",
+        "transform": {
+          "index": 0,
+          "rotationDeg": 90,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 0,
+              "y": 34.721
+            },
+            {
+              "x": 0,
+              "y": 85.247
+            },
+            {
+              "x": -50.504,
+              "y": 119.968
+            },
+            {
+              "x": -50.504,
+              "y": 0
+            }
+          ]
+        },
+        "bounds": {
+          "minX": -50.504,
+          "minY": 0,
+          "maxX": 0,
+          "maxY": 119.968
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-1",
+        "sourcePieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-1",
+        "placementReference": {
+          "x": -5.252,
+          "y": -5.252
+        },
+        "transform": {
+          "translateX": 81.00800000000004,
+          "translateY": 0,
+          "rotationDeg": 90,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-1",
+        "transform": {
+          "index": 0,
+          "rotationDeg": 90,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 0,
+              "y": 40.504
+            },
+            {
+              "x": -40.504,
+              "y": 40.504
+            },
+            {
+              "x": -40.504,
+              "y": 0
+            }
+          ]
+        },
+        "bounds": {
+          "minX": -40.504,
+          "minY": 0,
+          "maxX": 0,
+          "maxY": 40.504
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-2",
+        "sourcePieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-2",
+        "placementReference": {
+          "x": -5.252,
+          "y": -5.252
+        },
+        "transform": {
+          "translateX": 81.00800000000004,
+          "translateY": 40.504,
+          "rotationDeg": 90,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-2",
+        "transform": {
+          "index": 0,
+          "rotationDeg": 90,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 0,
+              "y": 40.504
+            },
+            {
+              "x": -40.504,
+              "y": 40.504
+            },
+            {
+              "x": -40.504,
+              "y": 0
+            }
+          ]
+        },
+        "bounds": {
+          "minX": -40.504,
+          "minY": 0,
+          "maxX": 0,
+          "maxY": 40.504
+        }
+      }
+    },
+    {
+      "placement": {
+        "pieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-3",
+        "sourcePieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-3",
+        "placementReference": {
+          "x": -5.252,
+          "y": -5.252
+        },
+        "transform": {
+          "translateX": 40.50400000000002,
+          "translateY": 0,
+          "rotationDeg": 90,
+          "mirrored": false
+        }
+      },
+      "collisionGeometry": {
+        "sourcePieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-3",
+        "transform": {
+          "index": 0,
+          "rotationDeg": 90,
+          "mirrored": false,
+          "reason": "orthogonal"
+        },
+        "polygon": {
+          "points": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 0,
+              "y": 40.504
+            },
+            {
+              "x": -40.504,
+              "y": 40.504
+            },
+            {
+              "x": -40.504,
+              "y": 0
+            }
+          ]
+        },
+        "bounds": {
+          "minX": -40.504,
+          "minY": 0,
+          "maxX": 0,
+          "maxY": 40.504
+        }
+      }
+    }
+  ],
+  "score": {
+    "unplacedCount": 36,
+    "sharedCollisionBoundaryLengthMm": 760.382,
+    "sharedCollisionBoundaryContactUnits": 7.878429,
+    "sharedCollisionBoundaryContactBand": 7,
+    "nearCompleteStructuralContactCount": 7,
+    "dominantNearCompleteStructuralContactCount": 1,
+    "largestNetFreeMaterialRegionAreaMm2": 46444.998483,
+    "freeMaterialRegionCount": 1,
+    "freeMaterialHoleCount": 6,
+    "freeMaterialSliverMetric": 1147.6396980777045,
+    "collisionBoundsWorstNormalizedSheetConsumption": 1,
+    "collisionBoundsNormalizedSpanSum": 1.9934733333333332,
+    "collisionBoundsAreaMm2": 238433.59999999998,
+    "collisionBoundsSpanMm": 996.084,
+    "occupiedHullWasteRatio": 0.17236,
+    "collisionBoundsBottomMm": 0,
+    "collisionBoundsLeftMm": 0,
+    "freeMaterialSnapshot": {
+      "sheet": {
+        "width": 600,
+        "height": 400,
+        "label": "600x400"
+      },
+      "regions": [
+        {
+          "boundary": {
+            "points": [
+              {
+                "x": 81.008,
+                "y": 0
+              },
+              {
+                "x": 367.076,
+                "y": 0
+              },
+              {
+                "x": 367.076,
+                "y": 164.504
+              },
+              {
+                "x": 481.58,
+                "y": 164.504
+              },
+              {
+                "x": 481.58,
+                "y": 183.811
+              },
+              {
+                "x": 427.522,
+                "y": 164.504
+              },
+              {
+                "x": 376.902,
+                "y": 226.332
+              },
+              {
+                "x": 376.902,
+                "y": 306.24
+              },
+              {
+                "x": 430.959,
+                "y": 325.546
+              },
+              {
+                "x": 481.58,
+                "y": 263.718
+              },
+              {
+                "x": 481.58,
+                "y": 329.008
+              },
+              {
+                "x": 481.51,
+                "y": 329.008
+              },
+              {
+                "x": 505.012,
+                "y": 399.512
+              },
+              {
+                "x": 572.582,
+                "y": 399.512
+              },
+              {
+                "x": 596.084,
+                "y": 329.008
+              },
+              {
+                "x": 596.084,
+                "y": 164.504
+              },
+              {
+                "x": 596.084,
+                "y": 0
+              },
+              {
+                "x": 600,
+                "y": 0
+              },
+              {
+                "x": 600,
+                "y": 400
+              },
+              {
+                "x": 505.174,
+                "y": 400
+              },
+              {
+                "x": 481.672,
+                "y": 329.496
+              },
+              {
+                "x": 414.102,
+                "y": 329.496
+              },
+              {
+                "x": 390.6,
+                "y": 400
+              },
+              {
+                "x": 356.636,
+                "y": 400
+              },
+              {
+                "x": 383.512,
+                "y": 324.748
+              },
+              {
+                "x": 356.636,
+                "y": 249.496
+              },
+              {
+                "x": 299.234,
+                "y": 249.496
+              },
+              {
+                "x": 272.358,
+                "y": 324.748
+              },
+              {
+                "x": 299.234,
+                "y": 400
+              },
+              {
+                "x": 229.046,
+                "y": 400
+              },
+              {
+                "x": 275.837,
+                "y": 383.957
+              },
+              {
+                "x": 275.837,
+                "y": 334.491
+              },
+              {
+                "x": 230.751,
+                "y": 302.287
+              },
+              {
+                "x": 183.96,
+                "y": 318.331
+              },
+              {
+                "x": 183.96,
+                "y": 300.816
+              },
+              {
+                "x": 113.456,
+                "y": 277.314
+              },
+              {
+                "x": 113.456,
+                "y": 391.888
+              },
+              {
+                "x": 183.96,
+                "y": 368.386
+              },
+              {
+                "x": 183.96,
+                "y": 367.796
+              },
+              {
+                "x": 229.046,
+                "y": 400
+              },
+              {
+                "x": 0,
+                "y": 400
+              },
+              {
+                "x": 0,
+                "y": 40.504
+              },
+              {
+                "x": 40.504,
+                "y": 40.504
+              },
+              {
+                "x": 40.504,
+                "y": 81.008
+              },
+              {
+                "x": 81.008,
+                "y": 81.008
+              },
+              {
+                "x": 81.008,
+                "y": 114.574
+              },
+              {
+                "x": 151.512,
+                "y": 91.072
+              },
+              {
+                "x": 151.512,
+                "y": 23.502
+              }
+            ]
+          },
+          "holes": [
+            {
+              "points": [
+                {
+                  "x": 213.088,
+                  "y": 0
+                },
+                {
+                  "x": 168.002,
+                  "y": 32.204
+                },
+                {
+                  "x": 168.002,
+                  "y": 81.67
+                },
+                {
+                  "x": 214.793,
+                  "y": 97.713
+                },
+                {
+                  "x": 259.879,
+                  "y": 65.509
+                },
+                {
+                  "x": 259.879,
+                  "y": 16.044
+                }
+              ]
+            },
+            {
+              "points": [
+                {
+                  "x": 326.331,
+                  "y": 0
+                },
+                {
+                  "x": 259.88,
+                  "y": 20.534
+                },
+                {
+                  "x": 259.88,
+                  "y": 92.758
+                },
+                {
+                  "x": 326.13,
+                  "y": 117.142
+                },
+                {
+                  "x": 367.076,
+                  "y": 59.634
+                }
+              ]
+            },
+            {
+              "points": [
+                {
+                  "x": 33.69,
+                  "y": 82.044
+                },
+                {
+                  "x": 33.69,
+                  "y": 202.012
+                },
+                {
+                  "x": 84.194,
+                  "y": 167.291
+                },
+                {
+                  "x": 84.194,
+                  "y": 116.765
+                }
+              ]
+            },
+            {
+              "points": [
+                {
+                  "x": 157.902,
+                  "y": 86.508
+                },
+                {
+                  "x": 117.65,
+                  "y": 115.259
+                },
+                {
+                  "x": 117.65,
+                  "y": 170.665
+                },
+                {
+                  "x": 157.902,
+                  "y": 199.416
+                },
+                {
+                  "x": 198.154,
+                  "y": 170.665
+                },
+                {
+                  "x": 238.406,
+                  "y": 199.416
+                },
+                {
+                  "x": 278.658,
+                  "y": 170.665
+                },
+                {
+                  "x": 278.658,
+                  "y": 225.112
+                },
+                {
+                  "x": 344.908,
+                  "y": 249.496
+                },
+                {
+                  "x": 385.854,
+                  "y": 191.988
+                },
+                {
+                  "x": 345.109,
+                  "y": 132.354
+                },
+                {
+                  "x": 278.658,
+                  "y": 152.888
+                },
+                {
+                  "x": 278.658,
+                  "y": 115.259
+                },
+                {
+                  "x": 238.406,
+                  "y": 86.508
+                },
+                {
+                  "x": 198.154,
+                  "y": 115.259
+                }
+              ]
+            },
+            {
+              "points": [
+                {
+                  "x": 69.685,
+                  "y": 177.267
+                },
+                {
+                  "x": 19.181,
+                  "y": 211.988
+                },
+                {
+                  "x": 19.181,
+                  "y": 262.514
+                },
+                {
+                  "x": 69.685,
+                  "y": 297.235
+                },
+                {
+                  "x": 120.189,
+                  "y": 262.514
+                },
+                {
+                  "x": 120.189,
+                  "y": 279.558
+                },
+                {
+                  "x": 190.693,
+                  "y": 303.06
+                },
+                {
+                  "x": 190.693,
+                  "y": 286.384
+                },
+                {
+                  "x": 256.943,
+                  "y": 310.768
+                },
+                {
+                  "x": 297.889,
+                  "y": 253.26
+                },
+                {
+                  "x": 257.144,
+                  "y": 193.626
+                },
+                {
+                  "x": 190.693,
+                  "y": 214.16
+                },
+                {
+                  "x": 190.693,
+                  "y": 188.486
+                },
+                {
+                  "x": 120.189,
+                  "y": 211.988
+                }
+              ]
+            },
+            {
+              "points": [
+                {
+                  "x": 12.447,
+                  "y": 267.144
+                },
+                {
+                  "x": 12.447,
+                  "y": 387.112
+                },
+                {
+                  "x": 62.951,
+                  "y": 352.391
+                },
+                {
+                  "x": 113.455,
+                  "y": 387.112
+                },
+                {
+                  "x": 113.455,
+                  "y": 267.144
+                },
+                {
+                  "x": 62.951,
+                  "y": 301.865
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "diagnostics": []
+    },
+    "placementOrder": [
+      "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-1",
+      "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-2",
+      "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-3",
+      "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-1",
+      "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-2",
+      "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-1",
+      "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-2",
+      "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-3",
+      "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-1",
+      "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-2",
+      "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-3",
+      "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-4",
+      "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-1",
+      "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-2",
+      "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-3",
+      "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-4",
+      "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-5",
+      "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-1",
+      "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-2",
+      "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-3",
+      "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-4",
+      "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-5",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-1",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-2",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-3"
+    ],
+    "unplacedSourcePieceIds": [
+      "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-1",
+      "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-2",
+      "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-3",
+      "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-4",
+      "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-1",
+      "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-2",
+      "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-1",
+      "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-2",
+      "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-3",
+      "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-4",
+      "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-5",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-1",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-2",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-3",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-4",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-5",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-6",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-7",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-8",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-9",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-10",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-11",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-12",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-13",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-14",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-15",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-16",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-17",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-18",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-19",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-20",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-4",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-5",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-6",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-7",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-8"
+    ]
+  },
+  "unplacedPieceIds": [
+    "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-1",
+    "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-2",
+    "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-3",
+    "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-4",
+    "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-1",
+    "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-2",
+    "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-1",
+    "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-2",
+    "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-3",
+    "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-4",
+    "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-5",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-1",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-2",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-3",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-4",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-5",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-6",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-7",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-8",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-9",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-10",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-11",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-12",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-13",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-14",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-15",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-16",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-17",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-18",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-19",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-20",
+    "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-4",
+    "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-5",
+    "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-6",
+    "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-7",
+    "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-8"
+  ],
+  "diagnostics": [
+    {
+      "code": "capacity_preflight_proven_impossible",
+      "message": "reason minimum-collision-area-exceeds-sheet-area; minimum-doubled-collision-area-grid2 626973708439; sheet-doubled-area-grid2 480000000000"
+    },
+    {
+      "code": "capacity_subset_settled",
+      "message": "settlement evaluation-cap; placed 25; unplaced 36; origin cold-search; evaluations 232539/249856; pruned-count 0; pruned-material 0; prefixes 0/0; hash 2c53f3123d5d57ab5e120717ae1e49046bb574925c49c4a33ed4febe7e81e414"
+    },
+    {
+      "code": "intrinsic_short_side_selected",
+      "message": "selected admitted contact-strip construction 7a2d7906095f69b8def581738fd68d4ca9e27ee223f32646367e6fd71658675e"
+    }
+  ],
+  "sortedPieceIds": [
+    "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-1",
+    "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-2",
+    "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-3",
+    "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-1",
+    "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-2",
+    "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-1",
+    "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-2",
+    "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-3",
+    "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-1",
+    "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-2",
+    "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-3",
+    "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-4",
+    "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-1",
+    "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-2",
+    "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-3",
+    "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-4",
+    "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-5",
+    "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-1",
+    "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-2",
+    "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-3",
+    "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-4",
+    "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-5",
+    "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-1",
+    "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-2",
+    "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-3",
+    "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-4",
+    "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-1",
+    "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-2",
+    "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-1",
+    "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-2",
+    "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-3",
+    "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-4",
+    "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-5",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-1",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-2",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-3",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-4",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-5",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-6",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-7",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-8",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-9",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-10",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-11",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-12",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-13",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-14",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-15",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-16",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-17",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-18",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-19",
+    "d06db288-d2d6-4f40-874e-98287f516d93-copy-20",
+    "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-1",
+    "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-2",
+    "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-3",
+    "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-4",
+    "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-5",
+    "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-6",
+    "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-7",
+    "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-8"
+  ],
+  "stateSnapshots": [],
+  "beamWidth": 8,
+  "portfolio": {
+    "status": "completed",
+    "terminationReason": "shared_archive_completed",
+    "source": "shared-archive",
+    "placements": [
+      {
+        "pieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-1",
+        "sourcePieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-1",
+        "placementReference": {
+          "x": -5.252,
+          "y": -5.252
+        },
+        "transform": {
+          "translateX": 596.0840000000001,
+          "translateY": 0,
+          "rotationDeg": 90,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-2",
+        "sourcePieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-2",
+        "placementReference": {
+          "x": -5.252,
+          "y": -5.252
+        },
+        "transform": {
+          "translateX": 596.0840000000001,
+          "translateY": 164.504,
+          "rotationDeg": 90,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-3",
+        "sourcePieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-3",
+        "placementReference": {
+          "x": -5.252,
+          "y": -5.252
+        },
+        "transform": {
+          "translateX": 481.58000000000004,
+          "translateY": 0,
+          "rotationDeg": 90,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-1",
+        "sourcePieceId": "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-1",
+        "placementReference": {
+          "x": -5.252,
+          "y": -5.577
+        },
+        "transform": {
+          "translateX": 506.89000000000004,
+          "translateY": 192.85,
+          "rotationDeg": 109.65401698807655,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-2",
+        "sourcePieceId": "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-2",
+        "placementReference": {
+          "x": -5.252,
+          "y": -5.577
+        },
+        "transform": {
+          "translateX": 383.51200000000006,
+          "translateY": 249.496,
+          "rotationDeg": 90,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-1",
+        "sourcePieceId": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-1",
+        "placementReference": {
+          "x": -6.099,
+          "y": -6.609
+        },
+        "transform": {
+          "translateX": 291.31000000000006,
+          "translateY": 266.058,
+          "rotationDeg": 162.82850612001232,
+          "mirrored": true
+        }
+      },
+      {
+        "pieceId": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-2",
+        "sourcePieceId": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-2",
+        "placementReference": {
+          "x": -6.099,
+          "y": -6.609
+        },
+        "transform": {
+          "translateX": 272.53200000000004,
+          "translateY": 133.704,
+          "rotationDeg": 162.82850612001232,
+          "mirrored": true
+        }
+      },
+      {
+        "pieceId": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-3",
+        "sourcePieceId": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-3",
+        "placementReference": {
+          "x": -6.099,
+          "y": -6.609
+        },
+        "transform": {
+          "translateX": 203.34500000000008,
+          "translateY": 327.33,
+          "rotationDeg": 162.82850612001232,
+          "mirrored": true
+        }
+      },
+      {
+        "pieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-1",
+        "sourcePieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-1",
+        "placementReference": {
+          "x": -5.252,
+          "y": -6.454
+        },
+        "transform": {
+          "translateX": 198.15400000000005,
+          "translateY": 86.508,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-2",
+        "sourcePieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-2",
+        "placementReference": {
+          "x": -5.252,
+          "y": -6.454
+        },
+        "transform": {
+          "translateX": 299.23300000000006,
+          "translateY": 351.202,
+          "rotationDeg": 125.53727384446901,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-3",
+        "sourcePieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-3",
+        "placementReference": {
+          "x": -5.252,
+          "y": -6.454
+        },
+        "transform": {
+          "translateX": 144.60600000000005,
+          "translateY": 48.915,
+          "rotationDeg": 234.462726155531,
+          "mirrored": true
+        }
+      },
+      {
+        "pieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-4",
+        "sourcePieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-4",
+        "placementReference": {
+          "x": -5.252,
+          "y": -6.454
+        },
+        "transform": {
+          "translateX": 117.65000000000003,
+          "translateY": 86.508,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-1",
+        "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-1",
+        "placementReference": {
+          "x": -7.287,
+          "y": -5.252
+        },
+        "transform": {
+          "translateX": 596.0840000000001,
+          "translateY": 399.512,
+          "rotationDeg": 180,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-2",
+        "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-2",
+        "placementReference": {
+          "x": -7.287,
+          "y": -5.252
+        },
+        "transform": {
+          "translateX": 390.6,
+          "translateY": 329.496,
+          "rotationDeg": 0,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-3",
+        "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-3",
+        "placementReference": {
+          "x": -7.287,
+          "y": -5.252
+        },
+        "transform": {
+          "translateX": 120.18900000000008,
+          "translateY": 303.06,
+          "rotationDeg": 270,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-4",
+        "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-4",
+        "placementReference": {
+          "x": -7.287,
+          "y": -5.252
+        },
+        "transform": {
+          "translateX": 183.96000000000004,
+          "translateY": 277.314,
+          "rotationDeg": 90,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-5",
+        "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-5",
+        "placementReference": {
+          "x": -7.287,
+          "y": -5.252
+        },
+        "transform": {
+          "translateX": 151.51200000000006,
+          "translateY": 0,
+          "rotationDeg": 90,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-1",
+        "sourcePieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-1",
+        "placementReference": {
+          "x": -9.984,
+          "y": -5.252
+        },
+        "transform": {
+          "translateX": 120.18900000000008,
+          "translateY": 177.267,
+          "rotationDeg": 90,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-2",
+        "sourcePieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-2",
+        "placementReference": {
+          "x": -9.984,
+          "y": -5.252
+        },
+        "transform": {
+          "translateX": 62.95100000000002,
+          "translateY": 387.112,
+          "rotationDeg": 270,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-3",
+        "sourcePieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-3",
+        "placementReference": {
+          "x": -9.984,
+          "y": -5.252
+        },
+        "transform": {
+          "translateX": 84.19400000000007,
+          "translateY": 82.044,
+          "rotationDeg": 90,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-4",
+        "sourcePieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-4",
+        "placementReference": {
+          "x": -9.984,
+          "y": -5.252
+        },
+        "transform": {
+          "translateX": 19.18100000000004,
+          "translateY": 297.235,
+          "rotationDeg": 270,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-5",
+        "sourcePieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-5",
+        "placementReference": {
+          "x": -9.984,
+          "y": -5.252
+        },
+        "transform": {
+          "translateX": 62.95100000000002,
+          "translateY": 267.144,
+          "rotationDeg": 90,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-1",
+        "sourcePieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-1",
+        "placementReference": {
+          "x": -5.252,
+          "y": -5.252
+        },
+        "transform": {
+          "translateX": 81.00800000000004,
+          "translateY": 0,
+          "rotationDeg": 90,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-2",
+        "sourcePieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-2",
+        "placementReference": {
+          "x": -5.252,
+          "y": -5.252
+        },
+        "transform": {
+          "translateX": 81.00800000000004,
+          "translateY": 40.504,
+          "rotationDeg": 90,
+          "mirrored": false
+        }
+      },
+      {
+        "pieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-3",
+        "sourcePieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-3",
+        "placementReference": {
+          "x": -5.252,
+          "y": -5.252
+        },
+        "transform": {
+          "translateX": 40.50400000000002,
+          "translateY": 0,
+          "rotationDeg": 90,
+          "mirrored": false
+        }
+      }
+    ],
+    "unplacedPieceIds": [
+      "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-1",
+      "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-2",
+      "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-3",
+      "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-4",
+      "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-1",
+      "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-2",
+      "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-1",
+      "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-2",
+      "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-3",
+      "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-4",
+      "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-5",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-1",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-2",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-3",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-4",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-5",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-6",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-7",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-8",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-9",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-10",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-11",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-12",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-13",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-14",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-15",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-16",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-17",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-18",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-19",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-20",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-4",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-5",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-6",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-7",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-8"
+    ],
+    "score": {
+      "unplacedCount": 36,
+      "sharedCollisionBoundaryLengthMm": 760.382,
+      "sharedCollisionBoundaryContactUnits": 7.878429,
+      "sharedCollisionBoundaryContactBand": 7,
+      "nearCompleteStructuralContactCount": 7,
+      "dominantNearCompleteStructuralContactCount": 1,
+      "largestNetFreeMaterialRegionAreaMm2": 46444.998483,
+      "freeMaterialRegionCount": 1,
+      "freeMaterialHoleCount": 6,
+      "freeMaterialSliverMetric": 1147.6396980777045,
+      "collisionBoundsWorstNormalizedSheetConsumption": 1,
+      "collisionBoundsNormalizedSpanSum": 1.9934733333333332,
+      "collisionBoundsAreaMm2": 238433.59999999998,
+      "collisionBoundsSpanMm": 996.084
+    },
+    "diagnostics": [
+      {
+        "code": "intrinsic_short_side_selected",
+        "message": "selected terminal contact-strip construction (7a2d7906095f69b8def581738fd68d4ca9e27ee223f32646367e6fd71658675e)"
+      }
+    ]
+  },
+  "focusedCompleteReconstructionTrace": {
+    "version": "intrinsic-focused-complete-reconstruction-v1",
+    "status": "skipped-preflight-proven-impossible",
+    "consumedCandidateEvaluations": 0,
+    "candidateEvaluationAccountingComplete": true,
+    "runtimeMs": 0,
+    "outputInfluence": "none"
+  },
+  "intrinsicShortSideObserverTrace": {
+    "candidateEvaluations": 0,
+    "cavityHullGuardEligibleEndpointCount": 0,
+    "endpoints": [],
+    "evaluatedOrientationCount": 0,
+    "geometricParetoEligibleEndpointCount": 0,
+    "outputInfluence": "none",
+    "placementEvaluations": 0,
+    "productionEnvelopeAreaGrid2": "239484966600",
+    "productionEnvelopeAreaMm2": 239484.9666,
+    "productionMaximumSideGrid": 599762,
+    "productionMaximumSideMm": 599.762,
+    "productionShortAxisSpanGrid": 399300,
+    "productionShortAxisSpanMm": 399.3,
+    "rankedCanonicalGeometryHashes": [],
+    "requestedLongAxis": "width",
+    "requestedLongAxisMm": 600,
+    "requestedSheetHeightMm": 400,
+    "requestedSheetWidthMm": 600,
+    "requestedShortAxisMm": 400,
+    "runtimeBudgetExceeded": false,
+    "runtimeMs": 0.7039999999979045,
+    "serializedTraceBytes": 808,
+    "settledEndpointCount": 0,
+    "status": "skipped-no-settled-complete-endpoints",
+    "version": "intrinsic-short-side-observer-v6"
+  },
+  "intrinsicShortSidePairFoldTrace": {
+    "admission": {
+      "accepted": true,
+      "allPiecesPlaced": true,
+      "collisionEnvelopeDensity": 0.8117773733106408,
+      "depthWithinProductionMaximumSide": true,
+      "directionallyEfficient": true,
+      "enclosedCavityCount": 0,
+      "envelopeAreaCostFactor": 0.995609884766771,
+      "envelopeAreaCostWithinProductionBound": true,
+      "exactLegal": true,
+      "fillRatio": 1,
+      "projectionComponentCount": 1,
+      "projectionCoverageRatio": 1,
+      "shortAxisSpanGainFactor": 1.0017530678687703
+    },
+    "canonicalGeometryHash": "7a2d7906095f69b8def581738fd68d4ca9e27ee223f32646367e6fd71658675e",
+    "collisionMaterialDoubledAreaGrid2": "387110003034",
+    "constructionKind": "contact-strip",
+    "contactStrip": {
+      "backtrackCount": 0,
+      "candidateEvaluations": 1822,
+      "executionModel": "single-process-sequential",
+      "orderPolicy": "prepared",
+      "peakRssDeltaBytes": 0,
+      "placedCount": 25,
+      "requestedCount": 25,
+      "reusedPrefixPlacements": 0,
+      "runtimeMs": 99.8856250000099,
+      "selectionPolicy": "depth-first",
+      "status": "constructed",
+      "stripLongAxisMm": 600,
+      "stripShortAxisMm": 400,
+      "transformEvaluations": 200,
+      "version": "intrinsic-short-side-contact-strip-v3"
+    },
+    "contactStripLanes": [
+      {
+        "backtrackCount": 0,
+        "candidateEvaluations": 1822,
+        "executionModel": "single-process-sequential",
+        "orderPolicy": "prepared",
+        "peakRssDeltaBytes": 0,
+        "placedCount": 25,
+        "requestedCount": 25,
+        "reusedPrefixPlacements": 0,
+        "runtimeMs": 99.8856250000099,
+        "selectionPolicy": "depth-first",
+        "status": "constructed",
+        "stripLongAxisMm": 600,
+        "stripShortAxisMm": 400,
+        "transformEvaluations": 200,
+        "version": "intrinsic-short-side-contact-strip-v3"
+      },
+      {
+        "backtrackCount": 4,
+        "candidateEvaluations": 1769,
+        "executionModel": "single-process-sequential",
+        "failureReason": "backtrack cap reached after 4 resumable contact decisions.",
+        "orderPolicy": "prepared",
+        "peakRssDeltaBytes": 0,
+        "placedCount": 19,
+        "requestedCount": 25,
+        "reusedPrefixPlacements": 61,
+        "runtimeMs": 174.17179199999373,
+        "selectionPolicy": "contact-first",
+        "status": "evaluation-cap",
+        "stripLongAxisMm": 600,
+        "stripShortAxisMm": 400,
+        "transformEvaluations": 296,
+        "version": "intrinsic-short-side-contact-strip-v3"
+      }
+    ],
+    "contactStripPromotion": {
+      "contactStripAdmitted": true,
+      "contactStripSummary": {
+        "admission": {
+          "accepted": true,
+          "allPiecesPlaced": true,
+          "collisionEnvelopeDensity": 0.8117773733106408,
+          "depthWithinProductionMaximumSide": true,
+          "directionallyEfficient": true,
+          "enclosedCavityCount": 0,
+          "envelopeAreaCostFactor": 0.995609884766771,
+          "envelopeAreaCostWithinProductionBound": true,
+          "exactLegal": true,
+          "fillRatio": 1,
+          "projectionComponentCount": 1,
+          "projectionCoverageRatio": 1,
+          "shortAxisSpanGainFactor": 1.0017530678687703
+        },
+        "collisionMaterialDoubledAreaGrid2": "387110003034",
+        "envelopeAreaGrid2": "238433600000",
+        "envelopeAreaMm2": 238433.6,
+        "interlocking": {
+          "isolatedPieceCount": 5,
+          "largestOccupiedHullGapDoubledAreaGrid2": "80617787342",
+          "largestOccupiedHullGapRatio": 0.17236048188881925,
+          "largestPositiveContactComponentSize": 5,
+          "occupiedHullDoubledAreaGrid2": "467727790376",
+          "positiveContactComponentCount": 11,
+          "sharedBoundaryLengthMm": 1051.327
+        },
+        "status": "accepted",
+        "usedLongAxisDepthGrid": 596084,
+        "usedLongAxisDepthMm": 596.084,
+        "usedShortAxisSpanGrid": 400000,
+        "usedShortAxisSpanMm": 400
+      },
+      "promoted": false
+    },
+    "envelopeAreaCostVetoObserved": false,
+    "envelopeAreaCostVetoes": [],
+    "envelopeAreaGrid2": "238433600000",
+    "envelopeAreaMm2": 238433.6,
+    "evaluatedPairCount": 300,
+    "executionModel": "single-process-sequential",
+    "expectedPairCount": 300,
+    "interlocking": {
+      "isolatedPieceCount": 5,
+      "largestOccupiedHullGapDoubledAreaGrid2": "80617787342",
+      "largestOccupiedHullGapRatio": 0.17236048188881925,
+      "largestPositiveContactComponentSize": 5,
+      "occupiedHullDoubledAreaGrid2": "467727790376",
+      "positiveContactComponentCount": 11,
+      "sharedBoundaryLengthMm": 1051.327
+    },
+    "outputInfluence": "selected",
+    "peakRssDeltaBytes": 0,
+    "placedCount": 25,
+    "prescribedRotationDeg": 90,
+    "productionEnvelopeAreaGrid2": "239484966600",
+    "productionEnvelopeAreaMm2": 239484.9666,
+    "productionMaximumSideGrid": 599762,
+    "productionMaximumSideMm": 599.762,
+    "productionShortAxisSpanGrid": 399300,
+    "productionShortAxisSpanMm": 399.3,
+    "requestedLongAxisMm": 600,
+    "requestedShortAxisMm": 400,
+    "rowCount": 0,
+    "runtimeMs": 277.0075419999921,
+    "serializedTraceBytes": 4193,
+    "status": "accepted",
+    "transformEvaluations": 200,
+    "usedLongAxisDepthGrid": 596084,
+    "usedLongAxisDepthMm": 596.084,
+    "usedShortAxisSpanGrid": 400000,
+    "usedShortAxisSpanMm": 400,
+    "version": "intrinsic-short-side-terminal-observer-v6"
+  }
+}

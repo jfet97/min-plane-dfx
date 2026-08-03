@@ -1,0 +1,89 @@
+Command: pnpm exec tsx --tsconfig tsconfig.node.json scripts/rust-parity/differential-fixture-matrix.ts --strict-exploratory --strict-exact
+Working directory: /Users/andreasimonecosta/Documents/Work/min-plane-dfx/.claude/worktrees/polygon-nesting-extraction
+Environment: Node 24.11.1 bin prepended to PATH
+Start timestamp: 2026-08-03T19:28:36Z
+Status: running
+
+===== stdout and stderr =====
+[differential-fixture-matrix] required: mixed61 pieces=2 profile=compact ... OK
+[differential-fixture-matrix] required: mixed61 pieces=2 profile=short-side ... OK
+[differential-fixture-matrix] required: mixed61 pieces=4 profile=compact ... OK
+[differential-fixture-matrix] required: mixed61 pieces=4 profile=short-side ... OK
+[differential-fixture-matrix] required: mixed61 pieces=8 profile=compact ... OK
+[differential-fixture-matrix] required: mixed61 pieces=8 profile=short-side ... OK
+[differential-fixture-matrix] required: triangle-20 sheet=2000x2700 profile=compact ... OK
+[differential-fixture-matrix] required: triangle-20 sheet=2000x2700 profile=short-side ... OK
+[differential-fixture-matrix] required: shapes-17 sheet=2000x2700 profile=compact ... OK
+[differential-fixture-matrix] required: shapes-17 sheet=2000x2700 profile=short-side ... FAILED
+    [run-differential] FIRST DIVERGENCE at path: value.portfolio.score.freeMaterialSliverMetric
+      typescript: 222.54854651458191
+      rust      : 222.54854651458194
+    [run-differential] runtime: node=v24.11.1 platform=darwin arch=arm64
+    [run-differential] FAILED: the compared semantic outcome diverged between backends.
+[differential-fixture-matrix] required: mixed61 sheet=600x400 profile=compact ... OK
+[differential-fixture-matrix] required: mixed61 sheet=600x400 profile=short-side ... OK
+[differential-fixture-matrix] required: mixed61 sheet=300x300 profile=compact ... OK
+[differential-fixture-matrix] required: mixed61 sheet=300x300 profile=short-side ... OK
+[differential-fixture-matrix] required: mixed61 sheet=2000x2700 profile=compact ... FAILED
+    [run-differential] FIRST DIVERGENCE at path: value.portfolio.score.freeMaterialSliverMetric
+      typescript: 11301451.399040371
+      rust      : 11301451.399040373
+    [run-differential] runtime: node=v24.11.1 platform=darwin arch=arm64
+    [run-differential] FAILED: the compared semantic outcome diverged between backends.
+[differential-fixture-matrix] required: mixed61 sheet=2000x2700 profile=short-side ... FAILED
+    [run-differential] FIRST DIVERGENCE at path: value.portfolio.score.freeMaterialSliverMetric
+      typescript: 313539.85657207255
+      rust      : 313539.8565720725
+    [run-differential] runtime: node=v24.11.1 platform=darwin arch=arm64
+    [run-differential] FAILED: the compared semantic outcome diverged between backends.
+[differential-fixture-matrix] exploratory (N1): mixed61 pieces=9 profile=compact ... FAILED
+    [run-differential] FIRST DIVERGENCE at path: value.diagnostics[2].message
+      typescript: "complete endpoint b024838a2718e8c134304a82fa0e1efab9c89355b6653de946285838ea939118 fits the requested sheet; scheduled capacity prework had already settled as observer-only work"
+      rust      : "complete endpoint e50afdeaeee83dedc2e20275ae532a8b05a78381793c60feba1a5ea7ae3d8314 fits the requested sheet; scheduled capacity prework had already settled as observer-only work"
+    [run-differential] runtime: node=v24.11.1 platform=darwin arch=arm64
+    [run-differential] FAILED: the compared semantic outcome diverged between backends.
+[differential-fixture-matrix] exploratory (N1): mixed61 pieces=9 profile=short-side ... FAILED
+    [run-differential] FIRST DIVERGENCE at path: value.diagnostics[2].message
+      typescript: "complete endpoint b024838a2718e8c134304a82fa0e1efab9c89355b6653de946285838ea939118 fits the requested sheet; scheduled capacity prework had already settled as observer-only work"
+      rust      : "complete endpoint e50afdeaeee83dedc2e20275ae532a8b05a78381793c60feba1a5ea7ae3d8314 fits the requested sheet; scheduled capacity prework had already settled as observer-only work"
+    [run-differential] runtime: node=v24.11.1 platform=darwin arch=arm64
+    [run-differential] FAILED: the compared semantic outcome diverged between backends.
+[differential-fixture-matrix] exploratory (N1): mixed61 pieces=10 profile=compact ... FAILED
+    [run-differential] FIRST DIVERGENCE at path: value.diagnostics[0].message
+      typescript: "shared archive selected periodic-P2 from 11 exact endpoints"
+      rust      : "shared archive selected canonical-grid from 11 exact endpoints"
+    [run-differential] runtime: node=v24.11.1 platform=darwin arch=arm64
+    [run-differential] FAILED: the compared semantic outcome diverged between backends.
+[differential-fixture-matrix] exploratory (N1): mixed61 pieces=10 profile=short-side ... FAILED
+    [run-differential] FIRST DIVERGENCE at path: value.diagnostics[0].message
+      typescript: "shared archive selected periodic-P2 from 11 exact endpoints"
+      rust      : "shared archive selected canonical-grid from 11 exact endpoints"
+    [run-differential] runtime: node=v24.11.1 platform=darwin arch=arm64
+    [run-differential] FAILED: the compared semantic outcome diverged between backends.
+[differential-fixture-matrix] exploratory (N1): mixed61 pieces=20 profile=compact ... FAILED
+    [run-differential] FIRST DIVERGENCE at path: value.diagnostics[2].message
+      typescript: "complete endpoint 971acce3c2eec526037dd27cf2cb46fbea716995c58bc6802b7bd961195379b9 fits the requested sheet; scheduled capacity prework had already settled as observer-only work"
+      rust      : "complete endpoint 00a8c257abf22c7e7b1402076f574e95f787b1c93dca0c64b1f0d11bff4fd4b7 fits the requested sheet; scheduled capacity prework had already settled as observer-only work"
+    [run-differential] runtime: node=v24.11.1 platform=darwin arch=arm64
+    [run-differential] FAILED: the compared semantic outcome diverged between backends.
+[differential-fixture-matrix] exploratory (N1): mixed61 pieces=20 profile=short-side ... FAILED
+    [run-differential] FIRST DIVERGENCE at path: value.diagnostics[2].message
+      typescript: "complete endpoint 971acce3c2eec526037dd27cf2cb46fbea716995c58bc6802b7bd961195379b9 fits the requested sheet; scheduled capacity prework had already settled as observer-only work"
+      rust      : "complete endpoint 00a8c257abf22c7e7b1402076f574e95f787b1c93dca0c64b1f0d11bff4fd4b7 fits the requested sheet; scheduled capacity prework had already settled as observer-only work"
+    [run-differential] runtime: node=v24.11.1 platform=darwin arch=arm64
+    [run-differential] FAILED: the compared semantic outcome diverged between backends.
+[differential-fixture-matrix] exploratory (N1): mixed61 pieces=40 profile=compact ... OK
+[differential-fixture-matrix] exploratory (N1): mixed61 pieces=40 profile=short-side ... FAILED
+    [run-differential] FIRST DIVERGENCE at path: value.portfolio.score.freeMaterialSliverMetric
+      typescript: 313455.0921764774
+      rust      : 313455.0921764773
+    [run-differential] runtime: node=v24.11.1 platform=darwin arch=arm64
+    [run-differential] FAILED: the compared semantic outcome diverged between backends.
+[differential-fixture-matrix] required: 13/16 passed; exploratory (N1): 1/8 passed
+[differential-fixture-matrix] FAILED: 3 required row(s) diverged: shapes-17 sheet=2000x2700 profile=short-side, mixed61 sheet=2000x2700 profile=compact, mixed61 sheet=2000x2700 profile=short-side
+
+===== gate metadata =====
+End timestamp: 2026-08-03T19:33:29Z
+Duration milliseconds: 293069
+Exit code: 1
+Status: failed

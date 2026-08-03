@@ -1,0 +1,12 @@
+Command: node node_modules/electron/install.js
+Working directory: /Users/andreasimonecosta/Documents/Work/min-plane-dfx/.claude/worktrees/polygon-nesting-extraction
+Start timestamp: 2026-08-03T18:21:05Z
+Status: running
+
+===== stdout and stderr =====
+
+===== gate metadata =====
+End timestamp: 2026-08-03T18:21:05Z
+Duration milliseconds: 146
+Exit code: 0
+Status: passed

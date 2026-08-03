@@ -1,0 +1,30 @@
+Command: pnpm exec tsx --tsconfig tsconfig.node.json scripts/rust-parity/baseline-divergence-evidence.ts --output docs/artifacts/polygon-nesting-extraction-baseline/gates/complete-divergence-evidence-attempt-1.json
+Working directory: /Users/andreasimonecosta/Documents/Work/min-plane-dfx/.claude/worktrees/polygon-nesting-extraction
+Environment: Node 24.11.1 bin prepended to PATH
+Start timestamp: 2026-08-03T19:21:01Z
+Status: running
+
+===== stdout and stderr =====
+[baseline-divergence-evidence] mixed61 pieces=2 profile=compact ... OK
+[baseline-divergence-evidence] mixed61 pieces=2 profile=short-side ... OK
+[baseline-divergence-evidence] mixed61 pieces=4 profile=compact ... OK
+[baseline-divergence-evidence] mixed61 pieces=4 profile=short-side ... OK
+[baseline-divergence-evidence] mixed61 pieces=8 profile=compact ... OK
+[baseline-divergence-evidence] mixed61 pieces=8 profile=short-side ... OK
+[baseline-divergence-evidence] triangle-20 sheet=2000x2700 profile=compact ... OK
+[baseline-divergence-evidence] triangle-20 sheet=2000x2700 profile=short-side ... OK
+[baseline-divergence-evidence] shapes-17 sheet=2000x2700 profile=compact ... OK
+[baseline-divergence-evidence] shapes-17 sheet=2000x2700 profile=short-side ... OK
+[baseline-divergence-evidence] mixed61 sheet=600x400 profile=compact ... OK
+[baseline-divergence-evidence] mixed61 sheet=600x400 profile=short-side ... OK
+[baseline-divergence-evidence] mixed61 sheet=300x300 profile=compact ... OK
+[baseline-divergence-evidence] mixed61 sheet=300x300 profile=short-side ... OK
+[baseline-divergence-evidence] mixed61 sheet=2000x2700 profile=compact ... OK
+[baseline-divergence-evidence] mixed61 sheet=2000x2700 profile=short-side ... OK
+[baseline-divergence-evidence] 16/16 rows passed; 6 accepted divergent leaves; 0 unexpected divergent leaves
+
+===== gate metadata =====
+End timestamp: 2026-08-03T19:23:56Z
+Duration milliseconds: 175674
+Exit code: 0
+Status: passed

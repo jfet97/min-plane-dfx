@@ -1,0 +1,1049 @@
+Command: cargo test --release --manifest-path crates/irregular-nesting-native/Cargo.toml
+Working directory: /Users/andreasimonecosta/Documents/Work/min-plane-dfx/.claude/worktrees/polygon-nesting-extraction
+Start timestamp: 2026-08-03T18:14:25Z
+Status: running
+
+===== stdout and stderr =====
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.24
+   Compiling quote v1.0.47
+   Compiling version_check v0.9.5
+   Compiling crossbeam-utils v0.8.22
+   Compiling typenum v1.20.1
+   Compiling crossbeam-epoch v0.9.20
+   Compiling napi-build v2.4.0
+   Compiling futures-sink v0.3.33
+   Compiling memchr v2.8.3
+   Compiling futures-core v0.3.33
+   Compiling autocfg v1.5.1
+   Compiling crossbeam-deque v0.8.7
+   Compiling futures-io v0.3.33
+   Compiling serde_core v1.0.229
+   Compiling libc v0.2.189
+   Compiling futures-channel v0.3.33
+   Compiling slab v0.4.12
+   Compiling futures-task v0.3.33
+   Compiling cfg-if v1.0.4
+   Compiling pin-project-lite v0.2.17
+   Compiling unicode-segmentation v1.13.3
+   Compiling rayon-core v1.13.0
+   Compiling generic-array v0.14.7
+   Compiling zmij v1.0.23
+   Compiling napi v3.12.0
+   Compiling libloading v0.9.0
+   Compiling num-traits v0.2.19
+   Compiling libm v0.2.16
+   Compiling convert_case v0.11.0
+   Compiling serde_json v1.0.151
+   Compiling serde v1.0.229
+   Compiling semver v1.0.28
+   Compiling napi-sys v3.3.0
+   Compiling irregular-nesting-native v0.1.0 (/Users/andreasimonecosta/Documents/Work/min-plane-dfx/.claude/worktrees/polygon-nesting-extraction/crates/irregular-nesting-native)
+   Compiling ctor v1.0.11
+   Compiling bitflags v2.13.1
+   Compiling either v1.17.0
+   Compiling rustc-hash v2.1.3
+   Compiling nohash-hasher v0.2.0
+   Compiling itoa v1.0.18
+   Compiling ryu-js v1.0.3
+   Compiling robust v1.2.0
+   Compiling syn v2.0.119
+   Compiling syn v3.0.3
+   Compiling cpufeatures v0.2.17
+   Compiling rayon v1.12.0
+   Compiling serde_derive v1.0.229
+   Compiling crypto-common v0.1.7
+   Compiling block-buffer v0.10.4
+   Compiling digest v0.10.7
+   Compiling sha2 v0.10.9
+   Compiling napi-derive-backend v6.1.0
+   Compiling num-integer v0.1.46
+   Compiling futures-macro v0.3.33
+   Compiling num-bigint v0.4.8
+   Compiling futures-util v0.3.33
+   Compiling napi-derive v3.6.1
+   Compiling futures-executor v0.3.33
+   Compiling futures v0.3.33
+    Finished `release` profile [optimized] target(s) in 1m 48s
+     Running unittests src/lib.rs (crates/irregular-nesting-native/target/release/deps/irregular_nesting_native-fe6de2397d9d2f80)
+
+running 606 tests
+test archive::anytime::tests::complete_dominates_partial_unless_complete_is_empty ... ok
+test archive::shared::tests::catalog_coverage_valid_accepts_a_family_with_incomplete_cells_when_audited ... ok
+test archive::shared::tests::experiment_valid_rejects_when_requested_is_never_set ... ok
+test archive::shared::tests::catalog_coverage_valid_accepts_full_coverage_with_families ... ok
+test archive::shared::tests::experiment_valid_rejects_a_non_completed_periodic_run ... ok
+test archive::shared::tests::catalog_coverage_valid_rejects_incomplete_runtime_coverage ... ok
+test archive::shared::tests::experiment_valid_accepts_matched_requested_and_consumed_counts ... ok
+test archive::shared::tests::periodic_selection_valid_accepts_incomplete_continuation_coverage_at_the_cap ... ok
+test archive::reconstruction::tests::derives_paired_q0_q90_traversal_orders_from_exact_endpoint_geometry ... ok
+test archive::reconstruction::tests::selects_role_families_without_changing_reconstruction_order ... ok
+test archive::reconstruction::tests::stacks_every_geometry_derived_order_with_gap_contained_placement ... ok
+test archive::reconstruction::tests::deduplicates_canonical_identities_and_removes_dominated_non_baselines ... ok
+test archive::reconstruction::tests::reserves_both_distinct_baseline_geometries_before_archive_truncation ... ok
+test archive::shared::tests::normalize_constructed_run_reports_evaluation_cap_with_no_endpoint ... ok
+test archive::shared::tests::normalize_constructed_run_reports_incomplete_when_pieces_remain_unplaced ... ok
+test archive::shared::tests::periodic_selection_valid_rejects_incomplete_budget_settlement ... ok
+test archive::anytime::tests::empty_or_undefined_identity_is_rejected ... ok
+test archive::shared::tests::periodic_selection_valid_accepts_the_fully_covered_case ... ok
+test archive::anytime::tests::dedup_first_occurrence_position_invalid_rejection_and_custom_rank ... ok
+test archive::shared::tests::periodic_selection_valid_rejects_incomplete_catalog_runtime_coverage ... ok
+test archive::shared::tests::periodic_selection_valid_rejects_over_cap_selection_count ... ok
+test archive::shared::tests::periodic_selection_valid_rejects_run_count_mismatch ... ok
+test archive::reconstruction::tests::deduplicates_effective_orders_of_interchangeable_geometry_without_collapsing_distinct_shapes ... ok
+test archive::shared::tests::periodic_selection_valid_rejects_incomplete_continuation_coverage_below_the_cap ... ok
+test archive::shared::tests::requested_sheet_fit_reports_no_fit_when_sheet_too_small ... ok
+test boundary::error::tests::archive_ineligible_routing_maps_to_not_implemented ... ok
+test archive::shared::tests::requested_sheet_fit_selects_q0_when_it_fits ... ok
+test archive::shared::tests::winner_selection_does_not_let_certificate_rescue_geometrically_dominated_layout ... ok
+test archive::shared::tests::retain_ranked_shared_archive_dedup_keeps_role_of_first_encounter ... ok
+test boundary::error::tests::compute_error_maps_no_valid_result ... ok
+test boundary::error::tests::compute_error_maps_source_geometry_missing_with_exact_context ... ok
+test archive::shared::tests::retain_ranked_shared_archive_rejects_hash_mismatch ... ok
+test boundary::error::tests::compute_error_maps_control_abort_reasons_to_distinct_codes ... ok
+test archive::shared::tests::winner_selection_prefers_lower_certificate_deficit_among_pareto_front ... ok
+test boundary::error::tests::from_panic_sanitizes_message_and_never_leaks_raw_payload ... ok
+test boundary::error::tests::boundary_error_includes_context_when_present ... ok
+test boundary::error::tests::boundary_error_omits_empty_context ... ok
+test boundary::error::tests::native_event_delivery_failure_keeps_only_the_status_name ... ok
+test boundary::error::tests::native_api_version_mismatch_renders_decimal_string_context ... ok
+test archive::reconstruction::tests::propagates_external_cancellation_reasons ... ok
+test boundary::events::tests::immediate_enqueue_failure_does_not_wait_for_acknowledgement ... ok
+test boundary::events::tests::accepted_terminal_with_retained_acknowledgement_unblocks_as_closing_on_cleanup ... ok
+test boundary::events::tests::callback_failure_wins_over_later_cleanup ... ok
+test boundary::diagnostics::tests::records_and_reads_back_the_last_job_diagnostics ... ok
+test boundary::events::tests::cleanup_wins_over_late_callback ... ok
+test boundary::events::tests::ordinary_delivery_failure_remains_authoritative_after_terminal_cleanup ... ok
+test boundary::events::tests::progress_and_terminal_share_the_tagged_ordinal_sequence ... ok
+test archive::shared::tests::normalize_constructed_run_reports_completed_for_an_exact_sheetless_layout ... ok
+test boundary::events::tests::live_terminal_waits_until_acknowledgement_callback_returns ... ok
+test boundary::events::tests::cleanup_close_does_not_block_during_terminal_enqueue_admission ... ok
+test boundary::job::tests::cancellation_registry_keeps_overlapping_public_job_ids_independently_cancellable ... ok
+test boundary::job::tests::cancellation_registry_rejects_a_duplicate_token_without_replacing_its_lease ... ok
+test boundary::job::tests::cancellation_registry_removes_only_the_pointer_identical_completing_lease ... ok
+test boundary::job::tests::cancellation_registry_retains_the_first_cancellation_reason ... ok
+test boundary::parallel::tests::automatic_thread_count_reserves_one_cpu_without_dropping_below_one ... ok
+test boundary::parallel::tests::job_pool_actual_count_matches_requested_when_the_build_succeeds ... ok
+test archive::reconstruction::tests::reports_exact_bounded_terminals ... ok
+test boundary::parallel::tests::map_slice_runs_serially_without_an_installed_pool ... ok
+test boundary::parallel::tests::installed_pool_actually_runs_work_on_its_own_worker_threads ... ok
+test boundary::parallel::tests::job_pool_reports_actual_count_separately_from_requested_after_fallback ... ok
+test boundary::parallel::tests::resolve_thread_count_clamps_a_zero_override_to_one ... ok
+test boundary::parallel::tests::pool_build_fallback_degrades_to_a_single_thread_pool ... ok
+test boundary::parallel::tests::resolve_thread_count_prefers_explicit_override ... ok
+test boundary::parallel::tests::map_slice_dispatches_to_the_installed_pool_and_preserves_order ... ok
+test boundary::parallel::tests::run_scoped_executes_on_a_pool_worker_with_the_slot_installed ... ok
+test boundary::parallel::tests::run_scoped_reinstalls_the_slot_freshly_on_every_run ... ok
+test boundary::parallel::tests::thread_count_env_parsing_rejects_invalid_or_zero_values ... ok
+test boundary::parallel::tests::with_job_pool_runs_inline_when_no_pool_is_installed ... ok
+test boundary::parallel::tests::sequential_jobs_clear_the_installed_pool_slot_after_each_guard_drops ... ok
+test boundary::parallel::tests::two_overlapping_jobs_on_different_os_threads_never_share_a_pool ... ok
+test boundary::request::tests::maps_overflowing_json_numbers_to_native_revalidation_failure ... ok
+test boundary::request::tests::rejects_empty_pieces ... ok
+test boundary::request::tests::rejects_empty_interchangeability_key ... ok
+test boundary::request::tests::rejects_empty_source_piece_and_strategy_run_ids ... ok
+test boundary::request::tests::decodes_and_prepares_a_minimal_valid_request ... ok
+test boundary::request::tests::allow_mirror_defaults_true_when_omitted ... ok
+test boundary::request::tests::rejects_duplicate_piece_ids ... ok
+test boundary::request::tests::rejects_malformed_json ... ok
+test boundary::request::tests::rejects_geometry_settings_cross_field_violation ... ok
+test boundary::request::tests::rejects_negative_padding ... ok
+test boundary::request::tests::rejects_non_irregular_worker_mode ... ok
+test boundary::request::tests::rejects_non_positive_sheet_dimensions ... ok
+test boundary::request::tests::rejects_non_positive_timeout ... ok
+test boundary::request::tests::rejects_placement_policy_id_not_a_member_of_ids ... ok
+test boundary::request::tests::rejects_version_mismatch ... ok
+test boundary::request::tests::rejects_fractional_optimizer_integers_through_request_decode ... ok
+test boundary::request::tests::rejects_policy_list_invariants_through_request_decode ... ok
+test boundary::request::tests::require_finite_rejects_nan_and_infinite_values ... ok
+test boundary::request::tests::require_archive_eligible_rejects_archive_disabled_settings ... ok
+test boundary::request::tests::rejects_short_side_cross_field_violations_through_request_decode ... ok
+test boundary::request::tests::rejects_fractional_integer_millimeter_fields_through_request_decode ... ok
+test boundary::request::tests::rejects_scalar_and_identity_refinements_through_request_decode ... ok
+test boundary::request::tests::rejects_unsafe_integer_values_through_request_decode ... ok
+test boundary::result::tests::anytime_scheduler_trace_is_camel_case_and_omits_absent_cancellation_reason ... ok
+test boundary::request::tests::revalidates_placement_policy_ids_non_empty_membership_and_uniqueness ... ok
+test boundary::result::tests::focused_complete_reconstruction_trace_omits_undefined_hash_fields ... ok
+test boundary::result::tests::capacity_trace_encodes_bigint_fields_as_decimal_strings_and_flattens_selected ... ok
+test boundary::result::tests::portfolio_phase_maps_every_variant ... ok
+test boundary::request::tests::revalidates_short_side_archive_and_ga_cross_field_rules ... ok
+test boundary::result::tests::portfolio_status_maps_completed_to_the_real_ts_literal ... ok
+test boundary::result::tests::search_source_maps_to_kebab_case ... ok
+test boundary::result::tests::termination_reason_maps_both_reachable_variants ... ok
+test boundary::request::tests::revalidates_optimizer_scalar_refinements_and_geometry_identity ... ok
+test boundary::result::tests::short_side_observer_trace_reuses_its_own_to_json_shape ... ok
+test boundary::request::tests::revalidates_non_negative_finite_optimizer_integer_fields ... ok
+test boundary::run_job::tests::profile_mixed61_default_cache_caps ... ignored, serial Mixed-61 profiling evidence
+test boundary::run_job::tests::profile_mixed61_effectively_unlimited_cache_caps ... ignored, serial Mixed-61 profiling evidence
+test boundary::run_job::tests::decode_and_route_rejects_archive_ineligible_settings_before_running ... ok
+test boundary::run_job::tests::run_job_from_json_resolves_an_err_envelope_for_malformed_json ... ok
+test boundary::request::tests::revalidates_positive_finite_optimizer_integer_fields ... ok
+test boundary::run_job::tests::run_job_from_json_resolves_an_err_envelope_for_archive_ineligible_routing ... ok
+test boundary::tests::passes_through_explicit_err_without_panicking ... ok
+test boundary::tests::passes_through_ok_result_unchanged ... ok
+test boundary::tests::contains_owned_string_panic_payload ... ok
+test boundary::tests::contains_non_string_panic_payload_without_leaking_it ... ok
+test boundary::tests::contains_static_str_panic_and_reports_operation ... ok
+test caches::geometry_cache_identity::tests::make_inner_fit_bounds_cache_key_matches_the_golden_bytes ... ok
+test caches::geometry_cache_identity::tests::make_transform_collision_geometry_cache_key_matches_the_golden_bytes ... ok
+test caches::geometry_cache_identity::tests::same_transform_requires_exact_unnormalized_rotation_equality ... ok
+test caches::geometry_cache_identity::tests::transform_reason_str_matches_the_serde_snake_case_mapping ... ok
+test caches::legal_candidate_memo::tests::contact_only_domain_uses_the_sheet_dimensions_identity_but_renders_its_own_domain_literal ... ok
+test boundary::run_job::tests::run_job_returns_an_err_envelope_when_source_geometry_is_missing ... ok
+test caches::legal_candidate_memo::tests::placed_pieces_are_joined_in_input_order_not_sorted ... ok
+test caches::legal_candidate_memo::tests::sheet_domain_omits_the_label_even_when_a_caller_might_otherwise_have_one ... ok
+test caches::legal_candidate_memo::tests::sheetless_nfp_domain_uses_the_deferred_sheet_identity ... ok
+test caches::nfp_cache_key::tests::canonical_polygon_digest_folds_negative_zero_in_point_keys ... ok
+test caches::nfp_cache_key::tests::canonical_polygon_digest_is_empty_for_an_empty_polygon ... ok
+test caches::nfp_cache_key::tests::canonical_polygon_digest_is_invariant_under_rotation_of_the_start_vertex ... ok
+test caches::nfp_cache_key::tests::canonical_polygon_digest_is_invariant_under_winding_reversal ... ok
+test caches::nfp_cache_key::tests::make_pairwise_nfp_cache_key_matches_the_golden_bytes_from_geometry_caches_md ... ok
+test caches::nfp_cache_key::tests::transform_digest_renders_mirrored_as_0_or_1_and_reason_as_the_bare_literal ... ok
+test caches::store::tests::charged_lru_evicts_the_least_recently_used_entry_at_a_tiny_cap ... ok
+test caches::store::tests::charged_lru_rejects_an_oversized_entry_without_evicting_a_hot_entry ... ok
+test caches::store::tests::clear_empties_the_store_and_zeroes_entry_counts_but_not_other_counters ... ok
+test caches::store::tests::downcast_mismatch_is_reported_as_a_miss_not_a_panic ... ok
+test boundary::run_job::tests::run_job_preserves_each_cancellation_reason_in_the_typed_failure_envelope ... ok
+test caches::store::tests::entry_charge_includes_the_retained_namespace_copy ... ok
+test caches::store::tests::get_on_an_empty_store_is_a_miss_and_records_lookup_and_miss ... ok
+test caches::store::tests::new_records_exactly_one_cache_instance_and_the_documented_byte_cap ... ok
+test caches::store::tests::record_hit_increments_hits_and_backing_cache_hits ... ok
+test caches::store::tests::remove_records_a_stale_removal_and_decrements_entries ... ok
+test caches::store::tests::multi_eviction_compacts_retained_recency_and_hash_capacity ... ok
+test caches::store::tests::replacement_updates_bytes_and_counters_without_counting_an_eviction ... ok
+test caches::store::tests::serialize_escapes_quotes_backslashes_and_control_characters ... ok
+test caches::store::tests::serialize_matches_the_pairwise_nfp_golden_bytes ... ok
+test caches::store::tests::serialize_matches_the_sheet_ifp_golden_bytes ... ok
+test caches::store::tests::serialize_matches_the_transform_collision_golden_bytes ... ok
+test caches::store::tests::serialize_passes_non_ascii_text_through_unescaped ... ok
+test caches::store::tests::set_then_get_round_trips_the_value_and_records_a_store_and_new_entry ... ok
+test caches::store::tests::valid_probe_borrows_a_hot_value_without_cloning_and_stale_probe_removes_it ... ok
+test caches::store::tests::repeated_stale_removal_compacts_retained_recency_and_hash_capacity ... ok
+test caches::telemetry::tests::namespace_mut_creates_a_zeroed_entry_on_first_access ... ok
+test caches::telemetry::tests::namespace_read_accessor_does_not_create_an_entry ... ok
+test caches::telemetry::tests::namespaces_are_reported_in_sorted_key_order ... ok
+test caches::transform_collision_geometry::tests::compute_applies_a_quarter_turn_rotation_and_reports_finite_bounds ... ok
+test caches::transform_collision_geometry::tests::compute_folds_negative_zero_in_transformed_coordinates ... ok
+test caches::transform_collision_geometry::tests::compute_rejects_a_non_convex_source_boundary ... ok
+test caches::transform_collision_geometry::tests::resolver_computes_and_stores_on_a_miss_then_hits_without_recomputing ... ok
+test caches::transform_collision_geometry::tests::resolver_never_writes_the_cache_when_compute_fails ... ok
+test caches::transform_collision_geometry::tests::resolver_evicts_and_recomputes_a_stale_entry_whose_transform_no_longer_matches ... ok
+test canonical_grid::contact::tests::axis_units_aborts_when_checkpoint_expires_mid_scan ... ok
+test canonical_grid::contact::tests::axis_units_is_undecidable_for_positive_diagonal_contact ... ok
+test canonical_grid::contact::tests::axis_units_measures_axis_aligned_positive_contact_exactly ... ok
+test canonical_grid::contact::tests::has_positive_contact_detects_a_shared_edge ... ok
+test canonical_grid::contact::tests::has_positive_contact_false_when_disjoint ... ok
+test canonical_grid::contact::tests::measure_boundary_contact_zero_case_returns_fully_populated_sentinel ... ok
+test canonical_grid::contact::tests::measure_boundary_contact_matches_full_edge_overlap ... ok
+test canonical_grid::contact::tests::measure_shared_convex_boundary_contact_zero_case_returns_fully_populated_sentinel ... ok
+test canonical_grid::contact::tests::shared_convex_boundary_length_matches_full_edge_overlap ... ok
+test canonical_grid::contact::tests::shared_convex_boundary_segments_empty_when_bounds_disjoint ... ok
+test canonical_grid::js_local::tests::bigint_to_number_overflows_to_infinity_like_number_of_bigint ... ok
+test canonical_grid::js_local::tests::is_safe_integer_matches_max_safe_integer_boundary ... ok
+test canonical_grid::js_local::tests::math_min_max_break_zero_ties_like_ecmascript ... ok
+test canonical_grid::js_local::tests::math_sign_preserves_signed_zero_and_propagates_nan ... ok
+test canonical_grid::js_local::tests::number_to_js_string_matches_ecmascript_special_cases ... ok
+test canonical_grid::layout::tests::assert_canonical_grid_legal_layout_accepts_touching_pieces ... ok
+test canonical_grid::layout::tests::analyze_canonical_layout_structure_reports_touching_pair ... ok
+test canonical_grid::layout::tests::assert_canonical_grid_legal_layout_rejects_wall_overrun ... ok
+test canonical_grid::layout::tests::assert_canonical_grid_legal_layout_rejects_overlap ... ok
+test canonical_grid::layout::tests::analyze_canonical_layout_structure_reports_overlap_conflict ... ok
+test canonical_grid::layout::tests::measure_canonical_enclosed_cavities_finds_a_frame_hole ... ok
+test canonical_grid::layout::tests::placed_collision_world_grid_path_folds_negative_zero ... ok
+test canonical_grid::layout::tests::measure_canonical_layout_contacts_matches_touching_edge ... ok
+test canonical_grid::layout::tests::canonical_collision_layout_identity_is_quarter_turn_invariant ... ok
+test canonical_grid::layout::tests::measure_canonical_layout_topology_reports_zero_cavities_for_disjoint_pieces ... ok
+test canonical_grid::layout::tests::placed_collision_world_grid_path_rejects_degenerate_input ... ok
+test canonical_grid::math::tests::convex_hull_of_empty_and_singleton_is_identity ... ok
+test canonical_grid::layout::tests::measure_canonical_layout_envelope_reports_bounding_box ... ok
+test canonical_grid::layout::tests::canonical_collision_layout_identity_is_ring_origin_invariant ... ok
+test canonical_grid::math::tests::convex_hull_rejects_non_finite_coordinates ... ok
+test canonical_grid::layout::tests::canonical_collision_layout_identity_is_translation_invariant ... ok
+test canonical_grid::layout::tests::canonical_collision_layout_identity_is_winding_invariant ... ok
+test canonical_grid::math::tests::cross_rejects_non_finite_coordinates ... ok
+test canonical_grid::math::tests::cross_sign_rejects_non_finite_coordinates ... ok
+test canonical_grid::layout::tests::canonical_collision_layout_identity_is_placement_order_invariant ... ok
+test canonical_grid::math::tests::doubled_grid_area_to_mm2_is_none_only_on_overflow ... ok
+test canonical_grid::math::tests::hull_sort_key_treats_negative_zero_difference_as_falsy_like_js ... ok
+test canonical_grid::math::tests::point_on_segment_returns_false_not_none_for_non_finite_coordinates ... ok
+test canonical_grid::math::tests::signed_doubled_area_rejects_non_finite_coordinates_once_length_reaches_three ... ok
+test canonical_grid::math::tests::signed_doubled_area_short_circuits_before_validating_coordinates ... ok
+test canonical_grid::offset_policy::tests::from_grid_is_exact_division_by_scale ... ok
+test canonical_grid::offset_policy::tests::to_grid_mm_preserves_negative_zero ... ok
+test canonical_grid::offset_policy::tests::to_grid_mm_rejects_non_finite_input ... ok
+test canonical_grid::offset_policy::tests::to_grid_mm_rounds_ties_away_from_zero ... ok
+test capacity::endpoint::tests::empty_endpoint_uses_the_constant_identity_and_hash ... ok
+test capacity::endpoint::tests::hash_tie_break_is_ascending ... ok
+test capacity::endpoint::tests::more_placed_pieces_wins_first ... ok
+test capacity::endpoint::tests::origin_rank_prefers_cold_search_on_a_full_tie ... ok
+test capacity::endpoint::tests::partitions_request_accepts_an_exact_partition ... ok
+test capacity::endpoint::tests::partitions_request_rejects_a_duplicate_id ... ok
+test capacity::material::tests::doubled_grid2_to_mm2_converts_exactly_for_small_areas ... ok
+test capacity::material::tests::exact_doubled_polygon_area_grid2_computes_a_60mm_square_exactly ... ok
+test capacity::material::tests::exact_doubled_polygon_area_grid2_rejects_degenerate_rings ... ok
+test capacity::endpoint::tests::materializes_one_placed_piece_and_computes_exact_material_area ... ok
+test capacity::material::tests::material_areas_complete_map_uses_convex_hull_not_collision_polygon ... ok
+test capacity::material::tests::material_areas_reports_duplicate_ids_as_invalid ... ok
+test capacity::material::tests::material_areas_reports_first_invalid_piece_in_prepared_order ... ok
+test capacity::material::tests::prepared_piece_id_falls_back_to_source_id ... ok
+test boundary::run_job::tests::run_job_returns_an_ok_envelope_for_a_real_one_piece_request ... ok
+test capacity::mode::tests::base_placement_evaluation_cap_uses_the_floor_when_piece_count_is_small ... ok
+test capacity::mode::tests::all_unplaced_fallback_endpoint_reports_every_piece_unplaced ... ok
+test capacity::mode::tests::quality_gate_admits_only_a_strict_placed_count_improvement ... ok
+test capacity::mode::tests::select_warm_settlement_lane_prefers_deepest_then_source_priority ... ok
+test capacity::mode::tests::select_warm_settlement_lane_returns_none_without_eligible_candidates ... ok
+test boundary::run_job::tests::run_job_from_json_reports_cleaned_cache_snapshots_for_a_real_request ... ok
+test capacity::mode::tests::trace_valid_rejects_a_mismatched_evaluation_sum ... ok
+test capacity::mode::tests::trace_valid_accepts_a_minimal_cold_only_trace ... ok
+test capacity::mode::tests::trace_valid_rejects_a_missing_cold_lane ... ok
+test capacity::mode::tests::trace_valid_rejects_exceeding_the_aggregate_cap ... ok
+test capacity::mode::tests::trace_valid_validates_a_warm_lane_chain ... ok
+test capacity::prefixes::tests::captures_a_skip_free_prefix_at_the_unique_valid_depth ... ok
+test capacity::prefixes::tests::prefix_depths_are_empty_below_four_pieces_with_no_valid_depth ... ok
+test capacity::prefixes::tests::prefix_depths_deduplicate_preserving_first_occurrence_order ... ok
+test capacity::prefixes::tests::rejects_a_lineage_that_skipped_a_piece_before_the_capture_depth ... ok
+test capacity::prefixes::tests::terminalizes_zero_descriptors_into_an_empty_result_without_evaluations ... ok
+test capacity::preflight::tests::fails_fast_on_a_piece_with_an_empty_transform_set ... ok
+test capacity::preflight::tests::honors_cancellation_from_the_caller_supplied_control ... ok
+test capacity::preflight::tests::honors_deadline_censoring_from_the_caller_supplied_control_after_the_first_checkpoint ... ok
+test capacity::prefixes::tests::truncates_to_the_maximum_descriptor_count ... ok
+test capacity::preflight::tests::rejects_a_sheet_with_no_positive_canonical_grid_area ... ok
+test capacity::preflight::tests::proves_impossibility_from_an_exact_singleton_q0_q90_fit_failure ... ok
+test capacity::preflight::tests::rejects_a_transform_producing_a_degenerate_collision_polygon ... ok
+test capacity::preflight::tests::proves_impossibility_from_the_exact_collision_area_sum ... ok
+test capacity::telemetry::tests::observed_status_when_the_probe_pauses_with_a_checkpoint ... ok
+test capacity::preflight::tests::stays_inconclusive_for_physically_impossible_but_unproven_requests ... ok
+test capacity::telemetry::tests::reason_export_used_for_proven_impossible_pressure ... ok
+test capacity::telemetry::tests::trivial_status_for_zero_or_one_pieces ... ok
+test capacity::telemetry::tests::unavailable_status_when_material_areas_are_invalid ... ok
+test capacity::telemetry::tests::unavailable_status_when_the_probe_does_not_pause ... ok
+test capacity::telemetry::tests::unavailable_status_when_the_probe_errors ... ok
+test checkpoints::canonical_json::tests::canonical_entry_list_key_matches_expected_record_shape ... ok
+test checkpoints::canonical_json::tests::canonical_record_reproduces_undefined_row_guard ... ok
+test checkpoints::canonical_json::tests::canonical_token_counts_utf16_code_units_not_bytes ... ok
+test checkpoints::canonical_json::tests::capacity_encoder_array_join_of_undefined_matches_js_quirk ... ok
+test checkpoints::canonical_json::tests::capacity_encoder_omits_undefined_fields ... ok
+test checkpoints::canonical_json::tests::capacity_encoder_sorts_keys_ordinally_and_quotes_bigint ... ok
+test checkpoints::canonical_json::tests::locale_compare_keys_matches_documented_divergence_example ... ok
+test checkpoints::canonical_json::tests::number_tokens_diverge_between_json_and_canonical_number ... ok
+test checkpoints::canonical_json::tests::strict_encoder_sorts_map_entries_by_locale_compared_string_key ... ok
+test checkpoints::canonical_json::tests::strict_encoder_uses_locale_compare_for_keys ... ok
+test clipper::core::tests::area_below_three_points_is_zero ... ok
+test clipper::core::tests::area_matches_shoelace_for_unit_square ... ok
+test checkpoints::canonical_json::tests::periodic_encoder_has_no_bigint_branch ... ok
+test clipper::core::tests::area_of_reversed_square_is_negative ... ok
+test clipper::core::tests::cross_product_sign_matches_orientation ... ok
+test clipper::core::tests::ensure_safe_integer_rejects_overflow_but_not_fractional_values ... ok
+test clipper::core::tests::get_bounds_of_empty_path_is_zero_rect ... ok
+test clipper::core::tests::math_round_matches_js_half_up_semantics ... ok
+test clipper::core::tests::multiply_uint64_matches_expected_split ... ok
+test clipper::core::tests::path2_contains_path1_detects_nested_square ... ok
+test clipper::core::tests::point64_utils_scale_and_create_round_trip ... ok
+test clipper::core::tests::round_to_even_matches_bankers_rounding ... ok
+test clipper::offset::tests::ellipse_produces_requested_step_count ... ok
+test clipper::offset::tests::ellipse_zero_radius_is_empty ... ok
+test clipper::offset::tests::execute_pre_cleanup_empty_group_list_is_empty ... ok
+test clipper::offset::tests::execute_pre_cleanup_miter_polygon_produces_one_offset_ring_per_input ... ok
+test clipper::offset::tests::execute_pre_cleanup_small_delta_passes_through_unchanged ... ok
+test clipper::offset::tests::execute_significant_delta_runs_through_engine_union_cleanup ... ok
+test clipper::offset::tests::execute_small_delta_succeeds_without_engine ... ok
+test clipper::offset::tests::get_lowest_path_info_picks_bottom_then_rightmost ... ok
+test clipper::offset::tests::get_unit_normal_degenerate_edge_is_zero ... ok
+test clipper::offset::tests::get_unit_normal_is_perpendicular_unit_length ... ok
+test clipper::offset::tests::group_construction_flags_reversed_negative_area_lowest_path ... ok
+test clipper::offset::tests::sqr_matches_multiplication ... ok
+test clipper::offset::tests::strip_duplicates_collapses_adjacent_and_closing_dupes ... ok
+test domain::cache::tests::geometry_cache_key_is_usable_as_a_hash_map_key ... ok
+test domain::cache::tests::geometry_cache_key_round_trips_through_json ... ok
+test domain::collision::tests::collision_geometry_diagnostic_omits_absent_piece_id ... ok
+test domain::collision::tests::collision_geometry_round_trips_through_json ... ok
+test domain::collision::tests::transformed_collision_geometry_round_trips_through_json ... ok
+test domain::geometry::tests::irregular_bounds_field_order_matches_ts_declaration_order ... ok
+test domain::geometry::tests::irregular_bounds_serde_round_trip_uses_camel_case_keys ... ok
+test domain::geometry::tests::irregular_point_constructs_and_compares_by_value ... ok
+test domain::geometry::tests::irregular_polygon_ring_has_no_implicit_closing_vertex ... ok
+test domain::geometry::tests::irregular_polygon_serde_round_trip_preserves_point_order ... ok
+test domain::ids::tests::ids_construct_display_and_compare_as_plain_strings ... ok
+test domain::ids::tests::ids_serde_round_trip_as_a_bare_json_string ... ok
+test domain::piece::tests::irregular_placed_piece_round_trips_through_json ... ok
+test domain::piece::tests::irregular_placement_candidate_round_trips_through_json ... ok
+test domain::piece::tests::irregular_placement_omits_absent_piece_id_and_placement_reference ... ok
+test domain::piece::tests::irregular_prepared_piece_omits_absent_optional_fields ... ok
+test domain::piece::tests::irregular_prepared_piece_round_trips_with_all_optional_fields_present ... ok
+test domain::score::tests::score_summary_omits_all_absent_optional_fields ... ok
+test domain::score::tests::score_summary_round_trips_with_every_optional_field_present ... ok
+test domain::settings::tests::default_placement_policy_id_is_a_member_of_the_default_policy_ids ... ok
+test domain::settings::tests::irregular_nesting_settings_round_trips_through_json ... ok
+test domain::settings::tests::optimizer_settings_deserialize_applies_ts_decode_defaults_for_omitted_wire_fields ... ok
+test domain::sheet::tests::free_material_snapshot_round_trips_with_holes ... ok
+test domain::sheet::tests::irregular_nfp_round_trips_through_json ... ok
+test domain::sheet::tests::sheet_spec_round_trips_through_json ... ok
+test domain::source::tests::dxf_geometry_segment_tags_by_kind ... ok
+test domain::source::tests::dxf_line_segment_carries_an_ellipse_source_curve ... ok
+test domain::source::tests::import_warning_entity_handle_accepts_string_or_number ... ok
+test domain::source::tests::import_warning_omits_absent_optional_fields_from_json ... ok
+test domain::transform::tests::irregular_transform_candidate_round_trips_with_out_of_range_rotation ... ok
+test domain::transform::tests::irregular_transform_field_order_matches_ts_declaration_order ... ok
+test domain::transform::tests::irregular_transform_reason_serializes_to_ts_literal_strings ... ok
+test geometry::collision_builder::tests::build_piece_derives_offset_from_the_supplied_geometry_settings ... ok
+test geometry::collision_builder::tests::build_piece_matches_the_ts_worked_example_with_a_warning_diagnostic ... ok
+test geometry::collision_builder::tests::build_piece_rejects_a_degenerate_two_point_hull ... ok
+test geometry::collision_builder::tests::build_piece_rejects_an_offset_that_exceeds_the_coordinate_guard ... ok
+test geometry::collision_builder::tests::build_piece_rejects_an_open_source_path ... ok
+test geometry::collision_builder::tests::clipper2_offset_adapter_compute_offsets_a_ccw_square_outward ... ok
+test geometry::collision_builder::tests::clipper2_offset_adapter_compute_rejects_a_non_convex_input ... ok
+test geometry::collision_builder::tests::conservative_offset_mm_adds_the_fixed_allowance ... ok
+test geometry::collision_builder::tests::convex_polygon_offset_compute_restores_clockwise_input_winding ... ok
+test geometry::collision_builder::tests::flatten_source_geometry_dedupes_shared_endpoints_across_segments ... ok
+test geometry::collision_builder::tests::to_integer_path_collapses_a_single_surviving_point_to_empty ... ok
+test geometry::convex::tests::accepts_ccw_square_with_positive_winding ... ok
+test geometry::convex::tests::accepts_cw_square_with_negative_winding ... ok
+test geometry::convex::tests::are_disjoint_false_when_exactly_touching ... ok
+test geometry::convex::tests::are_disjoint_false_when_overlapping ... ok
+test geometry::convex::tests::are_disjoint_true_when_strictly_separated_on_x ... ok
+test geometry::convex::tests::bounds_for_points_computes_tight_box ... ok
+test geometry::convex::tests::bounds_for_points_empty_is_none ... ok
+test geometry::convex::tests::bounds_for_points_rejects_non_finite_first_point ... ok
+test geometry::convex::tests::bounds_for_points_rejects_non_finite_later_point ... ok
+test geometry::convex::tests::bounds_for_points_single_point_is_degenerate_bounds ... ok
+test geometry::convex::tests::coordinate_supports_linear_topology_admits_zero ... ok
+test geometry::convex::tests::coordinate_supports_linear_topology_boundary_inclusive ... ok
+test geometry::convex::tests::coordinate_supports_linear_topology_rejects_outside_envelope ... ok
+test geometry::convex::tests::hull_deduplicates_exact_coordinate_repeats ... ok
+test geometry::convex::tests::hull_drops_collinear_points_on_an_edge ... ok
+test geometry::convex::tests::hull_of_collinear_points_only_is_the_two_extremes ... ok
+test geometry::convex::tests::hull_of_empty_input_is_empty ... ok
+test geometry::convex::tests::hull_of_one_point_is_that_point ... ok
+test geometry::convex::tests::hull_of_square_is_ccw_from_bottom_left ... ok
+test geometry::convex::tests::hull_of_two_points_is_sorted_pair ... ok
+test geometry::convex::tests::hull_sort_treats_negative_zero_and_zero_x_as_equal ... ok
+test geometry::convex::tests::linear_topology_envelope_bounds_are_exact_powers_of_two ... ok
+test geometry::convex::tests::rejects_collinear_vertex ... ok
+test geometry::convex::tests::rejects_fewer_than_three_vertices ... ok
+test geometry::convex::tests::rejects_inconsistent_winding ... ok
+test geometry::convex::tests::rejects_non_finite_coordinate ... ok
+test geometry::convex::tests::rejects_repeated_adjacent_vertex ... ok
+test geometry::convex::tests::rejects_self_intersecting_bowtie_ahead_of_its_turn_failure ... ok
+test geometry::convex::tests::strict_convex_boundary_validation_accessors ... ok
+test geometry::convex::tests::translate_polygon_with_bounds_empty_polygon_is_none ... ok
+test domain::settings::tests::irregular_nesting_settings_deserializes_the_mixed61_fixture_payload ... ok
+test geometry::convex::tests::translate_polygon_with_bounds_rejects_non_finite_translation ... ok
+test geometry::convex::tests::translate_polygon_with_bounds_translates_and_rebounds ... ok
+test geometry::convex::tests::validates_a_ring_with_coordinates_outside_the_linear_topology_envelope ... ok
+test geometry::free_material::tests::accepts_occupied_polygons_that_meet_at_one_exact_point ... ok
+test geometry::free_material::tests::canonicalizes_mixed_mirrored_windings_before_the_nonzero_occupied_union ... ok
+test geometry::free_material::tests::does_not_create_a_hole_for_border_touching_geometry ... ok
+test geometry::free_material::tests::direct_difference_matches_union_then_difference_for_disjoint_placements ... ok
+test geometry::free_material::tests::rejects_malformed_non_convex_collision_geometry_with_a_typed_error ... ok
+test geometry::free_material::tests::orders_holes_deterministically_by_stable_lowest_y_then_lowest_x ... ok
+test geometry::free_material::tests::represents_one_interior_placement_as_one_region_with_one_hole ... ok
+test geometry::free_material::tests::returns_no_regions_when_the_placed_geometry_covers_the_whole_sheet ... ok
+test geometry::free_material::tests::returns_the_whole_sheet_with_no_holes_when_there_are_no_placements ... ok
+test geometry::hash::tests::digest_is_64_lowercase_hex_characters ... ok
+test geometry::hash::tests::hashes_abc_to_known_sha256_digest ... ok
+test geometry::hash::tests::hashes_empty_string_to_known_sha256_digest ... ok
+test geometry::free_material::tests::extend_free_material_matches_full_recomputation_after_each_addition ... ok
+test geometry::hash::tests::hashes_utf8_multibyte_input_correctly ... ok
+test geometry::predicates::tests::collinear_points_are_zero ... ok
+test geometry::predicates::tests::matches_js_sign_convention_for_a_simple_left_turn ... ok
+test geometry::predicates::tests::matches_js_sign_convention_for_a_simple_right_turn ... ok
+test geometry::predicates::tests::orientation_equals_sign_of_robust_orient2d_directly ... ok
+test js_number::js_math::tests::hypot_delegates_to_standard_rounding_and_handles_extremes ... ok
+test js_number::js_math::tests::hypot_infinity_takes_precedence_over_nan ... ok
+test js_number::js_math::tests::max_all_min_all_match_empty_and_nan_semantics ... ok
+test js_number::js_math::tests::max_min_propagate_nan ... ok
+test domain::tests::imported_piece_round_trips_from_the_mixed61_fixture ... ok
+test js_number::js_math::tests::max_min_zero_sign_tie_break ... ok
+test js_number::js_math::tests::round_does_not_double_round_near_safe_integer_boundary ... ok
+test js_number::js_math::tests::round_matches_js_half_toward_positive_infinity ... ok
+test js_number::js_math::tests::sign_preserves_zero_sign_unlike_signum ... ok
+test js_number::js_math::tests::trunc_floor_ceil_preserve_negative_zero_and_special_values ... ok
+test js_number::tests::cmp_js_code_units_diverges_from_code_point_order_for_supplementary_plane ... ok
+test js_number::tests::cmp_js_code_units_matches_ascii_byte_order ... ok
+test js_number::tests::fold_negative_zero_folds_only_negative_zero ... ok
+test js_number::tests::fold_negative_zero_key_matches_number_to_js_string ... ok
+test js_number::tests::is_safe_integer_matches_boundary ... ok
+test js_number::tests::number_to_js_string_handles_special_values ... ok
+test nfp_ifp::boundary_core::tests::canonicalize_translated_convex_ring_drops_collinear_and_repeated_vertices ... ok
+test nfp_ifp::boundary_core::tests::compute_relative_nfp_boundary_reference_and_linear_agree_on_a_simple_case ... ok
+test nfp_ifp::boundary_core::tests::compute_relative_nfp_boundary_reference_matches_minkowski_sum_of_squares ... ok
+test nfp_ifp::boundary_core::tests::is_valid_cached_nfp_boundary_rejects_too_few_points ... ok
+test nfp_ifp::boundary_core::tests::hot_prepass_borrows_the_cached_nfp_before_the_normal_resolver_clones_once ... ok
+test nfp_ifp::boundary_core::tests::resolve_nfp_boundary_fails_before_any_cache_action_on_invalid_fixed_ring ... ok
+test nfp_ifp::boundary_core::tests::resolve_nfp_boundary_caches_the_relative_boundary_and_translates_on_every_call ... ok
+test nfp_ifp::boundary_core::tests::rotate_to_stable_start_picks_the_smallest_y_then_x_vertex ... ok
+test nfp_ifp::boundary_core::tests::resolve_nfp_boundary_shares_the_relative_cache_entry_across_canonically_equivalent_copies ... ok
+test nfp_ifp::ifp_bounds::tests::compute_ifp_bounds_is_infeasible_when_the_piece_cannot_fit ... ok
+test nfp_ifp::boundary_core::tests::stale_prepass_probe_removes_the_entry_before_stable_republication ... ok
+test nfp_ifp::ifp_bounds::tests::compute_ifp_bounds_is_invalid_for_a_degenerate_moving_polygon ... ok
+test nfp_ifp::ifp_bounds::tests::compute_ifp_bounds_produces_the_translation_rectangle ... ok
+test nfp_ifp::ifp_bounds::tests::resolve_ifp_bounds_caches_on_miss_and_hits_on_the_second_call ... ok
+test nfp_ifp::ifp_bounds::tests::resolve_ifp_bounds_zero_cache_actions_on_pre_key_validation_failure ... ok
+test nfp_ifp::ifp_bounds::tests::resolve_ifp_bounds_never_trusts_a_stale_cached_rectangle_over_the_live_polygon ... ok
+test nfp_ifp::service::tests::compute_ifp_bounds_reports_infeasible_as_a_distinct_error_from_invalid ... ok
+test nfp_ifp::service::tests::compute_nfp_and_the_internal_fast_path_agree ... ok
+test nfp_ifp::service::tests::generate_placement_candidates_bypasses_the_memo_when_none ... ok
+test nfp_ifp::service::tests::generate_placement_candidates_memo_hits_on_the_second_identical_call ... ok
+test nfp_ifp::telemetry::tests::checkpoint_phase_as_str_matches_ts_literals ... ok
+test nfp_ifp::service::tests::generate_placement_candidates_never_leaks_provenance_to_a_call_that_did_not_want_it ... ok
+test nfp_ifp::telemetry::tests::record_checkpoint_tracks_phase_live_inert_direct_void_and_composed ... ok
+test nfp_ifp::telemetry::tests::record_memo_bypass_increments_only_bypasses ... ok
+test nfp_ifp::telemetry::tests::record_memo_request_splits_outcomes_correctly ... ok
+test nfp_ifp::telemetry::tests::record_memo_restore_accumulates_candidate_counts_across_calls ... ok
+test result::materialize::tests::normalize_rotation_degrees_matches_ts_single_modulo_semantics ... ok
+test result::materialize::tests::resolves_exact_rotation_match_first ... ok
+test result::materialize::tests::resolves_quarter_turn_equivalent_when_no_exact_match ... ok
+test result::materialize::tests::returns_none_when_no_candidate_matches_mirror_or_quarter_turn ... ok
+test result::tests::anytime_scheduler_trace_valid_complete_endpoint_fitted_requires_cancelled_cold ... ok
+test result::tests::anytime_scheduler_trace_valid_requires_two_quanta_and_capacity_cold_first ... ok
+test result::tests::archive_eligibility_matches_production_compact_defaults ... ok
+test search::beam_state::tests::bottom_left_anchored_projection_key_is_defined_when_bounds_are_absent ... ok
+test search::beam_state::tests::canonical_entry_list_key_matches_checkpoint_encoder_directly ... ok
+test search::beam_state::tests::bottom_left_anchored_projection_matches_full_anchor_key ... ok
+test search::beam_state::tests::contact_signature_continuation_identity_is_none_when_a_placed_piece_fails_validation ... ok
+test search::beam_state::tests::contact_signature_continuation_identity_is_some_empty_array_for_the_empty_state ... ok
+test search::beam_state::tests::continuation_metadata_identity_changes_when_canonical_entry_keys_change ... ok
+test search::beam_state::tests::empty_state_has_empty_canonical_key_and_zero_bounds ... ok
+test search::beam_state::tests::insert_canonical_entry_key_keeps_ascending_order_and_stable_ties ... ok
+test search::beam_state::tests::normalize_canonical_coordinate_falls_back_to_the_raw_value_when_non_finite ... ok
+test search::beam_state::tests::normalize_canonical_coordinate_preserves_negative_zero_via_the_primary_grid_path ... ok
+test search::beam_state::tests::ring_key_is_invariant_to_start_vertex_and_winding ... ok
+test search::beam_state::tests::ring_key_translation_folds_negative_zero ... ok
+test search::beam_state::tests::source_file_id_import_is_unused_placeholder_guard ... ok
+test search::beam_state::tests::spatial_index_reuse_guard_rejects_mismatched_index ... ok
+test search::beam_state::tests::with_bottom_left_anchored_is_a_noop_when_already_anchored ... ok
+test search::beam_state::tests::with_bottom_left_anchored_is_a_noop_when_bounds_are_absent ... ok
+test search::beam_state::tests::with_bottom_left_anchored_translates_to_origin ... ok
+test search::beam_state::tests::with_placement_appends_sorted_canonical_entry_key ... ok
+test search::beam_state::tests::with_placement_phase_timings_callback_reports_a_total ... ok
+test search::beam_state::tests::with_quarter_turn_bottom_left_90_rotates_and_anchors ... ok
+test search::beam_state::tests::with_quarter_turn_bottom_left_zero_degrees_delegates_to_anchor ... ok
+test search::beam_state::tests::with_unplaced_piece_carries_bounds_and_index_through_unchanged ... ok
+test search::gap_regions::tests::candidate_fully_inside_gap_region_is_contained ... ok
+test search::gap_regions::tests::canonical_ring_of_empty_path_is_empty_string ... ok
+test search::gap_regions::tests::empty_placed_list_yields_empty_region_list ... ok
+test search::gap_regions::tests::candidate_overlapping_occupied_geometry_is_not_contained ... ok
+test search::gap_regions::tests::canonical_ring_is_invariant_to_rotation_and_direction ... ok
+test search::gap_regions::tests::picture_frame_encloses_a_cavity ... ok
+test search::gap_regions::tests::single_square_hull_degenerates_to_no_regions ... ok
+test search::layout_scorer::tests::charged_replacement_rejects_before_evicting_its_own_fifo_record ... ok
+test search::gap_regions::tests::regions_are_sorted_ascending_by_doubled_area_then_canonical_key ... ok
+test search::layout_scorer::tests::free_material_cache_rejects_oversized_snapshot_without_evicting_fifo_entry ... ok
+test search::gap_regions::tests::two_diagonal_squares_produce_one_hull_open_gap ... ok
+test search::layout_scorer::tests::free_material_charge_counts_inline_polygon_storage_once ... ok
+test search::layout_scorer::tests::free_material_charge_includes_diagnostic_string_and_piece_id_capacities ... ok
+test search::layout_scorer::tests::free_material_cache_evicts_oldest_key_at_capacity_without_reordering_on_overwrite ... ok
+test search::layout_scorer::tests::free_material_clear_releases_current_bytes_and_retains_peak_counters ... ok
+test search::layout_scorer::tests::get_newly_placed_geometry_requires_exact_reference_identity ... ok
+test search::layout_scorer::tests::free_material_multi_eviction_shrinks_retained_container_capacity ... ok
+test search::layout_scorer::tests::layout_score_order_dominance_of_unplaced_count ... ok
+test search::layout_scorer::tests::make_free_material_cache_key_is_stable_for_identical_inputs_and_varies_by_geometry_key ... ok
+test search::layout_scorer::tests::score_derived_state_computes_finite_score ... ok
+test search::layout_scorer::tests::score_derived_state_rejects_undefined_collision_bounds ... ok
+test search::layout_scorer::tests::successful_replacement_updates_bytes_and_counters_without_reordering ... ok
+test search::placement_scorer::tests::compare_scores_dispatches_short_side_fill_when_both_sides_agree ... ok
+test search::placement_scorer::tests::resolve_configured_placement_policy_id_falls_back_when_not_a_member ... ok
+test search::placement_scorer::tests::score_candidate_computes_finite_score_for_a_simple_placement ... ok
+test search::placement_scorer::tests::score_candidate_forces_balanced_compactness_on_a_square_sheet ... ok
+test search::placement_scorer::tests::score_candidate_measures_shared_boundary_against_placed_pieces ... ok
+test search::placement_scorer::tests::score_candidate_rejects_mismatched_metadata ... ok
+test search::score_grid::tests::cmp_number_treats_all_nan_as_mutually_equal_and_least ... ok
+test search::score_grid::tests::millimeter_units_preserve_sign_of_zero ... ok
+test search::score_grid::tests::millimeter_units_reject_non_finite_and_overflow ... ok
+test search::score_grid::tests::millimeter_units_round_half_away_from_zero ... ok
+test search::score_grid::tests::millimeters_divide_grid_units_back_to_mm_scale ... ok
+test search::score_grid::tests::scalar_uses_six_decimal_digit_grid ... ok
+test search::sort_pieces::tests::empty_input_returns_empty_output ... ok
+test search::sort_pieces::tests::equal_priority_pieces_preserve_original_relative_order ... ok
+test search::sort_pieces::tests::sorts_descending_by_longest_edge_then_area_then_imbalance ... ok
+test search::sort_pieces::tests::ties_on_longest_edge_break_by_area_then_imbalance ... ok
+test search::strict_decoder::tests::family_and_gap_replay_preserve_existing_serial_tie_behavior ... ok
+test search::strict_decoder::tests::indexed_scoring_replay_restores_source_order_including_none_scores ... ok
+test search::strict_decoder::tests::indexed_scoring_replay_selects_the_lowest_source_ordinal_error ... ok
+test search::strict_decoder::tests::strict_scoring_admits_exact_serial_prefix_for_zero_full_mid_slice_and_nan_caps ... ok
+test search::strict_decoder::tests::strict_scoring_map_runs_serially_without_an_installed_job_pool ... ok
+test search::strict_decoder::tests::strict_scoring_mode_falls_back_to_serial_for_phase_capture_or_injected_clock ... ok
+test search::strict_decoder::tests::strict_scoring_replays_each_bounded_chunk_before_dispatching_the_next ... ok
+test search::strict_family::tests::canonical_cyclic_polygon_key_is_rotation_and_direction_invariant ... ok
+test search::strict_decoder::tests::strict_scoring_map_dispatches_to_an_installed_job_pool ... ok
+test search::strict_family::tests::canonical_cyclic_polygon_key_of_empty_points_is_empty_string ... ok
+test search::strict_family::tests::empty_pieces_yields_no_families ... ok
+test search::strict_family::tests::group_measurements_come_from_first_member_only ... ok
+test search::strict_family::tests::group_preserves_first_occurrence_insertion_order_and_pushes_into_existing_group ... ok
+test search::strict_family::tests::intrinsic_collision_family_key_falls_back_to_source_id ... ok
+test search::strict_family::tests::intrinsic_collision_family_key_prefers_interchangeability_key ... ok
+test search::strict_family::tests::measure_collision_polygon_measures_rectangle ... ok
+test search::strict_family::tests::measure_collision_polygon_rejects_degenerate_input ... ok
+test short_side::axes::tests::narrow_height_sheet_uses_height_as_the_short_axis ... ok
+test short_side::axes::tests::narrow_width_sheet_uses_width_as_the_short_axis ... ok
+test short_side::axes::tests::span_picks_by_short_axis ... ok
+test short_side::axes::tests::square_sheet_deterministically_takes_the_height_short_axis_branch ... ok
+test short_side::contact_strip::tests::contact_score_ordering_prefers_higher_contact_count_then_axis_units ... ok
+test short_side::contact_strip::tests::serialize_contact_score_matches_positive_count_colon_axis_units ... ok
+test short_side::json::tests::array_renders_undefined_element_as_null ... ok
+test short_side::json::tests::byte_length_counts_utf8_bytes_not_chars ... ok
+test short_side::json::tests::non_finite_numbers_render_as_null ... ok
+test short_side::json::tests::object_omits_undefined_valued_fields ... ok
+test short_side::json::tests::opt_helpers_map_none_to_undefined ... ok
+test short_side::json::tests::strings_escape_control_characters_and_quotes ... ok
+test short_side::observer::tests::no_endpoints_skips_with_the_documented_status ... ok
+test tests::cancel_irregular_job_on_an_unknown_invocation_token_is_a_harmless_no_op ... ok
+test tests::get_last_job_diagnostics_is_null_before_any_job_has_run_in_this_process ... ok
+test tests::native_capability_reports_expected_shape ... ok
+test transforms::boundary_check::tests::accepts_a_ccw_square ... ok
+test transforms::boundary_check::tests::accepts_a_cw_square_with_opposite_winding ... ok
+test transforms::boundary_check::tests::rejects_a_non_convex_star ... ok
+test transforms::boundary_check::tests::rejects_collinear_vertices ... ok
+test transforms::boundary_check::tests::rejects_fewer_than_three_vertices ... ok
+test transforms::boundary_check::tests::rejects_non_finite_coordinates ... ok
+test transforms::boundary_check::tests::rejects_repeated_adjacent_vertices ... ok
+test transforms::flattening::arc::unit_tests::compute_sample_count_never_returns_less_than_one ... ok
+test transforms::flattening::arc::unit_tests::sample_bulge_points_negative_zero_bulge_is_a_straight_two_point_chord ... ok
+test transforms::flattening::arc::unit_tests::sample_bulge_points_undefined_bulge_is_a_straight_two_point_chord ... ok
+test transforms::flattening::arc::unit_tests::sample_bulge_points_unit_bulge_is_a_semicircle_and_preserves_endpoints ... ok
+test transforms::flattening::arc::unit_tests::sample_bulge_points_zero_bulge_is_a_straight_two_point_chord ... ok
+test transforms::flattening::arc::unit_tests::sample_points_preserves_imported_endpoints_exactly_even_off_circle ... ok
+test transforms::flattening::arc::unit_tests::sample_points_tighter_sag_tolerance_samples_more_densely ... ok
+test transforms::flattening::arc::unit_tests::sample_points_zero_radius_degenerate_arc_returns_just_the_two_endpoints ... ok
+test transforms::flattening::arc::unit_tests::sample_points_zero_sweep_is_a_full_circle_not_a_degenerate_point ... ok
+test transforms::flattening::ellipse::unit_tests::degenerate_chord_distance_uses_node_compatible_hypot ... ok
+test transforms::flattening::ellipse::unit_tests::sample_points_circle_special_case_stays_near_the_analytic_radius ... ok
+test transforms::flattening::ellipse::unit_tests::sample_points_full_ellipse_first_and_last_point_are_identical ... ok
+test transforms::flattening::ellipse::unit_tests::sample_points_thin_axis_ratio_still_terminates ... ok
+test transforms::flattening::ellipse::unit_tests::sample_points_tighter_sag_tolerance_samples_at_least_as_densely ... ok
+test transforms::flattening::ellipse::unit_tests::sample_points_zero_major_axis_returns_an_empty_array ... ok
+test transforms::flattening::ellipse::unit_tests::sample_points_zero_sweep_returns_an_empty_array_not_two_points ... ok
+test transforms::generator::tests::adaptive_compact_policy_derives_scale_aware_minimum_edge_length ... ok
+test transforms::generator::tests::appends_mirrors_after_unmirrored_choices_and_caps_the_combined_list ... ok
+test transforms::generator::tests::can_disable_configured_angles_without_disabling_baseline ... ok
+test transforms::generator::tests::can_disable_edge_derived_angles_without_disabling_configured ... ok
+test transforms::generator::tests::circular_distance_handles_the_seam ... ok
+test transforms::generator::tests::does_not_let_mirror_variants_bypass_the_transform_cap ... ok
+test transforms::generator::tests::emits_only_zero_degree_when_rotation_disabled ... ok
+test transforms::generator::tests::ga_active_disables_the_adaptive_policy ... ok
+test transforms::generator::tests::keeps_exact_derived_edge_angles_ahead_of_configured_under_the_cap ... ok
+test transforms::generator::tests::normalize_rotation_deg_folds_negative_zero ... ok
+test transforms::generator::tests::returns_four_orthogonal_baseline_choices_for_a_square ... ok
+test transforms::generator::tests::short_side_fill_placement_policy_disables_the_adaptive_policy ... ok
+test transforms::rotate::tests::arbitrary_angle_uses_trig_branch_and_matches_hand_computed_rotation ... ok
+test transforms::rotate::tests::mirroring_at_zero_rotation_folds_a_negated_zero_x ... ok
+test transforms::rotate::tests::mirroring_negates_x_before_rotation ... ok
+test transforms::rotate::tests::normalize_rotation_degrees_does_not_fold_negative_zero ... ok
+test transforms::rotate::tests::normalize_rotation_degrees_wraps_negative_and_large_values ... ok
+test transforms::rotate::tests::quarter_turns_use_exact_closed_form_branches ... ok
+test transforms::rotate::tests::transform_and_snap_point_snaps_to_the_canonical_grid ... ok
+test transforms::rotate::tests::zero_rotation_folds_negative_zero_coordinates ... ok
+test validation::placement::tests::check_returns_ok_false_for_illegal_placement ... ok
+test validation::placement::tests::check_sheetless_ignores_sheet_bounds ... ok
+test validation::placement::tests::coincident_rings_overlap ... ok
+test validation::placement::tests::diamond_inscribed_in_square_overlaps ... ok
+test validation::placement::tests::exact_edge_touching_is_legal ... ok
+test validation::placement::tests::indexed_and_brute_force_branches_agree_for_overlap ... ok
+test validation::placement::tests::legal_placement_with_no_placed_pieces ... ok
+test validation::placement::tests::non_finite_translation_is_a_geometry_failure ... ok
+test validation::placement::tests::outside_sheet_bounds_is_illegal_only_when_enforced ... ok
+test validation::placement::tests::positive_area_overlap_is_illegal ... ok
+test validation::placement::tests::stale_index_falls_back_to_brute_force ... ok
+test validation::placement::tests::validate_returns_err_for_illegal_placement_with_hardcoded_operation ... ok
+test validation::sat::tests::canonical_zero_normalizes_negative_zero_translation_components ... ok
+test validation::sat::tests::diamond_vs_square_depth_is_consistent_with_translation_magnitude ... ok
+test validation::sat::tests::measures_axis_aligned_overlap_depth_and_translation ... ok
+test validation::sat::tests::returns_none_for_exactly_touching_squares ... ok
+test validation::sat::tests::returns_none_for_fewer_than_three_vertices ... ok
+test validation::sat::tests::returns_none_for_separated_squares ... ok
+test validation::spatial_index::tests::add_does_not_mutate_parent_and_preserves_ordinal_order ... ok
+test validation::spatial_index::tests::cell_key_format_matches_ts_template_literal ... ok
+test validation::spatial_index::tests::continuation_identity_renders_whole_valued_cell_size_without_trailing_zero ... ok
+test validation::spatial_index::tests::continuation_identity_is_deterministic_and_content_sensitive ... ok
+test validation::spatial_index::tests::continuation_identity_sorts_buckets_by_locale_compare_not_numeric_order ... ok
+test validation::spatial_index::tests::empty_index_has_zero_size_and_default_cell_size ... ok
+test validation::spatial_index::tests::grid_cell_range_floors_toward_negative_infinity_for_negative_bounds ... ok
+test validation::spatial_index::tests::grid_cell_range_rejects_cell_count_above_maximum ... ok
+test validation::spatial_index::tests::grid_cell_range_rejects_non_finite_and_inverted_bounds ... ok
+test validation::spatial_index::tests::invalid_cell_size_falls_back_to_default ... ok
+test validation::spatial_index::tests::invalid_entries_land_in_fallback_and_are_returned_unconditionally_by_query ... ok
+test validation::spatial_index::tests::is_js_safe_integer_matches_number_is_safe_integer_bound ... ok
+test validation::spatial_index::tests::matches_false_on_length_mismatch ... ok
+test validation::spatial_index::tests::matches_uses_reference_identity_not_structural_equality ... ok
+test validation::spatial_index::tests::query_and_add_never_mutate_self ... ok
+test validation::spatial_index::tests::query_with_bounds_prunes_far_entries_but_keeps_touching_ones ... ok
+test validation::spatial_index::tests::query_without_bounds_returns_every_entry_in_ordinal_order ... ok
+test transforms::flattening::vector_tests::ellipse_sample_points_matches_ts_production_oracle ... ok
+test transforms::flattening::vector_tests::arc_sample_bulge_points_matches_ts_production_oracle ... ok
+test transforms::flattening::vector_tests::arc_compute_sample_count_matches_ts_production_oracle ... ok
+test transforms::flattening::vector_tests::arc_sample_points_matches_ts_production_oracle ... ok
+test transforms::flattening::ellipse::unit_tests::sample_points_recursion_depth_cap_terminates_without_panicking ... ok
+test boundary::run_job::tests::cache_caps_and_thread_counts_preserve_result_error_order_and_hash_bytes ... ok
+
+test result: ok. 604 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 51.50s
+
+     Running tests/beam_state_vectors.rs (crates/irregular-nesting-native/target/release/deps/beam_state_vectors-f675f275d31d1489)
+
+running 7 tests
+test dedup_identity_is_independent_of_placement_insertion_order ... ok
+test vector_file_reports_at_least_500_total_cases ... ok
+test ring_key_values_match_ts_production_oracle ... ok
+test negative_zero_cases_match_ts_production_oracle_and_fold_to_the_comparison_key ... ok
+test from_input_raw_construction_matches_incremental_construction_for_the_same_geometry ... ok
+test ring_key_invariance_sweeps_hold_and_match_ts_production_oracle ... ok
+test state_chains_replay_incrementally_and_match_every_recorded_snapshot ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+     Running tests/cache_keys_vectors.rs (crates/irregular-nesting-native/target/release/deps/cache_keys_vectors-815d3ae4be9441f3)
+
+running 6 tests
+test pairwise_nfp_cache_key_matches_ts_production_oracle_over_the_full_matrix ... ok
+test geometry_cache_store_scenarios_match_ts_production_oracle_hit_miss_and_clear_sequences ... ok
+test total_vector_count_meets_the_task_spec_floor ... ok
+test inner_fit_bounds_cache_key_matches_ts_production_oracle_over_the_full_matrix ... ok
+test legal_placement_candidate_memo_key_matches_ts_production_oracle_over_the_full_matrix ... ok
+test transform_collision_geometry_cache_key_matches_ts_production_oracle_over_the_full_matrix ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/canonical_grid_vectors.rs (crates/irregular-nesting-native/target/release/deps/canonical_grid_vectors-474411b19bcbf99d)
+
+running 9 tests
+test compare_bigints_matches_oracle ... ok
+test to_grid_mm_and_from_grid_match_oracle ... ok
+test point_on_segment_matches_oracle ... ok
+test compare_ratios_matches_oracle ... ok
+test vector_file_header_records_generating_commit ... ok
+test cross_and_cross_sign_match_oracle ... ok
+test doubled_grid_area_to_mm2_matches_oracle ... ok
+test convex_hull_matches_oracle ... ok
+test area_and_winding_functions_match_oracle ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/canonical_json_vectors.rs (crates/irregular-nesting-native/target/release/deps/canonical_json_vectors-05c7839cc916ab12)
+
+running 10 tests
+test canonical_number_matches_oracle ... ok
+test strict_map_vectors_match_oracle ... ok
+test capacity_encoder_matches_oracle ... ok
+test header_records_generating_commit_and_meaningful_coverage ... ok
+test canonical_token_matches_oracle ... ok
+test canonical_entry_list_key_matches_oracle ... ok
+test canonical_record_matches_oracle ... ok
+test strict_encoder_matches_oracle ... ok
+test locale_compare_keys_matches_oracle_over_full_printable_ascii_range ... ok
+test periodic_encoder_matches_oracle ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/canonical_layout_vectors.rs (crates/irregular-nesting-native/target/release/deps/canonical_layout_vectors-85619874ae3284a3)
+
+running 4 tests
+test convex_pair_vectors_match_ts_production_oracle ... ok
+test vector_file_header_records_generating_commit_and_meaningful_coverage ... ok
+test grid_pair_vectors_match_ts_production_oracle ... ok
+test layout_vectors_match_ts_production_oracle ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+
+     Running tests/capacity_core_vectors.rs (crates/irregular-nesting-native/target/release/deps/capacity_core_vectors-f0415d9d0d7c22f5)
+
+running 5 tests
+test endpoint_comparator_vectors_match ... ok
+test comparator_vectors_match ... ok
+test material_vectors_match ... ok
+test endpoint_vectors_match ... ok
+test preflight_vectors_match ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/capacity_search_vectors.rs (crates/irregular-nesting-native/target/release/deps/capacity_search_vectors-192289b0527d8b6f)
+
+running 3 tests
+test vector_file_reports_at_least_four_hundred_total_cases ... ok
+test full_run_cases_reproduce_ts_endpoints_and_trace ... ok
+test checkpoint_cases_reproduce_ts_hash_fields_and_resume_to_the_recorded_ground_truth ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.08s
+
+     Running tests/clipper_core_vectors.rs (crates/irregular-nesting-native/target/release/deps/clipper_core_vectors-f4b6fb6743eb0072)
+
+running 19 tests
+test offset_get_lowest_path_info_matches_oracle ... ok
+test point_in_polygon_and_path2_contains_path1_match_oracle ... ok
+test is_positive_matches_oracle ... ok
+test point64_utils_match_oracle ... ok
+test offset_get_unit_normal_matches_oracle ... ok
+test products_are_equal_matches_oracle ... ok
+test area_matches_oracle ... ok
+test get_closest_pt_on_segment_matches_oracle ... ok
+test offset_strip_duplicates_matches_oracle ... ok
+test rect64_utils_match_oracle ... ok
+test multiply_uint64_matches_oracle ... ok
+test cross_product_family_matches_oracle ... ok
+test get_bounds_matches_oracle ... ok
+test offset_area_and_sqr_match_oracle ... ok
+test offset_pre_cleanup_pipeline_matches_oracle ... ok
+test offset_ellipse_matches_oracle ... ok
+test round_to_even_check_cast_tri_sign_almost_zero_match_oracle ... ok
+test vectors_file_has_meta_and_expected_generating_commit_field ... ok
+test segs_intersect_and_get_line_intersect_pt_match_oracle ... ok
+
+test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/clipper_engine_vectors.rs (crates/irregular-nesting-native/target/release/deps/clipper_engine_vectors-ec5819a510dc57f0)
+
+running 4 tests
+test engine_module_path64_alias_matches_core ... ok
+test vector_file_header_records_generating_commit_and_meaningful_coverage ... ok
+test boolean_op_matches_oracle_vertex_for_vertex ... ok
+test boolean_op_with_poly_tree_matches_oracle_structure ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/clipper_offset_vectors.rs (crates/irregular-nesting-native/target/release/deps/clipper_offset_vectors-0f4549d1937dcc16)
+
+running 2 tests
+test vector_file_header_records_generating_commit_and_expected_vector_count ... ok
+test execute_matches_oracle_vertex_for_vertex_for_every_pending_vector ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/collision_builder_vectors.rs (crates/irregular-nesting-native/target/release/deps/collision_builder_vectors-0694727cc8017c0a)
+
+running 2 tests
+test vector_file_has_the_expected_shape_and_case_counts ... ok
+test build_piece_matches_the_oracle_for_every_vector ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/convex_vectors.rs (crates/irregular-nesting-native/target/release/deps/convex_vectors-5f4ab5b8e195c8f1)
+
+running 6 tests
+test are_disjoint_matches_oracle_for_every_vector ... ok
+test vector_file_header_records_generating_commit_and_meaningful_coverage ... ok
+test bounds_for_points_matches_oracle_for_every_vector ... ok
+test translate_polygon_with_bounds_matches_oracle_for_every_vector ... ok
+test validate_strict_boundary_matches_oracle_for_every_vector ... ok
+test compute_convex_hull_matches_oracle_for_every_vector ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/coordinator_vectors.rs (crates/irregular-nesting-native/target/release/deps/coordinator_vectors-379fd8fcd9bc01c8)
+
+running 8 tests
+test missing_source_geometry_returns_the_typed_compute_error ... ok
+test archive_ineligible_settings_return_a_typed_routing_error ... ok
+test short_side_profile_with_zero_placed_pieces_fails_closed_with_no_valid_result ... ok
+test history_mode_off_suppresses_state_snapshots_but_not_progress ... ok
+test two_small_squares_on_a_roomy_sheet_settle_through_the_shared_archive_winner_path ... ok
+test baseline_uncancelled_run_matches_ts_oracle_and_fires_the_nested_resume ... ok
+test cancellation_injected_during_the_nested_scheduler_resume_aborts_the_whole_job ... ok
+test full_job_vectors_match_ts_oracle ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.70s
+
+     Running tests/free_material_vectors.rs (crates/irregular-nesting-native/target/release/deps/free_material_vectors-e7654fc26e691f96)
+
+running 4 tests
+test total_vector_count_meets_the_task_spec_floor ... ok
+test extend_free_material_matches_ts_production_oracle_for_malformed_geometry ... ok
+test extend_free_material_matches_ts_production_oracle_over_parent_chains ... ok
+test compute_free_material_matches_ts_production_oracle_over_the_full_matrix ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/gap_family_vectors.rs (crates/irregular-nesting-native/target/release/deps/gap_family_vectors-f674bdd68a99c36e)
+
+running 5 tests
+test total_vector_count_meets_the_task_spec_floor ... ok
+test intrinsic_collision_family_key_matches_ts_production_oracle ... ok
+test group_intrinsic_collision_families_matches_ts_production_oracle ... ok
+test derive_canonical_intrinsic_gap_regions_matches_ts_production_oracle ... ok
+test candidate_contained_in_intrinsic_gap_matches_ts_production_oracle ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/hash_vectors.rs (crates/irregular-nesting-native/target/release/deps/hash_vectors-f7030480f67e8991)
+
+running 1 test
+test sha256_hex_matches_node_crypto_oracle ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/js_hypot_vectors.rs (crates/irregular-nesting-native/target/release/deps/js_hypot_vectors-8aa19f975d4fb105)
+
+running 1 test
+test standard_hypot_stays_within_the_documented_node_v8_envelope ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/js_number_vectors.rs (crates/irregular-nesting-native/target/release/deps/js_number_vectors-3734801e7ddec471)
+
+running 16 tests
+test math_min_all_matches_v8 ... ok
+test is_safe_integer_matches_v8 ... ok
+test number_to_js_string_matches_v8 ... ok
+test canonical_area_metric_matches_real_production_function ... ok
+test math_round_matches_v8 ... ok
+test fold_negative_zero_matches_v8_ternary_idiom ... ok
+test canonical_linear_metric_matches_real_production_function ... ok
+test vector_file_header_records_generating_commit ... ok
+test math_ceil_matches_v8 ... ok
+test math_min_pairs_match_v8 ... ok
+test math_trunc_matches_v8 ... ok
+test math_floor_matches_v8 ... ok
+test cmp_js_code_units_matches_v8_over_fixture_id_alphabet ... ok
+test math_max_pairs_match_v8 ... ok
+test math_sign_matches_v8 ... ok
+test math_max_all_matches_v8 ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/nfp_ifp_vectors.rs (crates/irregular-nesting-native/target/release/deps/nfp_ifp_vectors-bd6344c81e2ea14f)
+
+running 7 tests
+test vector_file_reports_at_least_500_total_cases_across_every_section ... ok
+test candidate_point_alternatives_ordering_matches_ts ... ok
+test cache_sequences_reproduce_the_recorded_hit_stale_recompute_pattern ... ok
+test rejection_cases_match_ts_error_taxonomy_and_abort_phases ... ok
+test ifp_bounds_matches_ts_computation ... ok
+test generated_candidates_match_ts_ordered_output ... ok
+test pairwise_nfp_matches_ts_computation ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/no_pool_global_rayon_containment.rs (crates/irregular-nesting-native/target/release/deps/no_pool_global_rayon_containment-f30fb10229f159b9)
+
+running 1 test
+test no_pool_execution_never_initializes_rayons_global_registry ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/periodic_vectors.rs (crates/irregular-nesting-native/target/release/deps/periodic_vectors-c122fb96c2ed0b2c)
+
+running 7 tests
+test crop_enumeration_preserves_serial_checkpoint_and_attempt_chronology ... ok
+test vector_file_metadata_is_present ... ok
+test phase_residual_cases_reproduce_ts_outcomes ... ok
+test seed_battery_cases_reproduce_ts_outcomes ... ok
+test continuation_ordering_cases_reproduce_ts_outcomes ... ok
+test catalog_cases_reproduce_ts_outcomes ... ok
+test portfolio_cases_reproduce_ts_outcomes ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/predicates_vectors.rs (crates/irregular-nesting-native/target/release/deps/predicates_vectors-81b189898d1245a2)
+
+running 1 test
+test orient2d_and_orientation_match_ts_production_oracle ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/reconstruction_vectors.rs (crates/irregular-nesting-native/target/release/deps/reconstruction_vectors-89a2f105af15cf8a)
+
+running 7 tests
+test archive_capacity_constant_matches_ts ... ok
+test endpoint_orders_cases_reproduce_ts_traversal_orders ... ok
+test specs_cases_reproduce_ts_role_order_and_family_counts ... ok
+test total_vector_count_meets_the_task_spec_floor ... ok
+test archive_cases_reproduce_ts_retained_hashes ... ok
+test order_key_cases_reproduce_ts_class_keys_and_effective_order_key ... ok
+test portfolio_cases_reproduce_ts_outcomes ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.28s
+
+     Running tests/scorers_vectors.rs (crates/irregular-nesting-native/target/release/deps/scorers_vectors-f7ec11173aa3b95d)
+
+running 6 tests
+test score_grid_canonicalization_matches_ts_oracle ... ok
+test placement_scorer_compare_scores_matches_ts_oracle ... ok
+test sort_pieces_for_nesting_matches_ts_oracle ... ok
+test placement_scorer_score_candidate_matches_ts_oracle ... ok
+test layout_scorer_compare_scores_matches_ts_oracle ... ok
+test layout_scorer_score_state_matches_ts_oracle ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/shared_archive_vectors.rs (crates/irregular-nesting-native/target/release/deps/shared_archive_vectors-bc32e4578defb678)
+
+running 5 tests
+test admission_cases_match_ts ... ok
+test ranking_comparator_cases_match_ts ... ok
+test checkpoint_chronology_cases_match_ts ... ok
+test evaluation_cap_cases_match_ts ... ok
+test full_portfolio_cases_match_ts ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.04s
+
+     Running tests/short_side_vectors.rs (crates/irregular-nesting-native/target/release/deps/short_side_vectors-c66d35af0bccb71e)
+
+running 4 tests
+test axes_cases_reproduce_ts_axes_and_span_bit_exact ... ok
+test pair_fold_cases_reproduce_ts_trace_exactly ... ok
+test observer_cases_reproduce_ts_status_and_ranking_exactly ... ok
+test contact_strip_cases_reproduce_ts_trace_exactly ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+
+     Running tests/strict_decoder_vectors.rs (crates/irregular-nesting-native/target/release/deps/strict_decoder_vectors-9afe2ab232d8d87a)
+
+running 14 tests
+test transform_order_cases_match_ts ... ok
+test envelope_cases_match_ts ... ok
+test metric_rounding_cases_match_ts ... ok
+test total_vector_count_meets_floor ... ok
+test deadline_cases_match_ts ... ok
+test pareto_cases_match_ts ... ok
+test no_timing_strict_scoring_fixture_is_semantically_equal_at_one_two_four_and_eight_threads ... ok
+test measure_completed_layout_cases_match_ts ... ok
+test budget_cap_cases_match_ts ... ok
+test checkpoint_integrity_hash_matches_ts_after_spatial_index_continuation_identity_fix ... ok
+test decode_cases_match_ts ... ok
+test checkpoint_cases_match_ts ... ok
+test no_timing_parallel_scoring_matches_the_serial_authority_for_every_decoder_mode ... ok
+test no_timing_parallel_scoring_preserves_cap_and_checkpoint_boundaries ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.76s
+
+     Running tests/thread_equality.rs (crates/irregular-nesting-native/target/release/deps/thread_equality-bb520a7658f3e6bc)
+
+running 6 tests
+test canonical_semantic_bytes_sort_object_fields_and_preserve_timing_field_presence ... ok
+test canonical_semantic_bytes_preserve_semantic_values_and_normalize_only_measurements ... ok
+test two_piece_fixture_is_thread_count_invariant ... ok
+test four_piece_fixture_is_thread_count_invariant ... ok
+test eight_piece_fixture_is_thread_count_invariant ... ok
+test twenty_piece_fixture_is_thread_count_invariant has been running for over 60 seconds
+test twenty_piece_fixture_is_thread_count_invariant ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 75.33s
+
+     Running tests/transforms_vectors.rs (crates/irregular-nesting-native/target/release/deps/transforms_vectors-6129ad10648e093b)
+
+running 2 tests
+test transform_and_snap_point_matches_ts_production_oracle_over_real_and_synthetic_rings ... ok
+test generate_transforms_matches_ts_production_oracle_over_the_full_matrix ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/validation_vectors.rs (crates/irregular-nesting-native/target/release/deps/validation_vectors-83cb62876b5d8062)
+
+running 5 tests
+test empty_index_helper_matches_ts_oracle_shape ... ok
+test total_vector_count_is_at_least_500 ... ok
+test sat_penetration_matches_ts_oracle ... ok
+test spatial_index_sequences_match_ts_oracle ... ok
+test assess_placement_matches_ts_oracle ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+   Doc-tests irregular_nesting_native
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+===== gate metadata =====
+End timestamp: 2026-08-03T18:18:44Z
+Duration milliseconds: 258849
+Exit code: 0
+Status: passed

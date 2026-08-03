@@ -1,0 +1,25 @@
+{
+  "name": "irregular-nesting-native",
+  "version": "0.1.0",
+  "filename": "irregular-nesting-native-0.1.0.tgz",
+  "files": [
+    {
+      "path": "LICENSES/clipper2-ts-BSL-1.0.txt"
+    },
+    {
+      "path": "NOTICE"
+    },
+    {
+      "path": "npm/index.cjs"
+    },
+    {
+      "path": "npm/irregular-nesting-native.darwin-arm64.node"
+    },
+    {
+      "path": "npm/target.cjs"
+    },
+    {
+      "path": "package.json"
+    }
+  ]
+}
