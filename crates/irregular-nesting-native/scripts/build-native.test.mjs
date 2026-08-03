@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
 import { createRequire } from 'node:module'
 import test from 'node:test'
 import { resolve } from 'node:path'
@@ -86,3 +87,44 @@ test('rejects unsupported targets before Cargo executes', () => {
     /unsupported native addon target "linux-arm64"/
   )
 })
+
+test(
+  'stages a macOS addon that dyld can load after copying the Cargo artifact',
+  { skip: process.platform !== 'darwin' },
+  () => {
+    const nativeTarget = resolveNativeTarget(process.platform, process.arch)
+    const build = spawnSync(
+      process.execPath,
+      [
+        resolve(CRATE_ROOT, 'scripts', 'build-native.mjs'),
+        '--profile',
+        'release',
+        '--target',
+        nativeTarget.cargoTarget
+      ],
+      { cwd: CRATE_ROOT, encoding: 'utf8' }
+    )
+    assert.equal(build.status, 0, build.stderr || build.stdout)
+
+    const stagedPath = resolve(
+      CRATE_ROOT,
+      'npm',
+      stagedAddonFileName(nativeTarget.platform, nativeTarget.arch)
+    )
+    const signature = spawnSync('codesign', ['-dvvv', stagedPath], {
+      cwd: CRATE_ROOT,
+      encoding: 'utf8'
+    })
+    assert.equal(signature.status, 0, signature.stderr || signature.stdout)
+    assert.doesNotMatch(signature.stderr, /linker-signed/)
+
+    const load = spawnSync(
+      process.execPath,
+      ['-e', "require('./npm/index.cjs'); process.stdout.write('loaded')"],
+      { cwd: CRATE_ROOT, encoding: 'utf8' }
+    )
+    assert.equal(load.signal, null, `addon load terminated by ${String(load.signal)}`)
+    assert.equal(load.status, 0, load.stderr || load.stdout)
+    assert.equal(load.stdout, 'loaded')
+  }
+)

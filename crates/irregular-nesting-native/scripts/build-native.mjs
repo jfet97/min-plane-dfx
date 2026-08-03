@@ -68,6 +68,11 @@ function stageAddonForTarget(profile, nativeTarget) {
   const destPath = join(npmDir, destFileName)
   copyFileSync(builtPath, destPath)
   console.log(`[build-native] copied ${builtPath} -> ${destPath}`)
+
+  if (process.platform === 'darwin' && nativeTarget.platform === 'darwin') {
+    execFileSync('codesign', ['--force', '--sign', '-', destPath], { stdio: 'inherit' })
+    console.log(`[build-native] ad-hoc signed ${destPath}`)
+  }
 }
 
 function main() {
