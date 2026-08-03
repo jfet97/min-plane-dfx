@@ -1745,148 +1745,7 @@ fn crop_coordinates(
         .collect()
 }
 
-/// Bounded chunk width for the parallel per-crop dispatch below. Mirrors
-/// `search::strict_decoder::STRICT_SCORING_CHUNK_SIZE`'s
-/// replay-each-chunk-before-dispatching-the-next pattern: at most one
-/// chunk's crop precursors are ever live, and the coordinator observes the
-/// cooperative-cancellation checkpoint once per chunk boundary.
-const PERIODIC_CROP_CHUNK_SIZE: usize = 32;
-
-/// One crop of the fixed `(rows 1..=q) x (Row, Column) x (corner 0..4)`
-/// enumeration. The position in that exact nesting order is the crop's
-/// stable source ordinal; every replay decision below (attempt accounting,
-/// first-ordinal error selection, first-occurrence identity dedup, output
-/// vector order) walks this order, never completion order.
-#[derive(Clone, Copy)]
-struct PeriodicCropSpec {
-    rows: i64,
-    columns: i64,
-    traversal: IntrinsicPeriodicCropTraversal,
-    corner: u8,
-}
-
-/// A surviving crop's pure computation result, produced on a worker and
-/// consumed by the serial replay. Carries everything the replay needs to
-/// build the final `IntrinsicPeriodicSeed` without recomputation; the
-/// `remaining_family_members` clone stays in the replay so it is allocated
-/// only for crops that actually win dedup, exactly as the serial loop did.
-struct PeriodicCropPrecursor {
-    identity: String,
-    normalized: Vec<IrregularPlacedPiece>,
-    component_count: f64,
-    isolated_piece_count: f64,
-    largest_component_size: f64,
-    maximum_side_mm: f64,
-    envelope_area_mm2: f64,
-    envelope_span_mm: f64,
-    exact_envelope: IntrinsicPeriodicExactEnvelope,
-}
-
-/// The pure per-crop payload (`PAR-PERIOD-01`): coordinate construction,
-/// incremental sheetless-legality placement build, bottom-left
-/// normalization, canonical identity, topology, envelope, and bounds --
-/// verified free of shared mutable state, caches, clocks, and control
-/// observation, so it may run on any thread. `Err` is the exact geometry
-/// error the serial loop's `?` would have propagated; the replay reproduces
-/// the serial short-circuit by returning the lowest-ordinal error and never
-/// dispatching later chunks.
-fn compute_periodic_crop(
-    cell: &IntrinsicPeriodicCell,
-    family_members: &[IrregularPreparedPiece],
-    v1: &GridPoint,
-    v2: &GridPoint,
-    q: i64,
-    member_count: usize,
-    spec: &PeriodicCropSpec,
-) -> Result<Option<PeriodicCropPrecursor>, IntrinsicPeriodicError> {
-    let coordinates = crop_coordinates(spec.rows, spec.columns, q, spec.traversal, spec.corner);
-    let mut placed: Vec<IrregularPlacedPiece> = Vec::new();
-    let mut source_index: usize = 0;
-    let mut legal = true;
-    'coord: for coordinate in &coordinates {
-        for base in &cell.members {
-            let piece = match family_members.get(source_index) {
-                Some(value) => value,
-                None => break,
-            };
-            let base_point = match grid_point(base.point) {
-                Some(value) => value,
-                None => {
-                    legal = false;
-                    break;
-                }
-            };
-            let point = from_grid_point(&GridPoint {
-                x: &base_point.x
-                    + &(BigInt::from(coordinate.row) * &v1.x)
-                    + &(BigInt::from(coordinate.column) * &v2.x),
-                y: &base_point.y
-                    + &(BigInt::from(coordinate.row) * &v1.y)
-                    + &(BigInt::from(coordinate.column) * &v2.y),
-            });
-            let actual_geometry = geometry_for_piece(&base.geometry, piece);
-            if !check_sheetless(&placed, &actual_geometry, point)? {
-                legal = false;
-                break;
-            }
-            placed.push(make_placed(piece, &actual_geometry, point));
-            source_index += 1;
-        }
-        if !legal || source_index >= (q as usize) * member_count {
-            break 'coord;
-        }
-    }
-    if !legal || placed.len() != (q as usize) * member_count {
-        return Ok(None);
-    }
-    let normalized = normalize_placed_bottom_left(&placed);
-    let identity = canonical_collision_layout_identity(&normalized);
-    let topology = measure_canonical_layout_topology(&normalized);
-    let envelope = measure_canonical_layout_envelope(&normalized);
-    let bounds = placed_bounds(&normalized);
-    let (identity, topology, envelope, bounds) = match (identity, topology, envelope, bounds) {
-        (Some(identity), Some(topology), Some(envelope), Some(bounds)) => {
-            (identity, topology, envelope, bounds)
-        }
-        _ => return Ok(None),
-    };
-    Ok(Some(PeriodicCropPrecursor {
-        identity,
-        component_count: topology.positive_contact_component_count,
-        isolated_piece_count: topology.isolated_piece_count,
-        largest_component_size: topology.largest_positive_contact_component_size,
-        maximum_side_mm: js_math::max(bounds.width, bounds.height),
-        envelope_area_mm2: bounds.width * bounds.height,
-        envelope_span_mm: bounds.width + bounds.height,
-        exact_envelope: IntrinsicPeriodicExactEnvelope {
-            maximum_side_grid: envelope.maximum_side_grid,
-            area_grid2: envelope.envelope_area_grid2,
-            span_grid: envelope.span_grid,
-        },
-        normalized,
-    }))
-}
-
 /// TS: `enumerateIntrinsicPeriodicCellCrops` (`CELLS:707-809`).
-///
-/// Parallel-dispatch structure (`PAR-PERIOD-01`, see
-/// `parallelism-inventory.md`): the admitted work is the complete fixed
-/// `(rows, traversal, corner)` crop list -- this function has no budget,
-/// quota, or early exit besides the geometry-error short-circuit, so exact
-/// serial admission is the whole list. Pure per-crop payloads run through
-/// the job-owned pool in bounded chunks; the coordinator replays each chunk
-/// in source-ordinal order (attempt accounting, lowest-ordinal error
-/// selection, semantically load-bearing first-occurrence identity dedup,
-/// output order) before dispatching the next. Cancellation is observed at
-/// chunk boundaries; an abort surfaces as the same whole-call `Err` as
-/// before, with no partial output. This is deliberately coarser than the
-/// serial loop's historical observation points (per rows value, per crop,
-/// and per coordinate inside each crop's legality build): worst-case
-/// uninterruptible work is one chunk of crops, each bounded by the
-/// family's piece count (q x member_count sheetless legality checks per
-/// crop, q itself at most the family size), millisecond-scale for real
-/// workloads. Abort classification and the no-partial-output contract are
-/// unchanged.
 pub fn enumerate_intrinsic_periodic_cell_crops(
     cell: &IntrinsicPeriodicCell,
     family_members: &[IrregularPreparedPiece],
@@ -1910,76 +1769,104 @@ pub fn enumerate_intrinsic_periodic_cell_crops(
     if q < 1 {
         return Ok(Vec::new());
     }
-
-    // Phase 1 (serial): the complete fixed crop list, in the exact
-    // enumeration order the serial loop used; position = source ordinal.
-    let mut specs: Vec<PeriodicCropSpec> = Vec::new();
+    let mut candidates: Vec<IntrinsicPeriodicSeed> = Vec::new();
+    let mut identities: std::collections::HashSet<String> = std::collections::HashSet::new();
     for rows in 1..=q {
+        checkpoint(control)?;
         let columns = (q + rows - 1) / rows;
         for traversal in [
             IntrinsicPeriodicCropTraversal::Row,
             IntrinsicPeriodicCropTraversal::Column,
         ] {
             for corner in 0..4u8 {
-                specs.push(PeriodicCropSpec {
-                    rows,
-                    columns,
-                    traversal,
-                    corner,
+                checkpoint(control)?;
+                on_crop_attempt();
+                let coordinates = crop_coordinates(rows, columns, q, traversal, corner);
+                let mut placed: Vec<IrregularPlacedPiece> = Vec::new();
+                let mut source_index: usize = 0;
+                let mut legal = true;
+                'coord: for coordinate in &coordinates {
+                    checkpoint(control)?;
+                    for base in &cell.members {
+                        let piece = match family_members.get(source_index) {
+                            Some(value) => value,
+                            None => break,
+                        };
+                        let base_point = match grid_point(base.point) {
+                            Some(value) => value,
+                            None => {
+                                legal = false;
+                                break;
+                            }
+                        };
+                        let point = from_grid_point(&GridPoint {
+                            x: &base_point.x
+                                + &(BigInt::from(coordinate.row) * &v1.x)
+                                + &(BigInt::from(coordinate.column) * &v2.x),
+                            y: &base_point.y
+                                + &(BigInt::from(coordinate.row) * &v1.y)
+                                + &(BigInt::from(coordinate.column) * &v2.y),
+                        });
+                        let actual_geometry = geometry_for_piece(&base.geometry, piece);
+                        if !check_sheetless(&placed, &actual_geometry, point)? {
+                            legal = false;
+                            break;
+                        }
+                        placed.push(make_placed(piece, &actual_geometry, point));
+                        source_index += 1;
+                    }
+                    if !legal || source_index >= (q as usize) * member_count {
+                        break 'coord;
+                    }
+                }
+                if !legal || placed.len() != (q as usize) * member_count {
+                    continue;
+                }
+                let normalized = normalize_placed_bottom_left(&placed);
+                let identity = canonical_collision_layout_identity(&normalized);
+                let topology = measure_canonical_layout_topology(&normalized);
+                let envelope = measure_canonical_layout_envelope(&normalized);
+                let bounds = placed_bounds(&normalized);
+                let (identity, topology, envelope, bounds) =
+                    match (identity, topology, envelope, bounds) {
+                        (Some(identity), Some(topology), Some(envelope), Some(bounds)) => {
+                            (identity, topology, envelope, bounds)
+                        }
+                        _ => continue,
+                    };
+                if identities.contains(&identity) {
+                    continue;
+                }
+                identities.insert(identity.clone());
+                candidates.push(IntrinsicPeriodicSeed {
+                    role: cell.role,
+                    cell_key: cell.canonical_key.clone(),
+                    placements: normalized,
+                    remaining_family_members: family_members
+                        [((q as usize) * member_count).min(family_members.len())..]
+                        .to_vec(),
+                    component_count: topology.positive_contact_component_count,
+                    isolated_piece_count: topology.isolated_piece_count,
+                    largest_component_size: topology.largest_positive_contact_component_size,
+                    maximum_side_mm: js_math::max(bounds.width, bounds.height),
+                    envelope_area_mm2: bounds.width * bounds.height,
+                    envelope_span_mm: bounds.width + bounds.height,
+                    exact_envelope: Some(IntrinsicPeriodicExactEnvelope {
+                        maximum_side_grid: envelope.maximum_side_grid,
+                        area_grid2: envelope.envelope_area_grid2,
+                        span_grid: envelope.span_grid,
+                    }),
+                    crop: IntrinsicPeriodicCropProvenance {
+                        rows: rows as f64,
+                        columns: columns as f64,
+                        traversal,
+                        corner,
+                    },
+                    canonical_key: identity,
                 });
             }
         }
     }
-
-    // Phases 2+3: chunked parallel compute, serial in-order replay.
-    let mut candidates: Vec<IntrinsicPeriodicSeed> = Vec::new();
-    let mut identities: std::collections::HashSet<String> = std::collections::HashSet::new();
-    crate::boundary::parallel::for_each_chunked_outcome(
-        &specs,
-        PERIODIC_CROP_CHUNK_SIZE,
-        || checkpoint(control),
-        |spec| compute_periodic_crop(cell, family_members, &v1, &v2, q, member_count, spec),
-        |_| on_crop_attempt(),
-        |spec, precursor| {
-            let PeriodicCropPrecursor {
-                identity,
-                normalized,
-                component_count,
-                isolated_piece_count,
-                largest_component_size,
-                maximum_side_mm,
-                envelope_area_mm2,
-                envelope_span_mm,
-                exact_envelope,
-            } = precursor;
-            if identities.contains(&identity) {
-                return;
-            }
-            identities.insert(identity.clone());
-            candidates.push(IntrinsicPeriodicSeed {
-                role: cell.role,
-                cell_key: cell.canonical_key.clone(),
-                placements: normalized,
-                remaining_family_members: family_members
-                    [((q as usize) * member_count).min(family_members.len())..]
-                    .to_vec(),
-                component_count,
-                isolated_piece_count,
-                largest_component_size,
-                maximum_side_mm,
-                envelope_area_mm2,
-                envelope_span_mm,
-                exact_envelope: Some(exact_envelope),
-                crop: IntrinsicPeriodicCropProvenance {
-                    rows: spec.rows as f64,
-                    columns: spec.columns as f64,
-                    traversal: spec.traversal,
-                    corner: spec.corner,
-                },
-                canonical_key: identity,
-            });
-        },
-    )?;
     Ok(candidates)
 }
 
@@ -3751,185 +3638,4 @@ pub fn rank_intrinsic_periodic_cells(
 ) -> Vec<IntrinsicPeriodicCell> {
     cells.sort_by(compare_cells);
     cells
-}
-
-#[cfg(test)]
-mod crop_dispatch_tests {
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    use std::sync::Mutex;
-
-    use super::{IntrinsicPeriodicCropTraversal, PeriodicCropSpec, PERIODIC_CROP_CHUNK_SIZE};
-    use crate::boundary::parallel::{for_each_chunked_outcome, JobPool};
-
-    fn specs(count: usize) -> Vec<PeriodicCropSpec> {
-        (0..count)
-            .map(|index| PeriodicCropSpec {
-                rows: index as i64,
-                columns: 1,
-                traversal: IntrinsicPeriodicCropTraversal::Row,
-                corner: 0,
-            })
-            .collect()
-    }
-
-    #[test]
-    fn crop_dispatch_runs_serially_without_an_installed_pool() {
-        let specs = specs(40);
-        let observed: Mutex<Vec<Option<usize>>> = Mutex::new(Vec::new());
-        let mut attempts = 0usize;
-        let mut replayed: Vec<i64> = Vec::new();
-        let outcome: Result<(), ()> = for_each_chunked_outcome(
-            &specs,
-            PERIODIC_CROP_CHUNK_SIZE,
-            || Ok(()),
-            |spec| {
-                observed.lock().unwrap().push(rayon::current_thread_index());
-                Ok(Some(spec.rows))
-            },
-            |_| attempts += 1,
-            |_, value| replayed.push(value),
-        );
-        assert!(outcome.is_ok());
-        assert_eq!(attempts, 40);
-        assert_eq!(replayed, (0..40).collect::<Vec<i64>>());
-        assert!(
-            observed.lock().unwrap().iter().all(|index| index.is_none()),
-            "without an installed job pool no crop may execute on any Rayon worker thread"
-        );
-    }
-
-    #[test]
-    fn crop_dispatch_uses_the_installed_pool_and_replays_in_ordinal_order() {
-        let job_pool = JobPool::new(Some(4));
-        let _guard = job_pool.install();
-        let specs = specs(40);
-        let observed: Mutex<Vec<Option<usize>>> = Mutex::new(Vec::new());
-        let mut replayed: Vec<i64> = Vec::new();
-        let outcome: Result<(), ()> = for_each_chunked_outcome(
-            &specs,
-            PERIODIC_CROP_CHUNK_SIZE,
-            || Ok(()),
-            |spec| {
-                observed.lock().unwrap().push(rayon::current_thread_index());
-                Ok(Some(spec.rows))
-            },
-            |_| {},
-            |_, value| replayed.push(value),
-        );
-        assert!(outcome.is_ok());
-        assert_eq!(
-            replayed,
-            (0..40).collect::<Vec<i64>>(),
-            "replay must walk source ordinals regardless of worker completion order"
-        );
-        assert!(
-            observed.lock().unwrap().iter().all(|index| index.is_some()),
-            "with an installed job pool every crop payload must run on a pool worker"
-        );
-    }
-
-    #[test]
-    fn crop_dispatch_replays_each_chunk_before_dispatching_the_next() {
-        let job_pool = JobPool::new(Some(4));
-        let _guard = job_pool.install();
-        let specs = specs(PERIODIC_CROP_CHUNK_SIZE + 8);
-        let attempts = AtomicUsize::new(0);
-        let outcome: Result<(), ()> = for_each_chunked_outcome(
-            &specs,
-            PERIODIC_CROP_CHUNK_SIZE,
-            || Ok(()),
-            |spec| {
-                if spec.rows as usize >= PERIODIC_CROP_CHUNK_SIZE {
-                    assert!(
-                        attempts.load(Ordering::SeqCst) >= PERIODIC_CROP_CHUNK_SIZE,
-                        "a crop in chunk N+1 must never be computed before chunk N finished \
-                         its serial replay"
-                    );
-                }
-                Ok(Some(()))
-            },
-            |_| {
-                attempts.fetch_add(1, Ordering::SeqCst);
-            },
-            |_, ()| {},
-        );
-        assert!(outcome.is_ok());
-        assert_eq!(
-            attempts.load(Ordering::SeqCst),
-            PERIODIC_CROP_CHUNK_SIZE + 8
-        );
-    }
-
-    #[test]
-    fn crop_dispatch_selects_the_lowest_ordinal_error_and_counts_attempts_exactly() {
-        let job_pool = JobPool::new(Some(4));
-        let _guard = job_pool.install();
-        let specs = specs(PERIODIC_CROP_CHUNK_SIZE + 8);
-        let computed: Mutex<Vec<i64>> = Mutex::new(Vec::new());
-        let mut attempts = 0usize;
-        let mut replayed: Vec<i64> = Vec::new();
-        let outcome: Result<(), i64> = for_each_chunked_outcome(
-            &specs,
-            PERIODIC_CROP_CHUNK_SIZE,
-            || Ok(()),
-            |spec| {
-                computed.lock().unwrap().push(spec.rows);
-                match spec.rows {
-                    5 => Err(5),
-                    7 => Err(7),
-                    other => Ok(Some(other)),
-                }
-            },
-            |_| attempts += 1,
-            |_, value| replayed.push(value),
-        );
-        assert_eq!(
-            outcome,
-            Err(5),
-            "the lowest source ordinal's error must win regardless of completion order"
-        );
-        assert_eq!(
-            attempts, 6,
-            "attempt fires once per ordinal up to and including the erroring crop, never beyond"
-        );
-        assert_eq!(
-            replayed,
-            vec![0, 1, 2, 3, 4],
-            "only pre-error ordinals replay, in order"
-        );
-        let computed = computed.lock().unwrap();
-        assert!(
-            computed
-                .iter()
-                .all(|rows| (*rows as usize) < PERIODIC_CROP_CHUNK_SIZE),
-            "no crop from a chunk after the erroring chunk may ever be computed: {computed:?}"
-        );
-    }
-
-    #[test]
-    fn crop_dispatch_stops_at_a_failed_chunk_checkpoint() {
-        let specs = specs(PERIODIC_CROP_CHUNK_SIZE * 3);
-        let mut checkpoints = 0usize;
-        let mut attempts = 0usize;
-        let outcome: Result<(), &'static str> = for_each_chunked_outcome(
-            &specs,
-            PERIODIC_CROP_CHUNK_SIZE,
-            || {
-                checkpoints += 1;
-                if checkpoints > 1 {
-                    Err("aborted")
-                } else {
-                    Ok(())
-                }
-            },
-            |_| Ok(Some(())),
-            |_| attempts += 1,
-            |_, ()| {},
-        );
-        assert_eq!(outcome, Err("aborted"));
-        assert_eq!(
-            attempts, PERIODIC_CROP_CHUNK_SIZE,
-            "cancellation at a chunk boundary must stop before any further crop is attempted"
-        );
-    }
 }

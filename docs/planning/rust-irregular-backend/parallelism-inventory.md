@@ -9,12 +9,15 @@ parallelization boundaries"), read together with §13 ("Cache architecture for t
 multithreading") and §19 (the preregistered performance contract).
 
 Implemented Rayon sites as of the native parallelism optimization pass
-(2026-08-02): PAR-GEOM-01 (`result/coordinator.rs`, piece preparation),
-PAR-CACHE-01/PAR-NFP-01 (`nfp_ifp/boundary_core.rs`, NFP miss precompute),
-PAR-STRICT-01 (`search/strict_decoder.rs`, chunked candidate scoring, retained
-by PR29), PAR-PERIOD-01 (`archive/periodic_cells.rs`, chunked crop
-enumeration), and PAR-NFP-02 (`nfp_ifp/candidates.rs`, chunked per-point
-legality). All of them route through the job-owned pool via
+(2026-08-02), including its post-merge correction: PAR-GEOM-01
+(`result/coordinator.rs`, piece preparation), PAR-CACHE-01/PAR-NFP-01
+(`nfp_ifp/boundary_core.rs`, NFP miss precompute), PAR-STRICT-01
+(`search/strict_decoder.rs`, chunked candidate scoring, retained by PR29), and
+PAR-NFP-02 (`nfp_ifp/candidates.rs`, chunked per-point legality).
+PAR-PERIOD-01 was measured in the optimization candidate but reverted after
+review proved that chunked crop dispatch coarsened the historical per-row,
+per-crop, and per-coordinate cancellation checkpoints. The retained sites
+route through the job-owned pool via
 `boundary::parallel` (`map_slice_with_job_pool` / `for_each_chunked_outcome` /
 their own `has_job_pool` branch); `tests/no_pool_global_rayon_containment.rs`
 proves the no-pool pipeline never touches Rayon's global registry, and
@@ -208,15 +211,6 @@ seam entirely (no Effect-TS in Rust), so both characterizations converge on one 
   `map_slice_with_job_pool` (explicit serial branch when no job pool is
   installed; ordinal-indexed reconstruction and first-ordinal error selection
   in the serial reduction that follows).
-- Implementation status (2026-08-02): **RETAINED** at
-  `crates/irregular-nesting-native/src/archive/periodic_cells.rs`
-  (`compute_periodic_crop` + the shared
-  `boundary::parallel::for_each_chunked_outcome` driver): the complete fixed
-  `(rows, traversal, corner)` crop list is the admitted set (the function has
-  no internal budget or quota), crops dispatch in bounded chunks of 32 with a
-  serial checkpoint per chunk boundary, and the serial replay owns crop
-  attempt accounting, lowest-ordinal error selection, the semantically
-  load-bearing first-occurrence identity dedup, and output order.
 
 **PAR-GEOM-02 — Curve flattening within one piece.** Priority: LOW.
 - Description: `ArcFlattening`/`EllipseFlattening` per-segment point generation within one
@@ -1196,14 +1190,22 @@ Priority: MEDIUM (part of the 14.4% search/decoders share).
   dedup and build `candidates` in the documented order — "first triple-loop iteration to
   reach a given canonical identity wins" is order-sensitive and must be resolved after the
   parallel phase.
-- Cancellation/budget interaction: none observed at this specific enumeration.
+- Cancellation/budget interaction: the Rust implementation has observable control
+  checkpoints at function entry, per row count, before every crop attempt, and for every
+  coordinate placed inside a crop. Whole-crop parallel evaluation cannot preserve that
+  serial chronology because the control object and attempt callback are coordinator-owned
+  `FnMut` state.
 - Cache interaction: none directly (invokes NFP/legality machinery owned by other clusters).
-- Risk class: RC-D.
+- Risk class: RC-D plus cancellation chronology.
 - Required tests: T-STD plus a two-combination-same-identity fixture asserting first-ordinal
-  wins at every thread count.
-- Target Rust module: proposed `periodic` (see §7).
-- Verdict: **SAFE-CANDIDATE** (conditions: ordinal enumeration serial-first, parallel
-  evaluation, serial dedup replay).
+  wins at every thread count, and an abort-at-checkpoint fixture that proves attempt
+  accounting remains at the historical observation point.
+- Target Rust module: `archive/periodic_cells.rs`.
+- Verdict: **REJECTED AFTER MEASUREMENT**. PR30's measured candidate evaluated whole crops in
+  32-item chunks, moving control observation from the historical per-row, per-crop, and
+  per-coordinate checkpoints to one checkpoint per chunk. The post-merge correction restores
+  serial crop enumeration. This site may be reconsidered only with a design that preserves
+  the exact checkpoint and callback chronology, not merely stable candidate replay.
 
 **PAR-PERIOD-02 — `deriveEdgeContactBasisCandidates`'s 4-level relation-discovery loop.**
 Priority: MEDIUM.

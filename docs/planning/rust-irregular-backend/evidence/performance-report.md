@@ -529,11 +529,24 @@ limited to the characterized `freeMaterialSliverMetric` hypot ULPs);
 
 ### Verdict
 
-RETAINED. Repeatable multi-thread end-to-end improvement far beyond
+The measurements retain their value as historical evidence for candidate
+`7fd9691`: repeatable multi-thread end-to-end improvement far beyond
 run-to-run noise on the primary gate (two independent batches, IQR under
 0.4 s per cell), no aggregate regression, peak RSS within the baseline
-envelope, byte-exact semantics on every measured sample and every
-maintained suite. The explicit 1-thread cell keeps a small residual
-overhead versus true no-pool serial execution (~1 s on C1); a singleton
-fast path in `map_slice_with_job_pool` is recorded in the parallelism
-inventory as a follow-up lead.
+envelope, and byte-exact layouts on every measured sample and maintained
+suite. They are not a current-source performance claim after the post-merge
+correction, because that candidate included PAR-PERIOD-01.
+
+Review of the merged implementation found that PAR-PERIOD-01 moved control
+observation from the historical per-row, per-crop, and per-coordinate
+checkpoints to one checkpoint per 32-crop chunk. Exact cancellation and
+attempt-accounting chronology is part of the semantic contract even though
+completed layouts remained byte-exact. The correction therefore restores
+serial periodic crop enumeration and retains the other measured changes:
+no-pool containment, requested/actual worker diagnostics,
+`JobPool::run_scoped`, the capacity successor identity cache, and
+PAR-NFP-02. Fresh measurements are required before attributing a production
+speedup to that corrected source. The explicit 1-thread candidate cell also
+kept a small residual overhead versus true no-pool serial execution (~1 s
+on C1); a singleton fast path in `map_slice_with_job_pool` remains recorded
+as a follow-up lead.
