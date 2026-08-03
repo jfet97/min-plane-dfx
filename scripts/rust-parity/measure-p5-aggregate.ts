@@ -942,6 +942,23 @@ function nativeThreadCounts(): NativeThreadCounts {
   }
 }
 
+export function validateNativeThreadCounts(
+  setting: RustThreadSetting,
+  counts: NativeThreadCounts
+): string | undefined {
+  if (
+    counts.used === undefined ||
+    counts.requested === undefined ||
+    counts.used !== counts.requested
+  ) {
+    return `actual Rayon pool size ${String(counts.used)} diverged from resolved requested count ${String(counts.requested)}`
+  }
+  if (typeof setting === 'number' && counts.requested !== setting) {
+    return `requested rust-${setting} cell but the native backend resolved ${counts.requested} threads`
+  }
+  return undefined
+}
+
 async function executeBackend(input: {
   readonly request: NestingRequest
   readonly backend: BenchmarkBackend
@@ -989,13 +1006,11 @@ async function executeBackend(input: {
       const threadCounts = nativeThreadCounts()
       // Benchmark-sample validity: a run whose actual built pool size
       // diverged from the resolved requested count (native pool-build
-      // fallback) or whose diagnostics did not report both counts cannot be
-      // attributed to its intended thread cell.
-      if (
-        threadCounts.used === undefined ||
-        threadCounts.requested === undefined ||
-        threadCounts.used !== threadCounts.requested
-      ) {
+      // fallback), whose diagnostics omitted either count, or whose resolved
+      // request differs from an explicit matrix cell cannot be attributed to
+      // its intended thread configuration.
+      const threadCountError = validateNativeThreadCounts(input.rustThreads, threadCounts)
+      if (threadCountError !== undefined) {
         return {
           elapsedMs,
           executedBackend: 'rust' as const,
@@ -1003,7 +1018,7 @@ async function executeBackend(input: {
           valid: false,
           qualityPassed: false,
           actualThreadCount: threadCounts.used,
-          error: `actual Rayon pool size ${String(threadCounts.used)} diverged from resolved requested count ${String(threadCounts.requested)}`
+          error: threadCountError
         }
       }
       return {

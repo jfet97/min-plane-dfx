@@ -20,14 +20,16 @@
 
 use std::collections::HashMap;
 use std::fs;
+use std::sync::Arc;
 
 use irregular_nesting_native::archive::periodic_cells::{
     compare_intrinsic_periodic_seed_envelope, compare_intrinsic_periodic_seed_envelope_area_first,
-    enumerate_intrinsic_periodic_cells, non_dominated_intrinsic_periodic_seeds,
-    rank_intrinsic_periodic_seeds, select_intrinsic_periodic_seed_front,
-    IntrinsicPeriodicCatalogOptions, IntrinsicPeriodicCropProvenance,
+    enumerate_intrinsic_periodic_cell_crops, enumerate_intrinsic_periodic_cells,
+    non_dominated_intrinsic_periodic_seeds, rank_intrinsic_periodic_seeds,
+    select_intrinsic_periodic_seed_front, IntrinsicPeriodicBaseMember,
+    IntrinsicPeriodicCatalogOptions, IntrinsicPeriodicCell, IntrinsicPeriodicCropProvenance,
     IntrinsicPeriodicCropTraversal, IntrinsicPeriodicExactEnvelope, IntrinsicPeriodicRole,
-    IntrinsicPeriodicSeed, PeriodicRunContext,
+    IntrinsicPeriodicSeed, IntrinsicPeriodicVector, PeriodicRunContext,
 };
 use irregular_nesting_native::archive::periodic_family::{
     continuations_for_execution, order_periodic_continuations_for_execution,
@@ -43,6 +45,9 @@ use irregular_nesting_native::domain::{
     IrregularPlacedPiece, IrregularPlacement, IrregularPlacementPolicyId, IrregularPoint,
     IrregularPolygon, IrregularPreparedPiece, IrregularTransform, IrregularTransformCandidate,
     IrregularTransformReason, PieceId, Rect, SheetSpec, SourceFileId, TransformedCollisionGeometry,
+};
+use irregular_nesting_native::nfp_ifp::{
+    NfpIfpAbortReason, NfpIfpCheckpointPhase, NfpIfpControl, NfpIfpControlAbortError,
 };
 use serde_json::Value;
 
@@ -413,6 +418,115 @@ fn dummy_placed_piece() -> IrregularPlacedPiece {
             bounds: bounds_of(&polygon.points),
         },
     }
+}
+
+fn synthetic_periodic_crop_fixture(
+    piece_count: usize,
+) -> (IntrinsicPeriodicCell, Vec<IrregularPreparedPiece>) {
+    let piece_id = PieceId::new("periodic-crop-piece");
+    let polygon = IrregularPolygon::new(vec![
+        IrregularPoint::new(0.0, 0.0),
+        IrregularPoint::new(1.0, 0.0),
+        IrregularPoint::new(1.0, 1.0),
+        IrregularPoint::new(0.0, 1.0),
+    ]);
+    let transform = IrregularTransformCandidate {
+        index: 0.0,
+        rotation_deg: 0.0,
+        mirrored: false,
+        reason: IrregularTransformReason::Configured,
+    };
+    let prepared = IrregularPreparedPiece {
+        piece_id: Some(piece_id.clone()),
+        interchangeability_key: None,
+        source: imported_piece(&piece_id),
+        allow_mirror: false,
+        collision_geometry: CollisionGeometry {
+            source_piece_id: piece_id.clone(),
+            source_bounds: bounds_of(&polygon.points),
+            sampled_points: polygon.points.clone(),
+            convex_hull: polygon.clone(),
+            collision_polygon: polygon.clone(),
+            placement_reference: IrregularPoint::new(0.0, 0.0),
+            diagnostics: vec![],
+        },
+        transforms: vec![transform],
+        priority_order_key: None,
+    };
+    let geometry = TransformedCollisionGeometry {
+        source_piece_id: piece_id,
+        transform,
+        polygon: polygon.clone(),
+        bounds: bounds_of(&polygon.points),
+    };
+    let cell = IntrinsicPeriodicCell {
+        role: IntrinsicPeriodicRole::P1,
+        family_key: "periodic-crop-family".to_string(),
+        members: vec![IntrinsicPeriodicBaseMember {
+            piece: Arc::new(prepared.clone()),
+            geometry,
+            point: IrregularPoint::new(0.0, 0.0),
+        }],
+        v1: IntrinsicPeriodicVector { x: 2.0, y: 0.0 },
+        v2: IntrinsicPeriodicVector { x: 0.0, y: 2.0 },
+        determinant_grid2: "4000000".to_string(),
+        member_doubled_area_grid2: "2000000".to_string(),
+        density: 0.25,
+        envelope_maximum_side_mm: 1.0,
+        hull_waste_ratio: 0.0,
+        shared_boundary_length_mm: 0.0,
+        infinite_far_proof: true,
+        three_by_three_lattice_legal: true,
+        three_by_three_centre_contact_complete: true,
+        basis_provenance: None,
+        canonical_key: "periodic-crop-cell".to_string(),
+    };
+    (cell, vec![prepared; piece_count])
+}
+
+#[test]
+fn crop_enumeration_preserves_serial_checkpoint_and_attempt_chronology() {
+    let (cell, pieces) = synthetic_periodic_crop_fixture(5);
+    let mut checkpoint_count = 0usize;
+    let mut attempt_count = 0usize;
+    let result = {
+        let mut abort_on_third = |_phase: NfpIfpCheckpointPhase| {
+            checkpoint_count += 1;
+            if checkpoint_count == 3 {
+                Err(NfpIfpControlAbortError {
+                    reason: NfpIfpAbortReason::Cancelled,
+                    message: "abort on third checkpoint".to_string(),
+                })
+            } else {
+                Ok(())
+            }
+        };
+        let mut control: Option<&mut dyn NfpIfpControl> = Some(&mut abort_on_third);
+
+        enumerate_intrinsic_periodic_cell_crops(
+            &cell,
+            &pieces,
+            &mut || attempt_count += 1,
+            &mut control,
+        )
+    };
+
+    assert!(matches!(
+        result,
+        Err(
+            irregular_nesting_native::archive::periodic_cells::IntrinsicPeriodicError::Abort(
+                NfpIfpControlAbortError {
+                    reason: NfpIfpAbortReason::Cancelled,
+                    ..
+                }
+            )
+        )
+    ));
+    assert_eq!(checkpoint_count, 3);
+    assert_eq!(
+        attempt_count, 0,
+        "the third historical checkpoint occurs before the first crop attempt"
+    );
 }
 
 fn synthetic_continuation(entry: &Value) -> IntrinsicPeriodicContinuation {

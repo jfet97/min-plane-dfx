@@ -1,10 +1,17 @@
 # Native parallelism follow-up evidence (2026-08-02)
 
-Portable summaries for the retained optimization pass on
+Portable summaries for the measured optimization candidate on
 `feat/native-parallelism-optimization` (base `main` @ `6a40af5`): the
 PAR-PERIOD-01 periodic crop seam, the PAR-NFP-02 per-point legality seam,
 `JobPool::run_scoped`, the capacity successor identity cache, and the
 no-pool containment plus requested/actual thread diagnostics hardening.
+
+These files are immutable historical performance evidence for candidate
+`7fd9691`, not a current-source benchmark. A post-merge review found that
+PAR-PERIOD-01 coarsened the historical cancellation and attempt-accounting
+chronology, so the correction restores serial periodic crop enumeration.
+The other candidate changes remain. Fresh measurements are required before
+claiming that the corrected production source retains these exact speedups.
 
 ## Experiment identity
 

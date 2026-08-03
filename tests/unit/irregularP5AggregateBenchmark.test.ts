@@ -98,6 +98,24 @@ describe('P5 aggregate benchmark contract', () => {
     })
   })
 
+  it('rejects an explicit Rust thread cell when diagnostics report another requested count', async () => {
+    const benchmarkModule =
+      (await import('../../scripts/rust-parity/measure-p5-aggregate.js')) as unknown as {
+        validateNativeThreadCounts?: (
+          setting: RustThreadSetting,
+          counts: { readonly used: number | undefined; readonly requested: number | undefined }
+        ) => string | undefined
+      }
+
+    expect(benchmarkModule.validateNativeThreadCounts).toBeTypeOf('function')
+    expect(benchmarkModule.validateNativeThreadCounts?.(1, { used: 15, requested: 15 })).toContain(
+      'rust-1'
+    )
+    expect(
+      benchmarkModule.validateNativeThreadCounts?.('default', { used: 15, requested: 15 })
+    ).toBeUndefined()
+  })
+
   it('rejects invalid or non-executed samples before calculating ratios', () => {
     const samples: ReadonlyArray<BenchmarkSample> = [
       {
