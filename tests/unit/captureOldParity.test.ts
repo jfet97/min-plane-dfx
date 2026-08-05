@@ -2,7 +2,7 @@ import { execFile as execFileCallback } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { promisify } from 'node:util'
 import { afterEach, describe, expect, it } from 'vitest'
 
@@ -296,6 +296,90 @@ describe('old parity capture assembly', () => {
   it('validates fresh capture inputs while preserving the unavailable historical addon hash', async () => {
     await expect(
       validateFreshCaptureInputs('docs/artifacts/polygon-nesting-extraction-baseline')
+    ).resolves.toEqual({
+      historicalAddonSha256: '9fc447f80a820c60676eee62706694c7f7ac79092a66ac131ac50b4f216dec9b'
+    })
+  })
+
+  it('validates frozen capture inputs from a core.autocrlf checkout without converting bytes', async () => {
+    const root = await temporaryDirectory()
+    const source = join(root, 'source')
+    const checkout = join(root, 'checkout')
+    const corpusDirectory = 'docs/artifacts/polygon-nesting-extraction-baseline'
+    await execFile('git', ['clone', '--quiet', resolve('.'), source])
+    await writeFile(join(source, '.gitattributes'), await readFile('.gitattributes'))
+    await execFile('git', ['-C', source, 'config', 'user.email', 'test@example.invalid'])
+    await execFile('git', ['-C', source, 'config', 'user.name', 'Test'])
+    await execFile('git', ['-C', source, 'add', '.gitattributes'])
+    await execFile('git', [
+      '-C',
+      source,
+      'commit',
+      '--quiet',
+      '--allow-empty',
+      '-m',
+      'test frozen attributes'
+    ])
+    await execFile('git', ['clone', '--quiet', '--config', 'core.autocrlf=true', source, checkout])
+
+    await expect(
+      validateFreshCaptureInputs(join(checkout, corpusDirectory), checkout)
+    ).resolves.toEqual({
+      historicalAddonSha256: '9fc447f80a820c60676eee62706694c7f7ac79092a66ac131ac50b4f216dec9b'
+    })
+    const { stdout } = await execFile('git', [
+      '-C',
+      checkout,
+      'check-attr',
+      'text',
+      '--',
+      `${corpusDirectory}/SHA256SUMS`,
+      `${corpusDirectory}/gates/capacity-production-attempt-1.log`,
+      'package.json'
+    ])
+    expect(stdout).toContain(`${corpusDirectory}/SHA256SUMS: text: unset`)
+    expect(stdout).toContain(
+      `${corpusDirectory}/gates/capacity-production-attempt-1.log: text: unset`
+    )
+    expect(stdout).toContain('package.json: text: unspecified')
+  })
+
+  it('extracts the historical addon hash from a CRLF legal manifest', async () => {
+    const root = await temporaryDirectory()
+    const source = join(root, 'source')
+    const checkout = join(root, 'checkout')
+    const corpusDirectory = 'docs/artifacts/polygon-nesting-extraction-baseline'
+    const legalManifestPath = join(checkout, corpusDirectory, 'legal-and-addon.sha256')
+    const checksumPath = join(checkout, corpusDirectory, 'SHA256SUMS')
+    await execFile('git', ['clone', '--quiet', resolve('.'), source])
+    await writeFile(join(source, '.gitattributes'), await readFile('.gitattributes'))
+    await execFile('git', ['-C', source, 'config', 'user.email', 'test@example.invalid'])
+    await execFile('git', ['-C', source, 'config', 'user.name', 'Test'])
+    await execFile('git', ['-C', source, 'add', '.gitattributes'])
+    await execFile('git', [
+      '-C',
+      source,
+      'commit',
+      '--quiet',
+      '--allow-empty',
+      '-m',
+      'test frozen attributes'
+    ])
+    await execFile('git', ['clone', '--quiet', source, checkout])
+    const legalManifest = await readFile(legalManifestPath, 'utf8')
+    const crlfLegalManifest = legalManifest.replaceAll('\n', '\r\n')
+    const checksumText = await readFile(checksumPath, 'utf8')
+    await writeFile(legalManifestPath, crlfLegalManifest)
+    await writeFile(
+      checksumPath,
+      checksumText.replace(
+        `${sha256(legalManifest)}  ${corpusDirectory}/legal-and-addon.sha256`,
+        `${sha256(crlfLegalManifest)}  ${corpusDirectory}/legal-and-addon.sha256`
+      )
+    )
+
+    await expect(
+      validateFreshCaptureInputs(join(checkout, corpusDirectory), checkout)
     ).resolves.toEqual({
       historicalAddonSha256: '9fc447f80a820c60676eee62706694c7f7ac79092a66ac131ac50b4f216dec9b'
     })

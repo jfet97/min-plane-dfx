@@ -135,7 +135,7 @@ async function validateCompleteChecksumManifest(
   await validateHashManifest(hashRoot, checksumText)
   const listed = new Set(
     checksumText
-      .split('\n')
+      .split(/\r?\n/)
       .filter(Boolean)
       .map((line) => /^([0-9a-f]{64})  (.+)$/.exec(line)?.[2])
   )
@@ -194,7 +194,7 @@ export async function validateFreshCaptureInputs(
       'legal-and-addon.sha256'
     )
   ).toString('utf8')
-  const entries = legalManifest.split('\n').filter(Boolean)
+  const entries = legalManifest.split(/\r?\n/).filter(Boolean)
   const historicalAddon = entries.find((entry) => entry.endsWith('.node'))
   const historicalAddonSha256 = /^([0-9a-f]{64})  /.exec(historicalAddon ?? '')?.[1]
   if (historicalAddonSha256 === undefined) {

@@ -196,6 +196,18 @@ describe('migration corpus export helpers', () => {
     )
   })
 
+  it('accepts canonical CRLF hash manifests without relaxing the two-space separator', async () => {
+    const root = await temporaryDirectory()
+    const source = 'frozen bytes\n'
+    await writeFile(join(root, 'source.txt'), source)
+    const hash = createHash('sha256').update(source).digest('hex')
+
+    await expect(validateHashManifest(root, `${hash}  source.txt\r\n`)).resolves.toBe(1)
+    await expect(validateHashManifest(root, `${hash} source.txt\r\n`)).rejects.toThrow(
+      /invalid hash manifest line/
+    )
+  })
+
   it('rejects a canonical artifact replaced by an absolute symlink outside the evidence root', async () => {
     const root = await temporaryDirectory()
     const externalRoot = await temporaryDirectory()

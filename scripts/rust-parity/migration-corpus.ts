@@ -382,7 +382,7 @@ export function validateNativePackageManifest(value: unknown): void {
 }
 
 export async function validateHashManifest(rootDirectory: string, text: string): Promise<number> {
-  const lines = text.split('\n').filter((line) => line.length > 0)
+  const lines = text.split(/\r?\n/).filter((line) => line.length > 0)
   const seen = new Set<string>()
   for (const line of lines) {
     const match = /^([0-9a-f]{64})  (.+)$/.exec(line)
