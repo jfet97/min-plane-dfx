@@ -385,6 +385,51 @@ describe('old parity capture assembly', () => {
     })
   })
 
+  it('disables autocrlf while creating the detached accepted-engine worktree', async () => {
+    const root = await temporaryDirectory()
+    const source = join(root, 'source')
+    const convertedWorktree = join(root, 'converted-engine')
+    const portableWorktree = join(root, 'portable-engine')
+    const corpusDirectory = 'docs/artifacts/polygon-nesting-extraction-baseline'
+    await execFile('git', ['clone', '--quiet', resolve('.'), source])
+    await execFile('git', ['-C', source, 'config', 'core.autocrlf', 'true'])
+    await execFile('git', [
+      '-C',
+      source,
+      'worktree',
+      'add',
+      '--detach',
+      convertedWorktree,
+      ACCEPTED_ENGINE_REVISION
+    ])
+
+    await expect(
+      validateFreshCaptureInputs(join(convertedWorktree, corpusDirectory), convertedWorktree)
+    ).rejects.toThrow(/hash mismatch/)
+    await execFile('git', ['-C', source, 'worktree', 'remove', '--force', convertedWorktree])
+    await execFile('git', [
+      '-C',
+      source,
+      '-c',
+      'core.autocrlf=false',
+      'worktree',
+      'add',
+      '--detach',
+      portableWorktree,
+      ACCEPTED_ENGINE_REVISION
+    ])
+
+    await expect(
+      validateFreshCaptureInputs(join(portableWorktree, corpusDirectory), portableWorktree)
+    ).resolves.toEqual({
+      historicalAddonSha256: '9fc447f80a820c60676eee62706694c7f7ac79092a66ac131ac50b4f216dec9b'
+    })
+    const workflow = await readFile('.github/workflows/capture-old-rust-parity.yml', 'utf8')
+    expect(workflow).toContain(
+      'git -c core.autocrlf=false worktree add --detach "$GITHUB_WORKSPACE/accepted-engine" "$ACCEPTED_ENGINE_SHA"'
+    )
+  })
+
   it('uses the supplied accepted-engine root for frozen source manifests', async () => {
     const root = await temporaryDirectory()
     await expect(

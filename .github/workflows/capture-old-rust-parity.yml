@@ -63,7 +63,7 @@ jobs:
       - name: Check out the accepted engine in a separate path
         shell: bash
         run: |
-          git worktree add --detach "$GITHUB_WORKSPACE/accepted-engine" "$ACCEPTED_ENGINE_SHA"
+          git -c core.autocrlf=false worktree add --detach "$GITHUB_WORKSPACE/accepted-engine" "$ACCEPTED_ENGINE_SHA"
           test "$(git -C "$GITHUB_WORKSPACE/accepted-engine" rev-parse HEAD)" = "$ACCEPTED_ENGINE_SHA"
           test "$(git -C "$GITHUB_WORKSPACE" cat-file -t "$SOURCE_PROVENANCE_SHA")" = commit
 
