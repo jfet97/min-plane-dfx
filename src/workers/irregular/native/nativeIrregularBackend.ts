@@ -651,6 +651,18 @@ function decodeNativeComputeResult(raw: unknown): IrregularComputeResult {
   return withNativeTraces(result, raw as NativeTraceFieldsJson)
 }
 
+/** Validates a successful raw N-API result envelope before it is archived. */
+export function validateNativeIrregularResultEnvelope(value: unknown): void {
+  if (typeof value !== 'object' || value === null) {
+    throw new Error('native result envelope must be an object')
+  }
+  const envelope = value as NativeEnvelope
+  if (envelope.ok !== true || envelope.result === undefined) {
+    throw new Error('native result envelope must be successful and contain a result')
+  }
+  decodeNativeComputeResult(envelope.result)
+}
+
 // ===========================================================================
 // Unified streamed event channel (`boundary::events`'s `NativeIrregularEvent`).
 // ===========================================================================
@@ -673,6 +685,29 @@ const NativeIrregularEventSchema = Schema.Union([
   })
 ])
 type NativeIrregularEvent = Schema.Schema.Type<typeof NativeIrregularEventSchema>
+
+/** Validates the complete native event sequence retained in a parity capture. */
+export function validateNativeIrregularEventSequence(events: ReadonlyArray<unknown>): void {
+  if (events.length === 0) throw new Error('native event sequence must not be empty')
+  for (const [index, value] of events.entries()) {
+    const event = Schema.decodeUnknownSync(NativeIrregularEventSchema)(value)
+    if (!Number.isSafeInteger(event.ordinal) || event.ordinal !== index) {
+      throw new Error('native event ordinals must be contiguous from zero')
+    }
+    if (event.kind === 'terminal' && index !== events.length - 1) {
+      throw new Error('native terminal event must be last')
+    }
+  }
+  const terminal = events.at(-1)
+  if (
+    typeof terminal !== 'object' ||
+    terminal === null ||
+    !('kind' in terminal) ||
+    terminal.kind !== 'terminal'
+  ) {
+    throw new Error('native event sequence must end with a terminal event')
+  }
+}
 
 type EventChannelState = 'open' | 'terminal-seen' | 'closed'
 

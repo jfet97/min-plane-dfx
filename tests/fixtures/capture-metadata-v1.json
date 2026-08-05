@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "acceptedEngineRevision": "5c72d8fca8e078b0a6e7d5f2515a8a0953475481",
+  "sourceProvenanceRevision": "e4f3608878611c002f343473fab72adc7d155f87",
+  "target": "x86_64-unknown-linux-gnu",
+  "toolchain": "1.95.0",
+  "artifactName": "old-rust-parity-capture-x86_64-unknown-linux-gnu",
+  "build": {
+    "profile": "release",
+    "features": []
+  },
+  "rustc": {
+    "identity": "rustc 1.95.0 (000000000 2026-03-12)",
+    "verbose": "rustc 1.95.0 (000000000 2026-03-12)\nbinary: rustc\ncommit-hash: 0000000000000000000000000000000000000000\nrelease: 1.95.0\n"
+  },
+  "cargo": {
+    "identity": "cargo 1.95.0 (000000000 2026-03-12)"
+  },
+  "sourceCargoLockSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "nativeDependencies": {
+    "entries": [{ "name": "napi", "version": "3.12.0" }],
+    "sha256": "8159b9dce744f77798c0f1d0fdbce7738d641d3e4bc6dc88039524d5f8592553"
+  },
+  "addon": {
+    "historicalSha256": "9fc447f80a820c60676eee62706694c7f7ac79092a66ac131ac50b4f216dec9b",
+    "freshSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "workflow": {
+    "repository": "owner/repository",
+    "ref": "refs/heads/main",
+    "sha": "cccccccccccccccccccccccccccccccccccccccc",
+    "runId": "1",
+    "runAttempt": "1"
+  },
+  "corpus": {
+    "manifestName": "migration-corpus.json",
+    "manifestSha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "sha256SumsSha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "rowIds": [
+      "triangle-20-2000x2700-compact",
+      "triangle-20-2000x2700-short-side",
+      "triangle-20-600x400-compact",
+      "triangle-20-600x400-short-side",
+      "triangle-20-300x300-compact",
+      "triangle-20-300x300-short-side",
+      "mixed-61-2000x2700-compact",
+      "mixed-61-2000x2700-short-side",
+      "mixed-61-600x400-compact",
+      "mixed-61-600x400-short-side",
+      "mixed-61-300x300-compact",
+      "mixed-61-300x300-short-side",
+      "shapes-17-2000x2700-compact",
+      "shapes-17-2000x2700-short-side",
+      "shapes-17-600x400-compact",
+      "shapes-17-600x400-short-side",
+      "shapes-17-300x300-compact",
+      "shapes-17-300x300-short-side"
+    ]
+  },
+  "raw": {
+    "version": 1,
+    "files": []
+  }
+}
