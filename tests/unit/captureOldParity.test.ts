@@ -1,7 +1,9 @@
+import { execFile as execFileCallback } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { promisify } from 'node:util'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import {
@@ -21,6 +23,7 @@ import {
   validateRawCaptureManifest
 } from '../../scripts/rust-parity/capture-old-parity.js'
 
+const execFile = promisify(execFileCallback)
 const temporaryDirectories: string[] = []
 
 async function temporaryDirectory(): Promise<string> {
@@ -312,6 +315,23 @@ describe('old parity capture assembly', () => {
     expect(workflow).toMatch(/tar --version.*GNU tar/)
     expect(workflow).toMatch(/GNU_TAR=.*gtar/)
     expect(workflow).toMatch(/"\$GNU_TAR" --sort=name --owner=0 --group=0 --numeric-owner/)
+  })
+
+  it('uses portable Node SHA-256 checksums in every workflow hash step', async () => {
+    const workflow = await readFile('.github/workflows/capture-old-rust-parity.yml', 'utf8')
+    const fixturePath = 'tests/fixtures/capture-metadata-v1.json'
+    const fixtureBytes = await readFile(fixturePath)
+
+    expect(workflow).not.toMatch(/\bshasum\b/)
+    expect(workflow.match(/scripts\/rust-parity\/sha256sum\.cjs/g)).toHaveLength(4)
+
+    const { stdout } = await execFile(process.execPath, [
+      'scripts/rust-parity/sha256sum.cjs',
+      fixturePath
+    ])
+    expect(stdout).toBe(
+      `${createHash('sha256').update(fixtureBytes).digest('hex')}  ${fixturePath}\n`
+    )
   })
 
   it('keeps the bundle inventory hashable after two finalize passes', async () => {

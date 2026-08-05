@@ -76,7 +76,7 @@ jobs:
           node --version > bundle/node-version.txt
           pnpm --version > bundle/pnpm-version.txt
           uname -a > bundle/host.txt
-          shasum -a 256 accepted-engine/crates/irregular-nesting-native/Cargo.lock > bundle/source-cargo-lock.sha256
+          node scripts/rust-parity/sha256sum.cjs accepted-engine/crates/irregular-nesting-native/Cargo.lock > bundle/source-cargo-lock.sha256
           git -C "$GITHUB_WORKSPACE" rev-parse HEAD > bundle/workflow-revision.txt
           git -C "$GITHUB_WORKSPACE" remote get-url origin > bundle/workflow-repository.txt
           printf '%s\n' "$GITHUB_WORKFLOW_REF" > bundle/workflow-ref.txt
@@ -99,7 +99,7 @@ jobs:
             > bundle/historical-addon-sha256.txt
           cp accepted-engine/docs/artifacts/polygon-nesting-extraction-baseline/migration-corpus.json bundle/migration-corpus.json
           cp accepted-engine/docs/artifacts/polygon-nesting-extraction-baseline/SHA256SUMS bundle/corpus-SHA256SUMS
-          shasum -a 256 bundle/migration-corpus.json bundle/corpus-SHA256SUMS > bundle/corpus-input-sha256s.txt
+          node scripts/rust-parity/sha256sum.cjs bundle/migration-corpus.json bundle/corpus-SHA256SUMS > bundle/corpus-input-sha256s.txt
 
       - name: Build the accepted old N-API adapter without features
         shell: bash
@@ -107,7 +107,7 @@ jobs:
           test "$(rustc -vV | awk '/^release: / {print $2}')" = "$RUST_VERSION"
           pnpm --dir accepted-engine exec node crates/irregular-nesting-native/scripts/build-native.mjs --release --target "$RUST_TARGET"
           cargo metadata --locked --format-version 1 --manifest-path accepted-engine/crates/irregular-nesting-native/Cargo.toml > bundle/native-cargo-metadata.json
-          shasum -a 256 accepted-engine/crates/irregular-nesting-native/npm/*.node > bundle/native-addon-sha256s.txt
+          node scripts/rust-parity/sha256sum.cjs accepted-engine/crates/irregular-nesting-native/npm/*.node > bundle/native-addon-sha256s.txt
           awk 'NR == 1 { print $1 }' bundle/native-addon-sha256s.txt > bundle/fresh-addon-sha256.txt
 
       - name: Build structured capture metadata input
@@ -204,7 +204,7 @@ jobs:
           fi
           "$GNU_TAR" --sort=name --owner=0 --group=0 --numeric-owner --mtime='UTC 1970-01-01' \
             -C capture -czf "$ARCHIVE_NAME" .
-          shasum -a 256 "$ARCHIVE_NAME" > "$ARCHIVE_NAME.sha256"
+          node scripts/rust-parity/sha256sum.cjs "$ARCHIVE_NAME" > "$ARCHIVE_NAME.sha256"
 
       - name: Upload immutable parity capture
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
