@@ -1,6 +1,3 @@
-crates/irregular-nesting-native/LICENSES/clipper2-ts-BSL-1.0.txt text eol=lf
-crates/irregular-nesting-native/NOTICE text eol=lf
 docs/artifacts/polygon-nesting-extraction-baseline/** -text
-crates/irregular-nesting-native/tests/vectors/** -text
 tests/fixtures/irregularSeventeenShapes/** -text
 tests/fixtures/irregularSheetInvariance/** -text

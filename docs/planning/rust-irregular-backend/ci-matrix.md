@@ -1,14 +1,12 @@
 # Rust Native CI Matrix
 
-**Status:** implemented workflow contract at `0fa19255e4c01bf5e7c113ed6779a6dc4eac2e7c`, with uncommitted changes.
+**Status:** archived embedded-Rust CI design. The Rust build, parity, and four-platform packaging workflows described below have been removed from this repository.
 
 ## Current verification update
 
-The workflow retains `pnpm install --frozen-lockfile --ignore-scripts` and uses explicit native build steps. It includes Rust format, strict Clippy, release Rust tests, required real-addon integration, Node/V8 hypot corpus verification, the scheduled/manual native quality-acceptance promotion gate, required and strict full differential modes, thread equality, and four packaged native-load targets.
+The remaining application workflow installs the exact private package from GitHub Packages using ephemeral runner authentication. Its native-package job verifies the external package allowlist and legal resources, then runs the real addon integration suite through Electron-as-Node. It does not build Rust or dispatch standalone parity.
 
-The packaged target matrix is Linux x64 on `ubuntu-24.04`, Windows x64 on `windows-latest`, macOS arm64 on `macos-15`, and macOS x64 on `macos-15-intel`. The package workflow explicitly runs `pnpm native:electron`, the native package contract suite, and the safe staging wrapper before Electron-builder. The wrapper restores the workspace link after packaging even when the build fails.
-
-The rebuilt local macOS arm64 artifact passed with a 46 MiB Asar containing only the 9 allowlisted native-package entries and an unpacked addon. Do not claim hosted success for the current unpushed matrix. Pushed runs `30600486816` and `30600486817` passed, but predate current packaging changes.
+The four native binaries are supplied by `@jfet07-polygon-labs/polygon-nesting@0.1.0`. Packaged application loading is verified locally against the registry package and its narrow Asar unpack rules.
 
 ## Historical design detail
 ## 1. What the prompt requires, verbatim

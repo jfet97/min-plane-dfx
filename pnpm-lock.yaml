@@ -33,8 +33,8 @@ importers:
         specifier: ^0.7.2
         version: 0.7.2
       irregular-nesting-native:
-        specifier: workspace:*
-        version: link:crates/irregular-nesting-native
+        specifier: npm:@jfet07-polygon-labs/polygon-nesting@0.1.0
+        version: '@jfet07-polygon-labs/polygon-nesting@0.1.0'
       robust-predicates:
         specifier: 3.0.3
         version: 3.0.3
@@ -97,9 +97,12 @@ importers:
         specifier: ^2.1.10
         version: 2.2.12(typescript@5.9.3)
 
-  crates/irregular-nesting-native: {}
-
 packages:
+
+  '@jfet07-polygon-labs/polygon-nesting@0.1.0':
+    resolution:
+      integrity: sha512-G2JAAjZ8D8q+8lA7SpZD2uGURQsdfDZB2W1UlInp2oMb/MQjp9HpKNt7/CAb/Dj9zyATzRrjVBlYSQr4uI/lPQ==
+      tarball: https://npm.pkg.github.com/download/@jfet07-polygon-labs/polygon-nesting/0.1.0/5d18869d132144b5ec47cee9650df229b2e2fa47
 
   7zip-bin@5.2.0:
     resolution: {integrity: sha512-ukTPVhqG4jNzMro2qA9HSCSSVJN3aN7tlb+hfqYCt3ER0yWroeA2VR38MNrOHLQ/cVj+DaIMad0kFCtWWowh/A==}
@@ -3130,6 +3133,8 @@ packages:
     engines: {node: '>= 10'}
 
 snapshots:
+
+  '@jfet07-polygon-labs/polygon-nesting@0.1.0': {}
 
   7zip-bin@5.2.0: {}
 

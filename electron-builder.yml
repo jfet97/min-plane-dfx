@@ -10,9 +10,9 @@ files:
   - package.json
 
 extraResources:
-  - from: crates/irregular-nesting-native/NOTICE
+  - from: node_modules/irregular-nesting-native/NOTICE
     to: LICENSES/irregular-nesting-native/NOTICE
-  - from: crates/irregular-nesting-native/LICENSES
+  - from: node_modules/irregular-nesting-native/LICENSES
     to: LICENSES/irregular-nesting-native/LICENSES
 
 # native addon binaries must remain outside app.asar for dlopen

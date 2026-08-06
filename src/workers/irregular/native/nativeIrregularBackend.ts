@@ -1,19 +1,18 @@
 /**
  * TS-side adapter for the `irregular-nesting-native` addon's real job
- * surface (`runIrregularJob`/`cancelIrregularJob`, `crates/irregular-nesting-native/src/boundary/job.rs`).
+ * surface (`runIrregularJob`/`cancelIrregularJob`, the package's `polygon-nesting-napi::job` module).
  *
  * Mirrors `computeIrregularNesting`'s own external contract (same
  * `NestingRequest` input, same `IrregularComputeResult` success shape) so the
  * one production call site (`nesting.worker.ts`'s `computeIrregularWorkerResult`)
- * can select between the two with a minimal branch, and so
- * `scripts/rust-parity/run-differential.ts` can run both backends
- * side-by-side over the same request. Unlike `computeIrregularNesting`, the
+ * can select between the two with a minimal branch. Unlike
+ * `computeIrregularNesting`, the
  * error channel here is already the terminal `WorkerResponseFailureError`
  * (not `IrregularComputeErrorType`) -- native failures never originate from
  * the TS `IrregularComputeErrorType` tagged union, so re-deriving one just to
  * immediately re-map it via `toIrregularWorkerFailure` would be pure
  * indirection. The Rust boundary's `BoundaryError.category` is already a
- * real `AppErrorCode` string (`crates/irregular-nesting-native/src/boundary/error.rs`'s
+ * real `AppErrorCode` string (the package's native error projection's
  * module doc: "category carries the real AppErrorCode string ... not a
  * placeholder"), so the mapping in this module is a validated pass-through,
  * not a second copy of the section-16 table.
@@ -130,7 +129,7 @@ export interface NativeIrregularBackendOptions {
 
 // ===========================================================================
 // Request encoding (TS NestingRequest -> the crate's `RequestDto` wire shape,
-// `crates/irregular-nesting-native/src/boundary/request.rs`).
+// the package's native request adapter).
 // ===========================================================================
 
 /**
@@ -185,7 +184,7 @@ function isAppErrorCode(value: string): value is AppErrorCode {
  * carries the exact `AppErrorCode` string and per-code context fields
  * `toIrregularWorkerFailure` (`nesting.worker.ts`) derives for the TS path,
  * transcribed and unit-tested on the Rust side
- * (`crates/irregular-nesting-native/src/boundary/error.rs`). Falls back to
+ * (the package's native error projection). Falls back to
  * `unknown_error` only for a category this TypeScript build does not
  * recognize -- constructing `WorkerResponseFailureError` with an
  * unrecognized `code` would itself throw (`code` is a `Schema.Literals`
@@ -551,7 +550,7 @@ function withNativeTraces(
 
 // ===========================================================================
 // Result decoding (the crate's `NativeIrregularComputeResult` wire shape,
-// `crates/irregular-nesting-native/src/boundary/result.rs`, -> TS
+// the package's native result projection, -> TS
 // `IrregularComputeResult`). Reuses every existing boundary/domain schema
 // this crate's own ported types already declare; only the shapes with no
 // existing TS schema (the full, non-summary `IrregularLayoutScore` and the
@@ -763,6 +762,7 @@ function createNativeEventDispatcher(
   options: NativeIrregularBackendOptions | undefined
 ): NativeEventDispatcher {
   let expectedOrdinal = 0
+  const requiresContiguousOrdinals = options?.emitStateSnapshot !== undefined
   let state: EventChannelState = 'open'
   let terminalOrdinal: number | undefined
   let firstFailure: WorkerResponseFailureError | undefined
@@ -817,7 +817,9 @@ function createNativeEventDispatcher(
       if (
         !Number.isSafeInteger(event.ordinal) ||
         event.ordinal < 0 ||
-        event.ordinal !== expectedOrdinal
+        (requiresContiguousOrdinals
+          ? event.ordinal !== expectedOrdinal
+          : event.ordinal < expectedOrdinal)
       ) {
         fail(
           nativeEventFailure('nativeEventOrdinal', {
@@ -828,7 +830,7 @@ function createNativeEventDispatcher(
         )
         return
       }
-      expectedOrdinal += 1
+      expectedOrdinal = event.ordinal + 1
 
       switch (event.kind) {
         case 'portfolio-progress':

@@ -20,7 +20,7 @@ const UPSTREAM_CLIPPER_LICENSE = readFileSync(
   resolve(REPOSITORY_ROOT, 'node_modules/clipper2-ts/LICENSE')
 )
 const NATIVE_PACKAGE_NOTICE = readFileSync(
-  resolve(REPOSITORY_ROOT, 'crates/irregular-nesting-native/NOTICE')
+  resolve(REPOSITORY_ROOT, 'node_modules/irregular-nesting-native/NOTICE')
 )
 
 function makeFakeElectron(tempDirectory) {

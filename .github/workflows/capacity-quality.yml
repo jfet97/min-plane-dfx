@@ -8,6 +8,10 @@ on:
 
 permissions:
   contents: read
+  packages: read
+
+env:
+  NODE_AUTH_TOKEN: ${{ github.token }}
 
 concurrency:
   group: capacity-quality-${{ github.ref }}
@@ -27,6 +31,8 @@ jobs:
         with:
           node-version: 24.11.1
           cache: pnpm
+      - name: Configure GitHub Packages authentication
+        run: pnpm config set --global "//npm.pkg.github.com/:_authToken" "$NODE_AUTH_TOKEN"
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm gate:capacity:production --output "$RUNNER_TEMP/capacity" --quiet
 
@@ -43,5 +49,32 @@ jobs:
         with:
           node-version: 24.11.1
           cache: pnpm
+      - name: Configure GitHub Packages authentication
+        run: pnpm config set --global "//npm.pkg.github.com/:_authToken" "$NODE_AUTH_TOKEN"
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm gate:compact-nine-baselines --output-dir "$RUNNER_TEMP/layouts" --skip-png
+
+  native-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.11.1
+          cache: pnpm
+      - name: Configure GitHub Packages authentication
+        run: pnpm config set --global "//npm.pkg.github.com/:_authToken" "$NODE_AUTH_TOKEN"
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm rebuild electron
+      - run: pnpm test:native:package
+      - name: Run real native package integration
+        env:
+          MIN_PLANE_REQUIRE_NATIVE_ADDON: "1"
+        run: >-
+          ELECTRON_RUN_AS_NODE=1 pnpm exec electron
+          ./node_modules/vitest/vitest.mjs run tests/unit/nativeIrregularBackend.test.ts

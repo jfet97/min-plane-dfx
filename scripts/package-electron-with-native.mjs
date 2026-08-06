@@ -1,37 +1,44 @@
 #!/usr/bin/env node
-/** Packages Electron with a physical, allowlisted native workspace package. */
-import { existsSync, renameSync, rmSync } from 'node:fs'
+/** Packages Electron with the exact registry-installed native dependency. */
+import { existsSync, readFileSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { stageNativePackageForElectron } from './stage-native-package-for-electron.mjs'
 
 const REPOSITORY_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const WORKSPACE_PACKAGE = resolve(REPOSITORY_ROOT, 'node_modules/irregular-nesting-native')
-const WORKSPACE_PACKAGE_BACKUP = `${WORKSPACE_PACKAGE}.workspace-link-${process.pid}`
+const NATIVE_PACKAGE_ROOT = resolve(REPOSITORY_ROOT, 'node_modules/irregular-nesting-native')
+const EXPECTED_PACKAGE_NAME = '@jfet07-polygon-labs/polygon-nesting'
+const EXPECTED_PACKAGE_VERSION = '0.1.0'
 
-if (!existsSync(WORKSPACE_PACKAGE)) {
-  throw new Error(`native workspace package link does not exist: ${WORKSPACE_PACKAGE}`)
+const packageManifestPath = resolve(NATIVE_PACKAGE_ROOT, 'package.json')
+if (!existsSync(packageManifestPath)) {
+  throw new Error(`native package is not installed: ${packageManifestPath}`)
 }
-if (existsSync(WORKSPACE_PACKAGE_BACKUP)) {
-  throw new Error(`native workspace package backup already exists: ${WORKSPACE_PACKAGE_BACKUP}`)
+
+const packageManifest = JSON.parse(readFileSync(packageManifestPath, 'utf8'))
+if (
+  packageManifest.name !== EXPECTED_PACKAGE_NAME ||
+  packageManifest.version !== EXPECTED_PACKAGE_VERSION
+) {
+  throw new Error(
+    `native package identity mismatch: expected ${EXPECTED_PACKAGE_NAME}@${EXPECTED_PACKAGE_VERSION}, ` +
+      `received ${String(packageManifest.name)}@${String(packageManifest.version)}`
+  )
 }
 
-renameSync(WORKSPACE_PACKAGE, WORKSPACE_PACKAGE_BACKUP)
-try {
-  const addonFiles = stageNativePackageForElectron(undefined, WORKSPACE_PACKAGE)
-  console.log(`staged irregular-nesting-native for Electron: ${addonFiles.join(', ')}`)
-
-  const electronBuilderCli = resolve(REPOSITORY_ROOT, 'node_modules/electron-builder/cli.js')
-  const result = spawnSync(process.execPath, [electronBuilderCli, ...process.argv.slice(2)], {
-    cwd: REPOSITORY_ROOT,
-    stdio: 'inherit'
-  })
-  if (result.error !== undefined) throw result.error
-  if (result.status !== 0) {
-    throw new Error(`electron-builder exited with status ${String(result.status)}`)
+for (const target of ['linux-x64', 'win32-x64', 'darwin-arm64', 'darwin-x64']) {
+  const addonPath = resolve(NATIVE_PACKAGE_ROOT, 'npm', `irregular-nesting-native.${target}.node`)
+  if (!existsSync(addonPath)) {
+    throw new Error(`native package target is missing: ${addonPath}`)
   }
-} finally {
-  rmSync(WORKSPACE_PACKAGE, { force: true, recursive: true })
-  renameSync(WORKSPACE_PACKAGE_BACKUP, WORKSPACE_PACKAGE)
+}
+
+const electronBuilderCli = resolve(REPOSITORY_ROOT, 'node_modules/electron-builder/cli.js')
+const result = spawnSync(process.execPath, [electronBuilderCli, ...process.argv.slice(2)], {
+  cwd: REPOSITORY_ROOT,
+  stdio: 'inherit'
+})
+if (result.error !== undefined) throw result.error
+if (result.status !== 0) {
+  throw new Error(`electron-builder exited with status ${String(result.status)}`)
 }

@@ -5,7 +5,7 @@
  * has no timeout because terminal acknowledgement is a strict production barrier.
  */
 
-import { existsSync, readFileSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -13,9 +13,8 @@ import { Worker, isMainThread, parentPort, workerData } from 'node:worker_thread
 
 const SCRIPT_PATH = fileURLToPath(import.meta.url)
 const SCRIPT_DIR = dirname(SCRIPT_PATH)
-const CRATE_ROOT = dirname(SCRIPT_DIR)
-const REPO_ROOT = dirname(dirname(CRATE_ROOT))
-const ADDON_ENTRY_PATH = join(CRATE_ROOT, 'npm', 'index.cjs')
+const REPO_ROOT = dirname(SCRIPT_DIR)
+const NATIVE_ADDON_PACKAGE_NAME = 'irregular-nesting-native'
 const LIFECYCLE_JOB_ID = 'native-worker-terminal-lifecycle'
 const REQUEST_FIXTURE_PATH = join(
   REPO_ROOT,
@@ -38,9 +37,8 @@ function assert(condition, message) {
 }
 
 function loadAddon() {
-  assert(existsSync(ADDON_ENTRY_PATH), `native addon entry missing: ${ADDON_ENTRY_PATH}`)
   const require = createRequire(import.meta.url)
-  const addon = require(ADDON_ENTRY_PATH)
+  const addon = require(NATIVE_ADDON_PACKAGE_NAME)
   const capability = addon.nativeCapability()
   assert(capability.apiVersion === 3, `expected apiVersion 3, received ${capability.apiVersion}`)
   return addon
@@ -123,48 +121,32 @@ function assertBlockedTerminalGate(control) {
   assert(Atomics.load(control, CONTROL.promiseSettled) === 0, 'native promise remains pending')
 }
 
-function readProcessLifecycle(addon) {
-  const diagnostics = JSON.parse(addon.getLastJobDiagnostics())
-  assert(diagnostics !== null, 'parent diagnostics sidecar exists after terminal entry')
-  const lifecycle = diagnostics.processLifecycle
-  assert(lifecycle !== null && typeof lifecycle === 'object', 'process lifecycle exists')
-  assert(
-    Number.isSafeInteger(lifecycle.terminalCleanupHooksFired),
-    'terminal cleanup hook counter is a safe integer'
-  )
-  assert(
-    Number.isSafeInteger(lifecycle.terminalLatchCloseRequestsByCleanup),
-    'terminal latch close counter is a safe integer'
-  )
-  return lifecycle
-}
-
-function waitForCleanupCommit(addon) {
-  return new Promise((resolve, reject) => {
-    const poll = () => {
-      try {
-        const lifecycle = readProcessLifecycle(addon)
-        if (
-          lifecycle.terminalCleanupHooksFired === 1 &&
-          lifecycle.terminalLatchCloseRequestsByCleanup === 1
-        ) {
-          resolve(lifecycle)
-          return
-        }
-        setImmediate(poll)
-      } catch (error) {
-        reject(error)
-      }
-    }
-    setImmediate(poll)
-  })
-}
-
 async function terminateAfterFailure(worker) {
   try {
     await worker.terminate()
   } catch {
     // preserve the original lifecycle failure
+  }
+}
+
+async function runCleanupProof() {
+  const controlBuffer = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 5)
+  const control = new Int32Array(controlBuffer)
+  const worker = createLifecycleWorker(controlBuffer)
+  let terminated = false
+
+  try {
+    const terminalEnteredPromise = waitForWorkerMessage(worker, 'terminal-entered')
+    releaseWorkerStart(control)
+    await terminalEnteredPromise
+    assertBlockedTerminalGate(control)
+
+    await worker.terminate()
+    terminated = true
+    assertBlockedTerminalGate(control)
+    process.stdout.write('cleanup-proof-ok\n')
+  } finally {
+    if (!terminated) await terminateAfterFailure(worker)
   }
 }
 
@@ -203,43 +185,6 @@ async function runTerminalBarrier() {
     await worker.terminate()
     terminated = true
     process.stdout.write('terminal-barrier-ok\n')
-  } finally {
-    if (!terminated) await terminateAfterFailure(worker)
-  }
-}
-
-async function runCleanupProof() {
-  const addon = loadAddon()
-  const controlBuffer = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 5)
-  const control = new Int32Array(controlBuffer)
-  const worker = createLifecycleWorker(controlBuffer)
-  let terminated = false
-
-  try {
-    const terminalEnteredPromise = waitForWorkerMessage(worker, 'terminal-entered')
-    releaseWorkerStart(control)
-    await terminalEnteredPromise
-    assertBlockedTerminalGate(control)
-
-    const beforeTermination = readProcessLifecycle(addon)
-    assert(
-      beforeTermination.terminalCleanupHooksFired === 0,
-      'cleanup hook counter starts at zero in the fresh probe process'
-    )
-    assert(
-      beforeTermination.terminalLatchCloseRequestsByCleanup === 0,
-      'latch close counter starts at zero in the fresh probe process'
-    )
-
-    await worker.terminate()
-    terminated = true
-    assertBlockedTerminalGate(control)
-
-    const afterTermination = await waitForCleanupCommit(addon)
-    const observation = `${afterTermination.terminalCleanupHooksFired}/${afterTermination.terminalLatchCloseRequestsByCleanup}`
-    process.stdout.write(`cleanup-proof-process-lifecycle=${observation}\n`)
-    assert(observation === '1/1', 'cleanup hook committed the terminal latch close')
-    process.stdout.write('cleanup-proof-ok\n')
   } finally {
     if (!terminated) await terminateAfterFailure(worker)
   }

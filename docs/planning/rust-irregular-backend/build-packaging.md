@@ -1,14 +1,12 @@
 # Native Build and Packaging
 
-**Status:** implemented current contract at `0fa19255e4c01bf5e7c113ed6779a6dc4eac2e7c`, with uncommitted changes.
+**Status:** archived embedded-workspace design. The application now consumes the exact private package `@jfet07-polygon-labs/polygon-nesting@0.1.0` through the stable `irregular-nesting-native` dependency key.
 
 ## Current verification update
 
-The stable loader resolves the package name only. Supported target and runner pairs are Linux x64 `x86_64-unknown-linux-gnu` on `ubuntu-24.04`, Windows x64 `x86_64-pc-windows-msvc` on `windows-latest`, macOS arm64 `aarch64-apple-darwin` on `macos-15`, and macOS x64 `x86_64-apple-darwin` on `macos-15-intel`.
+The embedded Cargo crate, workspace staging script, and local native build hooks have been removed. Electron Builder packages the registry-installed dependency directly and keeps Asar unpacking narrow to the native addon and better-sqlite3 binaries.
 
-Asar unpack remains narrow: only the native addon and better-sqlite3 native binaries are unpacked. Package CI explicitly runs `pnpm native:electron` before packaging. The packaging wrapper temporarily replaces the pnpm workspace link with a physical allowlisted package, invokes Electron-builder, and restores the link in `finally`; this prevents Cargo sources and `target/` artifacts from following the workspace dependency into Asar.
-
-The rebuilt macOS arm64 artifact contains only 9 native-package entries, has a 46 MiB `app.asar`, resolves the addon inside that Asar, unpacks the target binary, and passes the API 3 verifier. The npm tarball verifier confirmed `NOTICE`, `LICENSES`, loader, target metadata, Darwin arm64 binary, and `package.json`. The Clipper2 BSL SHA-256 is `ea056d2c64294936b226f7360c265e77c52adc4ba171ee61029357f101f439cf`; native `NOTICE` SHA-256 is `1fa11aadfd5f98d734cbaced1fa10d525fd85565c560044734db4ce752037c1d`.
+The macOS arm64 packaged application resolves the addon from `app.asar`, loads API 3 from the unpacked target binary, and verifies the installed and copied Clipper2 legal resources. The Clipper2 BSL SHA-256 is `ea056d2c64294936b226f7360c265e77c52adc4ba171ee61029357f101f439cf`; native `NOTICE` SHA-256 is `1fa11aadfd5f98d734cbaced1fa10d525fd85565c560044734db4ce752037c1d`.
 
 ## Historical design detail
 ## 1. Target package layout

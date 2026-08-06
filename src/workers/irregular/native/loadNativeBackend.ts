@@ -1,6 +1,6 @@
 /**
  * Resolves and probes the `irregular-nesting-native` N-API addon through its
- * stable workspace package entry point in development and packaged execution.
+ * stable dependency entry point in development and packaged execution.
  */
 import { createRequire } from 'node:module'
 import type { WorkerCancellationReason } from '@shared/protocol/worker.js'
@@ -76,7 +76,7 @@ function notInstalledMessage(): string {
   return (
     `irregular-nesting-native: package "${NATIVE_ADDON_PACKAGE_NAME}" is not installed ` +
     `(process.platform=${process.platform}, process.arch=${process.arch}). ` +
-    'Install the root workspace dependencies for development or use a packaged application that includes the native addon.'
+    'Install the root dependencies from GitHub Packages or use a packaged application that includes the native addon.'
   )
 }
 

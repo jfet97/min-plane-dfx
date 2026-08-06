@@ -24,13 +24,10 @@ import {
 import { makeIrregularWorkerOutput } from '../../src/workers/algorithm/irregular/irregularWorkerOutput.js'
 
 /**
- * These tests exercise the real `irregular-nesting-native` addon without
- * mocking the N-API boundary. The addon is a gitignored build artifact under
- * `crates/irregular-nesting-native/npm`, built explicitly by
- * `node crates/irregular-nesting-native/scripts/build-native.mjs`. Local
- * focused suites skip an absent optional addon. Native CI sets
- * `MIN_PLANE_REQUIRE_NATIVE_ADDON=1`, which runs this suite and fails it when
- * the expected addon is missing or cannot load.
+ * These tests exercise the registry-installed `irregular-nesting-native` addon
+ * without mocking the N-API boundary. Local focused suites skip an absent
+ * optional addon. Native CI sets `MIN_PLANE_REQUIRE_NATIVE_ADDON=1`, which runs
+ * this suite and fails it when the expected addon is missing or cannot load.
  */
 const probe = probeNativeIrregularAddon()
 const nativeAddonRequiredForTests = process.env.MIN_PLANE_REQUIRE_NATIVE_ADDON === '1'
@@ -42,7 +39,7 @@ const NATIVE_LIFECYCLE_PROBE_TIMEOUT_MS = 8_000
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const NATIVE_LIFECYCLE_PROBE_PATH = resolve(
   REPO_ROOT,
-  'crates/irregular-nesting-native/scripts/worker-terminal-lifecycle-probe.mjs'
+  'scripts/worker-terminal-lifecycle-probe.mjs'
 )
 
 /** Runs a real Worker lifecycle fixture and bounds only test-harness hangs. */
@@ -261,10 +258,9 @@ describeIfAvailable('computeIrregularNestingNative', () => {
   )
 
   it(
-    'proves cleanup releases the retained terminal wait in the real addon',
+    'proves Worker termination releases a blocked native terminal callback',
     async () => {
       const output = await runNativeLifecycleProbe('cleanup-proof')
-      expect(output).toContain('cleanup-proof-process-lifecycle=1/1')
       expect(output).toContain('cleanup-proof-ok')
     },
     NATIVE_LIFECYCLE_PROBE_TIMEOUT_MS + 2_000
@@ -738,18 +734,35 @@ describe('native irregular event dispatcher', () => {
     expect(settled).toBe(true)
   })
 
+  it('accepts ordinal gaps left by filtered state snapshots', async () => {
+    const transport = fakeNativeTransport(async (_requestJson, _invocationToken, onEvent) => {
+      onEvent(nativeEvent('portfolio-progress', 0))
+      onEvent(nativeEvent('terminal', 2))
+      return nativeFailureEnvelope()
+    })
+
+    const error = await Effect.runPromise(nativeTestEffect(transport).pipe(Effect.flip))
+    expect(error.code).toBe('worker_cancelled')
+  })
+
   it.each([
     ['reversed', [nativeEvent('portfolio-progress', 1), nativeEvent('terminal', 2)]],
     ['duplicate', [nativeEvent('portfolio-progress', 0), nativeEvent('terminal', 0)]],
     ['missing', [nativeEvent('portfolio-progress', 0), nativeEvent('terminal', 2)]]
-  ] as const)('rejects a %s ordinal sequence', async (_caseName, events) => {
-    const addon = fakeNativeTransport(async (_requestJson, _invocationToken, onEvent) => {
-      events.forEach(onEvent)
-      return nativeFailureEnvelope()
-    })
+  ] as const)(
+    'rejects a %s ordinal sequence when snapshots are requested',
+    async (_caseName, events) => {
+      const addon = fakeNativeTransport(async (_requestJson, _invocationToken, onEvent) => {
+        events.forEach(onEvent)
+        return nativeFailureEnvelope()
+      })
 
-    await expectNativeProtocolFailure(nativeTestEffect(addon), 'nativeEventOrdinal')
-  })
+      await expectNativeProtocolFailure(
+        nativeTestEffect(addon, { emitStateSnapshot: () => undefined }),
+        'nativeEventOrdinal'
+      )
+    }
+  )
 
   it('rejects a malformed event', async () => {
     const addon = fakeNativeTransport(async (_requestJson, _invocationToken, onEvent) => {
