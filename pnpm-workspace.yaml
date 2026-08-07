@@ -1,8 +1,10 @@
 packages:
   - '.'
-  - 'crates/*'
 
 verifyDepsBeforeRun: false
+
+minimumReleaseAgeExclude:
+  - '@jfet07-polygon-labs/polygon-nesting@0.1.0'
 
 allowBuilds:
   better-sqlite3: true

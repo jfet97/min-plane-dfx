@@ -1,6 +1,8 @@
 # Accepted old Rust parity capture
 
-Run `.github/workflows/capture-old-rust-parity.yml` only with **Run workflow**. It is deliberately manual because it rebuilds and runs the accepted embedded Rust N-API engine for every frozen desktop request.
+**Status:** archived capture procedure. The embedded Rust engine, workflow, and local capture scripts have been removed after the authorized package cutover. Do not run or recreate this capture from the application repository.
+
+The retained content below documents how the accepted old-side evidence was produced before removal. It is historical and its commands are no longer available on the current branch.
 
 ## Preconditions
 
