@@ -32,7 +32,10 @@ jobs:
           node-version: 24.11.1
           cache: pnpm
       - name: Configure GitHub Packages authentication
-        run: pnpm config set --global "//npm.pkg.github.com/:_authToken" "$NODE_AUTH_TOKEN"
+        run: |
+          config="$RUNNER_TEMP/npmrc"
+          printf '%s\n' "//npm.pkg.github.com/:_authToken=$NODE_AUTH_TOKEN" > "$config"
+          printf 'NPM_CONFIG_USERCONFIG=%s\n' "$config" >> "$GITHUB_ENV"
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm gate:capacity:production --output "$RUNNER_TEMP/capacity" --quiet
 
@@ -50,7 +53,10 @@ jobs:
           node-version: 24.11.1
           cache: pnpm
       - name: Configure GitHub Packages authentication
-        run: pnpm config set --global "//npm.pkg.github.com/:_authToken" "$NODE_AUTH_TOKEN"
+        run: |
+          config="$RUNNER_TEMP/npmrc"
+          printf '%s\n' "//npm.pkg.github.com/:_authToken=$NODE_AUTH_TOKEN" > "$config"
+          printf 'NPM_CONFIG_USERCONFIG=%s\n' "$config" >> "$GITHUB_ENV"
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm gate:compact-nine-baselines --output-dir "$RUNNER_TEMP/layouts" --skip-png
 
@@ -68,7 +74,10 @@ jobs:
           node-version: 24.11.1
           cache: pnpm
       - name: Configure GitHub Packages authentication
-        run: pnpm config set --global "//npm.pkg.github.com/:_authToken" "$NODE_AUTH_TOKEN"
+        run: |
+          config="$RUNNER_TEMP/npmrc"
+          printf '%s\n' "//npm.pkg.github.com/:_authToken=$NODE_AUTH_TOKEN" > "$config"
+          printf 'NPM_CONFIG_USERCONFIG=%s\n' "$config" >> "$GITHUB_ENV"
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm rebuild electron
       - run: pnpm test:native:package

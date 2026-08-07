@@ -61,6 +61,20 @@ test('configures GitHub Packages without committing a credential', () => {
   )
 })
 
+test('uses an ephemeral user npmrc for CI package authentication', () => {
+  const workflow = readText('.github/workflows/capacity-quality.yml')
+  const authStep = [
+    '      - name: Configure GitHub Packages authentication',
+    '        run: |',
+    '          config="$RUNNER_TEMP/npmrc"',
+    `          printf '%s\\n' "//npm.pkg.github.com/:_authToken=$NODE_AUTH_TOKEN" > "$config"`,
+    `          printf 'NPM_CONFIG_USERCONFIG=%s\\n' "$config" >> "$GITHUB_ENV"`
+  ].join('\n')
+
+  assert.equal(workflow.split(authStep).length - 1, 3)
+  assert.doesNotMatch(workflow, /pnpm config set --global/)
+})
+
 test('installs the exact portable package and all four native targets', () => {
   const packageManifest = JSON.parse(
     readFileSync(resolve(NATIVE_PACKAGE_ROOT, 'package.json'), 'utf8')
