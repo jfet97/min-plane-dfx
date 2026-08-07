@@ -26,7 +26,7 @@
     "package:native:electron": "node scripts/package-electron-with-native.mjs",
     "test": "pnpm native:electron && ELECTRON_RUN_AS_NODE=1 electron ./node_modules/vitest/vitest.mjs run",
     "test:focused": "ELECTRON_RUN_AS_NODE=1 pnpm exec electron ./node_modules/vitest/vitest.mjs run",
-    "test:native:package": "node --test scripts/verify-native-license-compliance.test.mjs scripts/verify-native-package-layout.test.mjs scripts/verify-packaged-native-load.test.mjs",
+    "test:native:package": "node --test scripts/verify-native-license-compliance.test.mjs scripts/verify-native-package-layout.test.mjs scripts/verify-native-matrix-execution.test.mjs scripts/verify-packaged-native-load.test.mjs",
     "test:watch": "pnpm native:electron && ELECTRON_RUN_AS_NODE=1 electron ./node_modules/vitest/vitest.mjs",
     "benchmark:irregular": "tsx --tsconfig tsconfig.node.json scripts/irregular-benchmark.ts",
     "profile:mixed61": "node scripts/profile-mixed61.mjs",
