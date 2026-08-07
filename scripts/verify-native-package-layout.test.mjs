@@ -158,6 +158,6 @@ test('runs the external package contracts through the root script', () => {
   const rootPackage = readJson('package.json')
   assert.equal(
     rootPackage.scripts['test:native:package'],
-    'node --test scripts/verify-native-license-compliance.test.mjs scripts/verify-native-package-layout.test.mjs scripts/verify-packaged-native-load.test.mjs'
+    'node --test scripts/verify-native-license-compliance.test.mjs scripts/verify-native-package-layout.test.mjs scripts/verify-native-matrix-execution.test.mjs scripts/verify-packaged-native-load.test.mjs'
   )
 })

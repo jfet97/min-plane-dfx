@@ -6,6 +6,10 @@ import {
   intrinsicShortSideAxes,
   intrinsicShortSideSpan
 } from '../src/workers/algorithm/irregular/intrinsicShortSideAxes.js'
+import {
+  parseIrregularMatrixBackend,
+  type IrregularMatrixBackend
+} from './lib/irregularMatrixBackend.js'
 
 interface Baseline {
   readonly fixture: 'triangle-20' | 'mixed-61' | 'shapes-17'
@@ -233,7 +237,11 @@ function runProcess(
   })
 }
 
-async function runBaseline(baseline: Baseline, outputDirectory: string): Promise<void> {
+async function runBaseline(
+  baseline: Baseline,
+  outputDirectory: string,
+  backend: IrregularMatrixBackend
+): Promise<void> {
   const outputPrefix = join(outputDirectory, `${baseline.fixture}-${baseline.sheet}`)
   const compactArguments = [
     'exec',
@@ -241,6 +249,8 @@ async function runBaseline(baseline: Baseline, outputDirectory: string): Promise
     '--tsconfig',
     'tsconfig.node.json',
     'scripts/irregular-compact-baseline.ts',
+    '--backend',
+    backend,
     '--fixture',
     baseline.fixture,
     '--sheet',
@@ -271,6 +281,8 @@ async function runBaseline(baseline: Baseline, outputDirectory: string): Promise
     '--tsconfig',
     'tsconfig.node.json',
     'scripts/irregular-compact-baseline.ts',
+    '--backend',
+    backend,
     '--fixture',
     baseline.fixture,
     '--sheet',
@@ -372,6 +384,7 @@ function focusedExpectedArguments(baseline: Baseline): ReadonlyArray<string> {
   ]
 }
 
+const selectedBackend = parseIrregularMatrixBackend(argument('--backend'))
 const outputDirectory =
   argument('--output-dir') ?? '/private/tmp/min-plane-provenance/compact-nine-baselines'
 const skipPng = hasArgument('--skip-png')
@@ -388,7 +401,7 @@ const outcomes: Array<{
 if (!resumeExisting) {
   for (const baseline of BASELINES) {
     try {
-      await runBaseline(baseline, outputDirectory)
+      await runBaseline(baseline, outputDirectory, selectedBackend)
       outcomes.push({
         fixture: baseline.fixture,
         sheet: baseline.sheet,
@@ -407,6 +420,13 @@ if (!resumeExisting) {
 
 interface CompactReport {
   readonly fixture: Baseline['fixture']
+  readonly backend: IrregularMatrixBackend
+  readonly nativeDiagnostics?: {
+    readonly backendVersion: string
+    readonly requestedThreadCount: number
+    readonly actualThreadCount: number
+    readonly nativeWallClockMs: number
+  }
   readonly objectiveProfile: 'compact' | 'short-side'
   readonly sheet: {
     readonly width: number
@@ -476,7 +496,11 @@ if (resumeExisting) {
     outcomes.push({
       fixture: baseline.fixture,
       sheet: baseline.sheet,
-      passed: compactReport.passed && shortSideReport.passed
+      passed:
+        compactReport.backend === selectedBackend &&
+        shortSideReport.backend === selectedBackend &&
+        compactReport.passed &&
+        shortSideReport.passed
     })
   }
 }
@@ -543,6 +567,8 @@ for (let index = 0; index < BASELINES.length; index += 1) {
       fixture: baseline.fixture,
       sheet: baseline.sheet,
       profile: 'compact',
+      backend: compactReport.backend,
+      nativeDiagnostics: compactReport.nativeDiagnostics,
       source: 'production-compact',
       strategyId: compactReport.workerOutput.strategyId,
       placedCount: compactReport.result.placedCount,
@@ -553,7 +579,10 @@ for (let index = 0; index < BASELINES.length; index += 1) {
       canonicalCavities: compactReport.result.canonicalTopology?.enclosedCavityCount,
       bounds: compactReport.result.bounds,
       exactPiecePartition: compactReport.checks.exactPiecePartition,
-      passed: compactReport.objectiveProfile === 'compact' && compactReport.passed,
+      passed:
+        compactReport.backend === selectedBackend &&
+        compactReport.objectiveProfile === 'compact' &&
+        compactReport.passed,
       svgPath: compactReport.svgPath,
       pngPath: skipPng ? undefined : basename(compactPngPath)
     },
@@ -561,6 +590,8 @@ for (let index = 0; index < BASELINES.length; index += 1) {
       fixture: baseline.fixture,
       sheet: baseline.sheet,
       profile: 'short-side',
+      backend: shortSideReport.backend,
+      nativeDiagnostics: shortSideReport.nativeDiagnostics,
       source: shortSideSource,
       strategyId: shortSideReport.workerOutput.strategyId,
       profileOutcome,
@@ -579,6 +610,7 @@ for (let index = 0; index < BASELINES.length; index += 1) {
       bounds: shortSideReport.result.bounds,
       exactPiecePartition: shortSideReport.checks.exactPiecePartition,
       passed:
+        shortSideReport.backend === selectedBackend &&
         shortSideReport.objectiveProfile === 'short-side' &&
         Boolean(shortSideReport.checks.exactPiecePartition) &&
         selectedPartitionMatchesCompact &&
@@ -626,6 +658,7 @@ const layoutContractPassed =
   compactFallbackCount === 0 &&
   directionalSuccessCount === 9 &&
   directionalMissCount === 0 &&
+  layoutRecords.every(({ backend }) => backend === selectedBackend) &&
   layoutRecords.every(({ exactPiecePartition, passed }) =>
     Boolean(exactPiecePartition && passed)
   ) &&
@@ -635,12 +668,28 @@ const layoutContractPassed =
       ({ inheritedSubsetMatchesCompact, selectedPartitionMatchesCompact }) =>
         inheritedSubsetMatchesCompact === true && selectedPartitionMatchesCompact === true
     )
+const nativeDiagnostics = layoutRecords.flatMap(
+  ({ fixture, sheet, profile, backend, nativeDiagnostics: diagnostics }) =>
+    diagnostics === undefined
+      ? []
+      : [
+          {
+            fixture,
+            sheet,
+            profile,
+            backend,
+            ...diagnostics
+          }
+        ]
+)
 const summaryPath = join(outputDirectory, 'summary.json')
 await writeFile(
   summaryPath,
   `${JSON.stringify(
     {
       generatedAt: new Date().toISOString(),
+      backend: selectedBackend,
+      nativeDiagnostics,
       passed: outcomes.every(({ passed }) => passed) && layoutContractPassed,
       caseCount: BASELINES.length,
       layoutCount: layoutRecords.length,
@@ -692,6 +741,8 @@ await writeFile(
         'gate:compact-nine-baselines',
         '--output-dir',
         '<output-directory>',
+        '--backend',
+        selectedBackend,
         ...(resumeExisting ? ['--resume-existing'] : []),
         ...(reusePng ? ['--reuse-png'] : []),
         ...(skipPng ? ['--skip-png'] : [])
@@ -702,6 +753,8 @@ await writeFile(
       },
       svgRenderer: skipPng ? undefined : SVG_RENDERER_SCRIPT,
       execution: {
+        backend: selectedBackend,
+        nativeDiagnostics,
         maximumConcurrentAlgorithmProcesses: 1,
         algorithmCases: BASELINES.length * 2,
         materializedLayouts: layoutRecords.length,
@@ -739,6 +792,8 @@ const passed = outcomes.every((outcome) => outcome.passed) && layoutContractPass
 console.log(
   JSON.stringify({
     outputDirectory,
+    backend: selectedBackend,
+    nativeDiagnostics,
     caseCount: BASELINES.length,
     layoutCount: layoutRecords.length,
     compactLayoutCount,

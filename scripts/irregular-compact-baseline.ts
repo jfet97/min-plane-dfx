@@ -4,7 +4,7 @@ import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { performance } from 'node:perf_hooks'
-import { Effect, Layer, Schema } from 'effect'
+import { Effect, Schema } from 'effect'
 import { importDxfFile } from '../src/main/services/DxfImportService.js'
 import { ImportedPiece } from '../src/shared/domain/dxf.js'
 import { JobId, PieceId, SourceFileId } from '../src/shared/domain/ids.js'
@@ -20,13 +20,7 @@ import {
 } from '../src/shared/irregular/domain.js'
 import { makePresetShapeDocument } from '../src/shared/presetShapes.js'
 import { preparePieces } from '../src/shared/preparePieces.js'
-import {
-  computeIrregularNesting,
-  intrinsicAnytimeSchedulerTraceValid,
-  type IrregularComputeResult
-} from '../src/workers/algorithm/irregular/computeIrregularNesting.js'
-import { IrregularLayoutScorer } from '../src/workers/algorithm/irregular/irregularLayoutScorer.js'
-import { IrregularPlacementScorer } from '../src/workers/algorithm/irregular/irregularPlacementScorer.js'
+import { intrinsicAnytimeSchedulerTraceValid } from '../src/workers/algorithm/irregular/computeIrregularNesting.js'
 import { makeIrregularWorkerOutput } from '../src/workers/algorithm/irregular/irregularWorkerOutput.js'
 import { INTRINSIC_SHORT_SIDE_OBSERVER_MAX_TRACE_BYTES } from '../src/workers/algorithm/irregular/intrinsicShortSideObserver.js'
 import {
@@ -38,21 +32,26 @@ import {
   canonicalCollisionLayoutIdentity,
   measureCanonicalLayoutTopology
 } from '../src/workers/irregular/canonicalLayoutGeometry.js'
-import { CollisionGeometryBuilder } from '../src/workers/irregular/collisionGeometryBuilder.js'
-import { FreeMaterialServiceLive } from '../src/workers/irregular/freeMaterialService.js'
-import { GeometrySettings } from '../src/workers/irregular/geometryKernel.js'
-import { NfpIfpServiceLive } from '../src/workers/irregular/nfpIfpService.js'
-import { TransformGeneratorLive } from '../src/workers/irregular/transformGenerator.js'
+import {
+  executeProductionIrregularBackend,
+  readLastNativeIrregularDiagnostics,
+  type IrregularComputeResult
+} from '../src/workers/irregular/productionIrregularBackend.js'
 import {
   canonicalizeIrregularLayout,
   type LayoutPoint
 } from './lib/irregularLayoutCanonicalization.js'
+import {
+  parseIrregularMatrixBackend,
+  type IrregularMatrixBackend
+} from './lib/irregularMatrixBackend.js'
 import { exactIrregularPiecePartition } from '../src/workers/irregular/differential/irregularQualityAcceptance.js'
 
 type FixtureName = 'triangle-20' | 'mixed-61' | 'shapes-17'
 type ObjectiveProfile = 'compact' | 'short-side'
 
 interface Arguments {
+  readonly backend: IrregularMatrixBackend
   readonly fixture: FixtureName
   readonly sheet: SheetSpec
   readonly outputPrefix: string
@@ -133,6 +132,7 @@ function optionalIntegerArgument(name: string): number | undefined {
 
 function parseArguments(): Arguments {
   return {
+    backend: parseIrregularMatrixBackend(argument('--backend')),
     fixture: fixtureArgument(requiredArgument('--fixture')),
     sheet: sheetArgument(requiredArgument('--sheet')),
     outputPrefix: requiredArgument('--output-prefix'),
@@ -172,7 +172,7 @@ function requestOptions(settings: IrregularNestingSettings): NestingOptions {
   return new NestingOptions({
     allowGlobalRotation: true,
     allowGlobalMirror: true,
-    timeoutMs: 0,
+    timeoutMs: Number.MAX_SAFE_INTEGER,
     workerMode: 'irregular-convex-v2',
     historyMode: 'off',
     historyScope: 'winning_path',
@@ -283,7 +283,7 @@ async function mixed61Request(sheet: SheetSpec): Promise<NestingRequest> {
     sheet,
     options: new NestingOptions({
       ...request.options,
-      timeoutMs: 0,
+      timeoutMs: Number.MAX_SAFE_INTEGER,
       historyMode: 'off',
       irregularSettings: settings
     })
@@ -385,39 +385,37 @@ let observerWinner:
 let pairFoldObserverWinner: ReadonlyArray<IrregularPlacedPiece> | undefined
 const startedAt = performance.now()
 const result = await Effect.runPromise(
-  computeIrregularNesting(request, {
-    ...(args.disableFocusedCompleteReconstruction
-      ? { focusedCompleteReconstructionControlArm: 'disable' as const }
-      : {}),
-    ...(args.captureShortSideObserver
-      ? {
-          captureIntrinsicShortSideObserver: true,
-          onIntrinsicShortSideObserverWinner: (winner: typeof observerWinner) => {
-            observerWinner = winner
-          },
-          ...(args.captureShortSidePairFoldObserver
-            ? {
-                captureIntrinsicShortSidePairFoldObserver: true,
-                onIntrinsicShortSidePairFoldObserverWinner: (
-                  winner: typeof pairFoldObserverWinner
-                ) => {
-                  pairFoldObserverWinner = winner
+  executeProductionIrregularBackend({
+    backend: args.backend,
+    request,
+    settings,
+    options: {
+      ...(args.disableFocusedCompleteReconstruction
+        ? { focusedCompleteReconstructionControlArm: 'disable' as const }
+        : {}),
+      ...(args.captureShortSideObserver
+        ? {
+            captureIntrinsicShortSideObserver: true,
+            onIntrinsicShortSideObserverWinner: (winner: typeof observerWinner) => {
+              observerWinner = winner
+            },
+            ...(args.captureShortSidePairFoldObserver
+              ? {
+                  captureIntrinsicShortSidePairFoldObserver: true,
+                  onIntrinsicShortSidePairFoldObserverWinner: (
+                    winner: typeof pairFoldObserverWinner
+                  ) => {
+                    pairFoldObserverWinner = winner
+                  }
                 }
-              }
-            : {})
-        }
-      : {})
-  }).pipe(
-    Effect.provide(CollisionGeometryBuilder.Live),
-    Effect.provide(TransformGeneratorLive),
-    Effect.provide(NfpIfpServiceLive),
-    Effect.provide(FreeMaterialServiceLive),
-    Effect.provide(IrregularPlacementScorer.Live),
-    Effect.provide(IrregularLayoutScorer.Live),
-    Effect.provide(Layer.succeed(GeometrySettings, settings))
-  )
+              : {})
+          }
+        : {})
+    }
+  })
 )
 const elapsedMs = Math.max(0, performance.now() - startedAt)
+const nativeDiagnostics = args.backend === 'rust' ? readLastNativeIrregularDiagnostics() : undefined
 const workerOutput = makeIrregularWorkerOutput({
   request,
   computed: result,
@@ -653,6 +651,8 @@ if (shortSideProfileSource !== undefined && shortSideProfileReportPath !== undef
     `${JSON.stringify(
       jsonSafe({
         fixture: args.fixture,
+        backend: args.backend,
+        nativeDiagnostics,
         profile: 'short-side',
         sheet: {
           width: args.sheet.width,
@@ -689,6 +689,10 @@ if (shortSideProfileSource !== undefined && shortSideProfileReportPath !== undef
 }
 
 const checks = {
+  backendDiagnostics: args.backend === 'typescript' || nativeDiagnostics !== undefined,
+  nativeThreadCount:
+    args.backend === 'typescript' ||
+    nativeDiagnostics?.requestedThreadCount === nativeDiagnostics?.actualThreadCount,
   collisionIdentity:
     args.expectedCollisionIdentitySha256 === undefined ||
     collisionIdentitySha256 === args.expectedCollisionIdentitySha256,
@@ -779,6 +783,8 @@ const checks = {
 const passed = Object.values(checks).every(Boolean)
 const report = jsonSafe({
   fixture: args.fixture,
+  backend: args.backend,
+  nativeDiagnostics,
   objectiveProfile: args.objectiveProfile,
   sheet: { width: args.sheet.width, height: args.sheet.height },
   sourceCommit:
@@ -818,5 +824,15 @@ const report = jsonSafe({
     shortSideProfileReportPath === undefined ? undefined : basename(shortSideProfileReportPath)
 })
 await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`)
-console.log(JSON.stringify({ reportPath, svgPath, elapsedMs, checks, passed }))
+console.log(
+  JSON.stringify({
+    reportPath,
+    svgPath,
+    backend: args.backend,
+    nativeDiagnostics,
+    elapsedMs,
+    checks,
+    passed
+  })
+)
 if (args.strict && !passed) process.exitCode = 1

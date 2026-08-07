@@ -3,18 +3,15 @@ import * as NodePath from '@effect/platform-node/NodePath'
 import * as NodeWorkerRunner from '@effect/platform-node/NodeWorkerRunner'
 import { computeNesting } from './algorithm/computeNesting.js'
 import { dispatchNestingComputation } from './nestingDispatch.js'
-import {
-  computeIrregularNesting,
-  type IrregularComputeResult,
-  type IrregularStateSnapshot
-} from './algorithm/irregular/computeIrregularNesting.js'
+import type {
+  IrregularComputeResult,
+  IrregularStateSnapshot
+} from './irregular/productionIrregularBackend.js'
 import {
   irregularStrategyRunId,
   makeIrregularHistoryFrame,
   makeIrregularWorkerOutput
 } from './algorithm/irregular/irregularWorkerOutput.js'
-import { IrregularLayoutScorer } from './algorithm/irregular/irregularLayoutScorer.js'
-import { IrregularPlacementScorer } from './algorithm/irregular/irregularPlacementScorer.js'
 import type { IrregularDecisionTraceEvent } from './algorithm/irregular/decisionTrace.js'
 import {
   IrregularDecisionTraceBatcher,
@@ -22,19 +19,7 @@ import {
 } from './decisionTraceNdjson.js'
 import { IRREGULAR_WORKER_MODE } from '@shared/irregular/defaults.js'
 import { readIrregularBackendFromEnv } from '@shared/irregular/backendSelection.js'
-import { CollisionGeometryBuilder } from './irregular/collisionGeometryBuilder.js'
-import { GeometryKernel, GeometrySettings } from './irregular/geometryKernel.js'
-import { FreeMaterialServiceLive } from './irregular/freeMaterialService.js'
-import { NfpIfpServiceLive } from './irregular/nfpIfpService.js'
-import { TransformGeneratorLive } from './irregular/transformGenerator.js'
-import { computeIrregularNestingNative } from './irregular/native/nativeIrregularBackend.js'
-import { probeNativeIrregularAddon } from './irregular/native/loadNativeBackend.js'
-import {
-  computeIrregularNestingDifferential,
-  executeIrregularBackend,
-  type IrregularBackendExecutionDependencies
-} from './irregular/differential/irregularDifferential.js'
-import { toIrregularWorkerFailure } from './irregular/irregularWorkerFailure.js'
+import { executeProductionIrregularBackend } from './irregular/productionIrregularBackend.js'
 import {
   ActiveRunRegistry,
   cancelActiveRunOnInterrupt,
@@ -399,41 +384,14 @@ function computeIrregularWorkerResult(
     isCancelled: controller.isRequested,
     registerNativeCancellation: controller.registerNativeCancellation
   }
-  const geometrySettings = request.options.irregularSettings ?? GeometrySettings.Make
-
   /**
-   * Backend selection is out-of-band and non-persisted. Auto uses TypeScript
-   * for archive-ineligible jobs and preflights native capability and the
-   * required objective profile before Rust dispatch. Explicit Rust and
-   * differential requests remain fail-closed.
+   * Backend selection is out-of-band and non-persisted. The application-owned
+   * executor is shared with package-verification scripts so both paths assemble
+   * the same TypeScript layers and native adapter.
    */
   const backend = readIrregularBackendFromEnv(irregularBackendProcessEnv())
-  const dependencies: IrregularBackendExecutionDependencies = {
-    probeNative: probeNativeIrregularAddon,
-    runRust: computeIrregularNestingNative,
-    runTypeScript: (typescriptRequest, settings, typescriptOptions) =>
-      computeIrregularNesting(typescriptRequest, typescriptOptions).pipe(
-        Effect.provide(CollisionGeometryBuilder.Live),
-        Effect.provide(TransformGeneratorLive),
-        Effect.provide(NfpIfpServiceLive),
-        Effect.provide(FreeMaterialServiceLive),
-        Effect.provide(IrregularPlacementScorer.Layer),
-        Effect.provide(IrregularLayoutScorer.Live),
-        Effect.provide(GeometryKernel.Live),
-        Effect.provide(Layer.succeed(GeometrySettings, settings)),
-        Effect.mapError(toIrregularWorkerFailure)
-      )
-  }
-  const executionInput = {
-    request,
-    settings: geometrySettings,
-    ...(options === undefined ? {} : { options }),
-    dependencies
-  }
   const computedEffect: Effect.Effect<IrregularComputeResult, WorkerResponseFailureError> =
-    backend === 'differential'
-      ? computeIrregularNestingDifferential(executionInput)
-      : executeIrregularBackend({ ...executionInput, backend })
+    executeProductionIrregularBackend({ request, backend, options })
 
   return computedEffect.pipe(
     Effect.map((computed) => {
