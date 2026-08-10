@@ -64,6 +64,7 @@ interface Arguments {
   readonly maximumAreaMm2: number | undefined
   readonly maximumCanonicalCavities: number | undefined
   readonly maximumElapsedMs: number | undefined
+  readonly disableGlobalMirror: boolean
   readonly disableFocusedCompleteReconstruction: boolean
   readonly captureShortSideObserver: boolean
   readonly captureShortSidePairFoldObserver: boolean
@@ -145,6 +146,7 @@ function parseArguments(): Arguments {
     maximumAreaMm2: optionalNumberArgument('--maximum-area-mm2'),
     maximumCanonicalCavities: optionalIntegerArgument('--maximum-canonical-cavities'),
     maximumElapsedMs: optionalNumberArgument('--maximum-elapsed-ms'),
+    disableGlobalMirror: process.argv.includes('--disable-global-mirror'),
     disableFocusedCompleteReconstruction: process.argv.includes(
       '--disable-focused-complete-reconstruction'
     ),
@@ -372,6 +374,7 @@ const request = new NestingRequest({
   ...loadedRequest,
   options: new NestingOptions({
     ...loadedRequest.options,
+    allowGlobalMirror: !args.disableGlobalMirror,
     irregularSettings: settings
   })
 })
